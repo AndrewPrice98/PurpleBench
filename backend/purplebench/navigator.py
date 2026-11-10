@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .attribution import ATTACK_NOTICE
 from .coverage import Coverage
 from .scoring import DETECTED, MISSED, PARTIAL, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN
 
@@ -63,8 +64,10 @@ def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: 
         if t.status in SCORES:
             entry["score"] = SCORES[t.status]
         techniques.append(entry)
-    desc = description or ("Detection coverage of a Sigma rule set over recorded Atomic Red Team telemetry. "
+    desc = description or ("Detection coverage of a Sigma rule set over recorded Sysmon telemetry (mostly Atomic Red "
+                           "Team tests from Splunk attack_data). "
                            "'Missed' means no rule in this rule set fired on this telemetry.")
+    desc = f"{desc} {ATTACK_NOTICE}"
     return {
         "name": name,
         "versions": {"attack": ATTACK_VERSION, "navigator": NAVIGATOR_VERSION, "layer": LAYER_VERSION},

@@ -622,7 +622,8 @@ def run_detail(run_id: str, conn: Conn):
              "noisy": bool(h["noisy"])})
     execs = [{"id": e["id"], "technique": _tech(e["technique_id"]), "test_guid": e["test_guid"],
               "status": e["status"], "ttd_ms": e["ttd_ms"], "reason": e["reason"],
-              "rules_fired": hit_counts.get(e["id"], 0), "rules": by_exec.get(e["id"], []), "started_at": e["started_at"], "ended_at": e["ended_at"]}
+              "rules_fired": hit_counts.get(e["id"], 0), "rules": by_exec.get(e["id"], []),
+              "started_at": e["started_at"], "ended_at": e["ended_at"]}
              for e in db.list_executions(conn, run["id"])]
     return {**_run_out(run), **st, "executions": execs,
             "gaps": [_gap_out(g) for g in db.list_gaps(conn, run["id"])],
@@ -764,7 +765,8 @@ def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: 
     lose an event. Filters (matched only, one rule) apply before paging.
 
     With a filter the whole file is scanned, so ``total`` (distinct events passing the filters; an event matched
-    by several rules counts once) is exact; ``skipped_lines`` counts the unusable lines that pass the filter. Without a filter the scan stops once the
+    by several rules counts once) is exact; ``skipped_lines`` counts the unusable lines that pass the filter.
+    Without a filter the scan stops once the
     page and one more event are found: ``total`` and ``skipped_lines`` then only count what was scanned
     (``total_is_lower_bound``), because counting every line of a large lab file on each page would be costly.
     """

@@ -4,7 +4,7 @@ import {
   STATUS, STATUS_ORDER, closingRules, countEntries, filterExecutions, firstLink, formatClock, formatDate,
   formatDateTime, formatOffset, formatScore, formatTtd, gaugeArc, linePath, linePoints, pickStartHere, scale,
   splitLinks, splitRuleRefs, tacticLabel, tacticsOf, timelineModel, tsMs, eventName, summaryField, attackUrl,
-  DEMO_WRITE_NOTICE, showDemoWriteNotice, gapText, matchPaging, matchTotal, timelineLabel,
+  DEMO_WRITE_NOTICE, ATTACK_COPYRIGHT, ATTACK_TRADEMARK, showDemoWriteNotice, gapText, matchPaging, matchTotal, timelineLabel,
 } from './lib.js'
 
 test('every status has a label, glyph, tone and help text', () => {
@@ -250,4 +250,12 @@ test('demo write notice shows only for an admin on the hosted demo', () => {
   assert.equal(showDemoWriteNotice({ demo: false, guest: false }), false)
   assert.equal(showDemoWriteNotice(null), false)
   assert.equal(DEMO_WRITE_NOTICE, 'Demo: changes you make are visible to other visitors until the demo resets.')
+})
+
+test('the ATT&CK notice is the one the Terms of Use require', () => {
+  assert.equal(
+    ATTACK_COPYRIGHT,
+    '© 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.',
+  )
+  assert.equal(ATTACK_TRADEMARK, 'MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.')
 })

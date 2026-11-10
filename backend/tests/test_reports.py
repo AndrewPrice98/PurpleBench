@@ -52,6 +52,23 @@ def test_honesty_and_attribution_present(seeded):
     assert "not yet run against a real lab" not in page  # recorded runs do not claim a lab
 
 
+@pytest.mark.parametrize("run_id", [1, 4])
+def test_attack_notice_in_both_report_formats(seeded, run_id):
+    from purplebench.attribution import ATTACK_COPYRIGHT, ATTACK_TERMS_URL, ATTACK_TRADEMARK
+    page = _html(seeded, run_id)
+    md = _md(seeded, run_id)
+    appendix = page.split("Appendix B.")[1]
+    assert html_escape(ATTACK_COPYRIGHT) in appendix and html_escape(ATTACK_TRADEMARK) in appendix
+    assert ATTACK_TERMS_URL in appendix
+    flat = md.replace("\\", "")
+    assert ATTACK_COPYRIGHT in flat and ATTACK_TRADEMARK in flat
+
+
+def html_escape(text):
+    import html
+    return html.escape(text, quote=False)
+
+
 def test_results_and_scope_content(seeded):
     page = _html(seeded, 3)
     assert "71.4%" in page and "T1059.001" in page and "(exact)" in page
@@ -135,7 +152,7 @@ def test_unknown_run(seeded):
         _md(seeded, 99)
 
 
-# -- fix round 1 -----------------------------------------------------------------------------------
+# -- authors and numbers -------------------------------------------------------------------------------
 
 def test_authors_shown_for_fired_rules_and_in_appendix(seeded):
     from purplebench import rulesets

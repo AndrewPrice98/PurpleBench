@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from . import db, library, rulesets
+from .attribution import ATTACK_NOTICE, ATTACK_TERMS_URL
 from .coverage import GENERIC_HINT, best_execution, compute_coverage, load_gap_hints
 from .scoring import (DETECTED, DID_NOT_RUN, MISSED, NOT_TESTED, PARTIAL, TELEMETRY_GAP, UNTESTED,
                       ExecutionScore, RuleHit, RunScore)
@@ -70,6 +71,8 @@ ATTRIBUTION = (
       "https://github.com/redcanaryco/atomic-red-team . Test names, GUIDs and descriptions."),
     T("Splunk attack_data recorded telemetry: Apache License 2.0, https://github.com/splunk/attack_data . "
       "Trimmed, normalised subsets of Windows Sysmon logs."),
+    T("MITRE ATT&CK: technique and tactic ids and names are ATT&CK Enterprise v20, used under the ATT&CK Terms of "
+      f"Use ({ATTACK_TERMS_URL} ). {ATTACK_NOTICE}"),
 )
 
 _ISO = re.compile(r"^\d{4}-\d\d-\d\dT[\d:.]{8,15}Z?$")

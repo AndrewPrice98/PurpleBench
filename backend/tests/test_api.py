@@ -176,6 +176,8 @@ def test_coverage_and_navigator(admin):
     assert "attachment" in r.headers["content-disposition"]
     layer = r.json()
     assert navigator.validate_layer(layer) == []
+    from purplebench.attribution import ATTACK_COPYRIGHT, ATTACK_TRADEMARK
+    assert ATTACK_COPYRIGHT in layer["description"] and ATTACK_TRADEMARK in layer["description"]
     meta = " ".join(m["value"] for t in layer["techniques"] for m in t["metadata"] if "rules" in m["name"])
     assert "(" in meta and "unknown author" not in meta  # "title (author)"
     assert admin.get("/api/coverage?run=x").status_code == 404
@@ -414,7 +416,7 @@ def test_end_to_end_empty_db(empty, recorded, db_file):
     assert empty.get("/api/overview").json()["latest"]["run"]["id"] == rid
 
 
-# -- fix round: robustness and dashboard data ------------------------------------------------------------
+# -- robustness and dashboard data ------------------------------------------------------------
 
 def test_seed_failure_is_logged_once_and_cached(db_file, monkeypatch, caplog):
     import time

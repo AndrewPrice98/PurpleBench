@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, downloads } from '../api.js'
 import {
-  ATOMIC_URL, ATTACK_DATA_URL, DRL_URL, MISSED_MEANING, NOT_TESTED, SIGMAHQ_URL, STATUS, TTD_LABEL, countEntries,
+  ATOMIC_URL, ATTACK_COPYRIGHT, ATTACK_DATA_URL, ATTACK_TERMS_URL, ATTACK_TRADEMARK, DRL_URL, MISSED_MEANING, NOT_TESTED, SIGMAHQ_URL, STATUS, TTD_LABEL, countEntries,
   formatDate, formatDateTime, formatScore, formatTtd, gapText, plural,
 } from '../lib.js'
 import { diffCoverage, previousRun, runDownloadName, scoreDelta } from '../model.js'
@@ -203,7 +203,9 @@ function Preview({ data }) {
             ))}
             {firedRules.size === 0 && 'none'}.
           </li>
-          <li>ATT&amp;CK® is a trademark of The MITRE Corporation.</li>
+          <li>
+            {ATTACK_COPYRIGHT} {ATTACK_TRADEMARK} (<ExternalLink href={ATTACK_TERMS_URL}>ATT&amp;CK Terms of Use</ExternalLink>)
+          </li>
         </ul>
       </section>
     </article>

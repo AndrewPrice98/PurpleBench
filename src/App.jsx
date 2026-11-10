@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { BrowserRouter, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { api } from './api.js'
-import { ATOMIC_URL, ATTACK_DATA_URL, DRL_URL, GITHUB_URL, SIGMAHQ_URL, THIRD_PARTY_URL } from './lib.js'
+import {
+  ATOMIC_URL, ATTACK_COPYRIGHT, ATTACK_DATA_URL, ATTACK_TERMS_URL, ATTACK_TRADEMARK, DRL_URL, GITHUB_URL, SIGMAHQ_URL,
+  THIRD_PARTY_URL,
+} from './lib.js'
 import {
   BrandMark, Empty, ErrorState, ExternalLink, Icon, Loading, SessionContext, useSession,
 } from './components/ui.jsx'
@@ -93,7 +96,8 @@ function Footer() {
           recorded telemetry from <ExternalLink href={ATTACK_DATA_URL}>Splunk attack_data</ExternalLink> (Apache-2.0) and{' '}
           <ExternalLink href={SIGMAHQ_URL}>SigmaHQ</ExternalLink> rules (
           <ExternalLink href={DRL_URL}>Detection Rule License 1.1</ExternalLink>). Rule authors are named wherever a
-          rule appears. ATT&amp;CK® is a trademark of The MITRE Corporation.{' '}
+          rule appears. {ATTACK_COPYRIGHT} {ATTACK_TRADEMARK}{' '}
+          (<ExternalLink href={ATTACK_TERMS_URL}>ATT&amp;CK Terms of Use</ExternalLink>){' '}
           <ExternalLink href={THIRD_PARTY_URL}>Sources and licences</ExternalLink>
         </p>
         <p className="footer-meta">

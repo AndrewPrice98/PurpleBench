@@ -6,6 +6,11 @@ export const DRL_URL = 'https://github.com/SigmaHQ/Detection-Rule-License'
 export const ATOMIC_URL = 'https://github.com/redcanaryco/atomic-red-team'
 export const ATTACK_DATA_URL = 'https://github.com/splunk/attack_data'
 export const SIGMAHQ_URL = 'https://github.com/SigmaHQ/sigma'
+export const ATTACK_TERMS_URL = 'https://attack.mitre.org/resources/legal-and-branding/terms-of-use/'
+// Reproduced as the ATT&CK Terms of Use require (keep identical to backend/purplebench/attribution.py).
+export const ATTACK_COPYRIGHT =
+  '© 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.'
+export const ATTACK_TRADEMARK = 'MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.'
 
 export const MISSED_MEANING =
   '"Missed" means no rule in this rule set fired on this telemetry. It says nothing about any security product.'
