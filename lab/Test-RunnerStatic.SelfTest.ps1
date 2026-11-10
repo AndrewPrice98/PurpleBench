@@ -141,9 +141,9 @@ $added = [ordered]@{
     "`$Credential = `$null"                                             = '$Credential is assigned again'
     "`$WhatIfPreference = `$false"                                      = '$WhatIfPreference is assigned again'
     "`$AtomicsPath = 'C:\x'"                                            = '$AtomicsPath is assigned again'
-    "`$sessionArgs['ComputerName'] = 'other'"                           = '$sessionArgs must not be modified'
+    "`$sessionArgs['ComputerName'] = 'other'"                           = 'member or index write on $sessionArgs is forbidden'
     "`$sessionArgs.ComputerName = 'other'"                              = 'must not be changed'
-    "`$sessionArgs.UseSSL = `$false"                                    = '$sessionArgs must not be modified'
+    "`$sessionArgs.UseSSL = `$false"                                    = 'member or index write on $sessionArgs is forbidden'
     "`$sessionArgs.Add('Name', 'x')"                                    = 'method'
     "`$sessionArgs = @{ ComputerName = 'other' }"                       = '$sessionArgs is assigned again'
     "`$runBlock = { 1 }"                                                = '$runBlock is assigned again'
@@ -173,9 +173,26 @@ $added = [ordered]@{
     "`${env:PSModulePath} = 'x'"                                        = "'env:' drive"
     "`$env:Path += ';x'"                                                = "'env:' drive"
     "`$PSDefaultParameterValues = @{}"                                  = '$PSDefaultParameterValues is assigned again'
-    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'"            = '$PSDefaultParameterValues must not be modified'
+    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'"            = 'member or index write on $PSDefaultParameterValues is forbidden'
     "Set-Item env:PSModulePath 'x'"                                     = "forbidden command 'Set-Item'"
     "New-Item env:X"                                                    = "command 'New-Item' is not on the allow-list"
+    # --- round 3: aliasing the session arguments or the marker answer
+    "`$h = `$sessionArgs"                                               = '$sessionArgs may only be initialised'
+    "`$h = `$sessionArgs`n`$h.ComputerName = 'other'"                   = '$sessionArgs may only be initialised'
+    "`$h = `$sessionArgs`n`$h['ComputerName'] = 'other'"                = 'member or index write on $h is forbidden'
+    "`$h = `$sessionArgs`n`$h.Add('Name', 'x')"                         = '$sessionArgs may only be initialised'
+    "`$x = ""`$sessionArgs"""                                           = '$sessionArgs may only be initialised'
+    "Write-Host `$sessionArgs"                                          = '$sessionArgs may only be initialised'
+    "`$sessionArgs.Count"                                               = '$sessionArgs may only be initialised'
+    "`$script:sessionArgs.UseSSL = `$true`n`$h = `$script:sessionArgs"   = '$sessionArgs may only be initialised'
+    "`$h = `$info`n`$h.Marker = 1"                                      = 'member or index write on $h is forbidden'
+    "`$h = `$info"                                                      = '$info (the marker answer) may only be assigned once'
+    "Write-Host `$info"                                                 = '$info (the marker answer) may only be assigned once'
+    "`$info.Marker = 1"                                                 = 'member or index write on $info is forbidden'
+    "`$info.Add('Marker', 1)"                                           = '$info (the marker answer) may only be assigned once'
+    "`$t.technique_id = 'T9999'"                                        = 'member or index write on $t is forbidden'
+    "`$tests[0].technique_id = 'T9999'"                                 = 'member or index write on $tests is forbidden'
+    "`$camp.tests = @()"                                                = 'member or index write on $camp is forbidden'
     "`$markerBlock = { 1 }"                                             = 'assigned exactly once'
 }
 foreach ($key in $added.Keys) { $line = $key.Replace('~', ''); Test-Case "add: $line" ($runner + "`n" + $line + "`n") $added[$key] }
@@ -196,7 +213,7 @@ $remote = [ordered]@{
     "`$x = [Reflection.Assembly]::Lo~ad(`$b)"        = "forbidden member 'Load'"
     "`$env:PSModulePath = '\\server\mods'; Import-Module -Name 'Invoke-AtomicRedTeam' -ErrorAction Stop" = "'env:' drive"
     "`$h = @{ Get~Prereqs = `$true }; Invoke-AtomicTest T1003.001 @h" = 'splatting'
-    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'; Import-Module -Name 'Invoke-AtomicRedTeam' -ErrorAction Stop" = '$PSDefaultParameterValues must not be modified'
+    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'; Import-Module -Name 'Invoke-AtomicRedTeam' -ErrorAction Stop" = 'member or index write on $PSDefaultParameterValues is forbidden'
 }
 foreach ($key in $remote.Keys) {
     $line = $key.Replace('~', '')
@@ -239,6 +256,10 @@ $gates = [ordered]@{
     'allow-list refusal not first statement' = @('Stop-Refused "target', "Write-Host 'x'; Stop-Refused ""target", 'allow-list gate')
     'session args with an extra key'   = @("ErrorAction = 'Stop' }", "ErrorAction = 'Stop'; Name = 'x' }", "key 'Name' is not allowed")
     'session args credential replaced' = @('Credential = $Credential;', 'Credential = $null;', 'value for')
+    'Stop-Refused exit moved into a dead branch' = @('exit 1', 'if ($false) { exit 1 }', 'differs from the version pinned')
+    'Stop-Refused message changed'     = @('Nothing was executed.', 'Carry on.', 'differs from the version pinned')
+    'Test-AllowListed returns true first' = @('if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {', 'return $true; if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {', 'differs from the version pinned')
+    'Test-AllowListed comparison inverted' = @('$entry -eq $Name', '$entry -ne $Name', 'differs from the version pinned')
     'New-Object type changed'          = @('System.Text.UTF8Encoding', 'System.Net.Web~Client', 'New-Object type')
 }
 foreach ($name in $gates.Keys) {

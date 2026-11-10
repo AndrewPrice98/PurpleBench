@@ -222,6 +222,22 @@ foreach ($f in $functionAsts) {
     if (@($functionAsts | Where-Object { $_.Name -ieq $f.Name }).Count -gt 1) { Add-Problem $f "function '$($f.Name)' is defined more than once (a later definition would replace the checked one)" }
     if ($f.Parent -isnot [System.Management.Automation.Language.NamedBlockAst] -or $f.Parent.Parent -ne $ast) { Add-Problem $f "function '$($f.Name)' must be defined at the top level of the script, not inside a condition or block" }
 }
+# ---- the two gate functions are pinned: any edit must be made on purpose, here as well ------------------------------------
+# (whitespace collapsed). If you change Stop-Refused or Test-AllowListed deliberately, update these texts in the same commit.
+$pinnedFunctions = @{
+    'Stop-Refused'     = @'
+function Stop-Refused { param([string]$Reason) Write-Host "REFUSED: $Reason Nothing was executed." -ForegroundColor Red exit 1 }
+'@
+    'Test-AllowListed' = @'
+function Test-AllowListed { param([string]$Name, [string]$Path) if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { Stop-Refused "allow-list file '$Path' not found. Copy lab-targets.example.json to lab-targets.json and list your lab VM." } $doc = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json if ($null -eq $doc -or -not ($doc.PSObject.Properties.Name -contains 'targets')) { Stop-Refused "allow-list file '$Path' has no 'targets' list." } foreach ($entry in @($doc.targets)) { if ($entry -is [string] -and $entry.Length -gt 0 -and $entry -eq $Name) { return $true } } return $false }
+'@
+}
+foreach ($pf in $pinnedFunctions.Keys) {
+    $fd = @($functionAsts | Where-Object { $_.Name -ieq $pf }) | Select-Object -First 1
+    if ($fd -and (($fd.Extent.Text -replace '\s+', ' ').Trim()) -cne (($pinnedFunctions[$pf] -replace '\s+', ' ').Trim())) {
+        Add-Problem $fd "function $pf differs from the version pinned in the checker; if the change is intended, update the pinned text in Test-RunnerStatic.ps1 deliberately, in the same commit"
+    }
+}
 foreach ($own in $ownFunctions) {
     if (@($functionAsts | Where-Object { $_.Name -ieq $own }).Count -eq 0) { $problems.Add("missing function $own") }
 }
@@ -277,6 +293,17 @@ foreach ($w in $writes) {
     $name = Get-VarName $w.Var
     if ($name -match ':') { Add-Problem $w.Node "writing to the '$($name.Split(':')[0]):' drive or to a drive-qualified variable is forbidden ('$name')"; continue }
     $key = $name.ToLowerInvariant()
+    $isUseSsl = ($key -eq 'sessionargs' -and $w.Node -is [System.Management.Automation.Language.AssignmentStatementAst] -and $w.Node.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and
+        $w.Node.Left.Member.Extent.Text -eq 'UseSSL' -and $w.Node.Right.Extent.Text.Trim() -eq '$true')
+    # A member or index write (`$x.Prop = ...`, `$x['k'] = ...`, `$x.Prop++`) changes an object that other variables may point to
+    # (`$h = $obj; $h.Prop = ...`), so it is allowed only on the runner's own result record `$exec` (and `.UseSSL = $true`).
+    $viaMember = $false
+    if ($w.Node -is [System.Management.Automation.Language.AssignmentStatementAst]) { $tgt = $w.Node.Left } elseif ($w.Node -is [System.Management.Automation.Language.UnaryExpressionAst]) { $tgt = $w.Node.Child } else { $tgt = $null }
+    if ($tgt -is [System.Management.Automation.Language.MemberExpressionAst] -or $tgt -is [System.Management.Automation.Language.IndexExpressionAst]) { $viaMember = $true }
+    if (-not $w.Direct -and $viaMember -and $key -ne 'exec' -and -not $isUseSsl) {
+        Add-Problem $w.Node "member or index write on `$$name is forbidden; only `$exec (the runner's own result record) and `$sessionArgs.UseSSL = `$true may be modified this way"
+        continue
+    }
     if (-not $protectedMax.ContainsKey($key)) { continue }
     if ($key -eq 'sessionargs' -and -not $w.Direct -and $w.Node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
         $w.Node.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and $w.Node.Left.Member.Extent.Text -eq 'UseSSL' -and $w.Node.Right.Extent.Text.Trim() -eq '$true') { continue }
@@ -298,6 +325,31 @@ foreach ($c in $commandAsts) {
 }
 foreach ($im in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and $n.Expression -is [System.Management.Automation.Language.VariableExpressionAst] -and $n.Expression.VariablePath.UserPath -ieq 'sessionArgs' }, $true)) {
     Add-Problem $im '$sessionArgs must not be changed with a method call'
+}
+# ---- references to the session arguments, and to the marker result, are restricted --------------------------------------
+# `$h = $sessionArgs` would let `$h.ComputerName = ...` retarget the session after the allow-list gate, so $sessionArgs may
+# appear only in: its one literal-hashtable initialisation, `.UseSSL = $true`, and `New-PSSession @sessionArgs`.
+# `$info` (the marker answer) is a mutable object the marker gate reads, so it may appear only as the target of its one
+# assignment and as `$info.Property` reads. Not restricted, on purpose: `$session` (opened after the gates; an alias cannot change
+# where it points), `$Credential` (an immutable PSCredential), `$tests`/`$camp` (JSON data; changing their contents needs a member or
+# index write, which is forbidden above), `$executions`/`$problems` (output lists).
+foreach ($rv in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and ((($n.VariablePath.UserPath) -replace '^(?i)(script|global|local|private|using):', '') -ieq 'sessionArgs') }, $true)) {
+    $par = $rv.Parent
+    $okRef = $false
+    if ($par -is [System.Management.Automation.Language.AssignmentStatementAst] -and $par.Left -eq $rv -and $par.Operator -eq [System.Management.Automation.Language.TokenKind]::Equals -and
+        $par.Right -is [System.Management.Automation.Language.CommandExpressionAst] -and $par.Right.Expression -is [System.Management.Automation.Language.HashtableAst]) { $okRef = $true }
+    elseif ($par -is [System.Management.Automation.Language.MemberExpressionAst] -and $par -isnot [System.Management.Automation.Language.InvokeMemberExpressionAst] -and $par.Expression -eq $rv -and
+        $par.Member.Extent.Text -eq 'UseSSL' -and $par.Parent -is [System.Management.Automation.Language.AssignmentStatementAst] -and $par.Parent.Left -eq $par -and $par.Parent.Right.Extent.Text.Trim() -eq '$true') { $okRef = $true }
+    elseif ($rv.Splatted -and $par -is [System.Management.Automation.Language.CommandAst] -and $par.GetCommandName() -eq 'New-PSSession') { $okRef = $true }
+    if (-not $okRef) { Add-Problem $rv '$sessionArgs may only be initialised (one literal hashtable), have UseSSL set to $true, and be splatted into New-PSSession; any other reference (an alias, a copy, a read, a method call) could retarget the session' }
+}
+foreach ($rv in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and ((($n.VariablePath.UserPath) -replace '^(?i)(script|global|local|private|using):', '') -ieq 'info') }, $true)) {
+    $par = $rv.Parent
+    $okRef = $false
+    if ($par -is [System.Management.Automation.Language.AssignmentStatementAst] -and $par.Left -eq $rv) { $okRef = $true }
+    elseif ($par -is [System.Management.Automation.Language.MemberExpressionAst] -and $par -isnot [System.Management.Automation.Language.InvokeMemberExpressionAst] -and $par.Expression -eq $rv -and
+        -not ($par.Parent -is [System.Management.Automation.Language.AssignmentStatementAst] -and $par.Parent.Left -eq $par)) { $okRef = $true }
+    if (-not $okRef) { Add-Problem $rv '$info (the marker answer) may only be assigned once and read as $info.Property; copying or passing it on could let another variable change what the marker gate sees' }
 }
 # splatting: only New-PSSession @sessionArgs
 foreach ($sv in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and $n.Splatted }, $true)) {
