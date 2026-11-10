@@ -1,7 +1,7 @@
 fastapi>=0.115
 uvicorn[standard]>=0.30
 pyyaml>=6.0
-python-multipart>=0.0.9
+python-multipart>=0.0.33
 pyjwt>=2.8
 defusedxml>=0.7
 regex>=2024.0
