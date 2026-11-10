@@ -50,7 +50,7 @@ def _flag(name: str, default: bool) -> bool:
 
 
 def db_path() -> Path:
-    return Path(os.environ.get("PURPLEBENCH_DB", DATA_DIR / "purplebench.db"))
+    return Path(os.environ.get("PURPLEBENCH_DB") or DATA_DIR / "purplebench.db")
 
 
 def max_upload_bytes() -> int:
@@ -71,20 +71,24 @@ def max_upload_bytes() -> int:
 # -- authentication --------------------------------------------------------------------
 
 def admin_user() -> str:
-    return os.environ.get("PURPLEBENCH_ADMIN_USER", "admin")
+    return os.environ.get("PURPLEBENCH_ADMIN_USER") or "admin"
 
 
 def admin_password_hash() -> str:
-    return os.environ.get("PURPLEBENCH_ADMIN_PASSWORD_HASH", "")
+    return os.environ.get("PURPLEBENCH_ADMIN_PASSWORD_HASH") or ""
 
 
 def secret_key() -> str:
     """Key that signs session tokens. Must be long and random; rotating it logs everyone out."""
-    return os.environ.get("PURPLEBENCH_SECRET_KEY", "")
+    return os.environ.get("PURPLEBENCH_SECRET_KEY") or ""
 
 
 def session_hours() -> float:
-    return float(os.environ.get("PURPLEBENCH_SESSION_HOURS", "8"))
+    try:
+        hours = float(os.environ.get("PURPLEBENCH_SESSION_HOURS") or 8)
+    except ValueError:
+        return 8.0
+    return hours if hours > 0 else 8.0
 
 
 def cookie_secure() -> bool:
