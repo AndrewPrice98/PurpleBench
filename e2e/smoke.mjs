@@ -41,6 +41,7 @@ async function visit(path, name, expectText, shot) {
 
 // -- guest is read-only -------------------------------------------------------------------------------
 const overview = await visit('/', 'overview', ['Recorded mode'], '01-overview')
+check((await page.locator('footer').innerText()).includes('registered trademarks of The MITRE Corporation'), 'footer carries the ATT&CK notice')
 check(/Demo/.test(overview) || /read-only/i.test(overview), 'overview: marked as the demo')
 const campaigns = await visit('/campaigns', 'campaigns', ['Ransomware precursors'], '05-campaigns')
 check(!/New campaign/.test(campaigns), 'guest: no "New campaign" control')
