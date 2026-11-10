@@ -84,7 +84,7 @@ $denyCommands = @('Invoke-Expression', 'iex', 'Invoke-WebRequest', 'iwr', 'Invok
     'Invoke-CimMethod', 'Register-ScheduledTask', 'New-Service', 'Set-Service', 'Stop-Service', 'Format-Volume',
     'Clear-EventLog', 'Remove-EventLog', 'Clear-Disk', 'Initialize-Disk', 'Remove-Partition', 'Stop-Computer',
     'Restart-Computer', 'Remove-Item', 'Set-ItemProperty', 'New-ItemProperty', 'Disable-NetFirewallProfile',
-    'Set-Alias', 'New-Alias', 'sal', 'nal', 'Set-Variable')
+    'Set-Alias', 'New-Alias', 'sal', 'nal', 'Set-Variable', 'New-Variable', 'Clear-Variable', 'Remove-Variable')
 $denyNative = @('powershell', 'powershell.exe', 'pwsh', 'pwsh.exe', 'cmd', 'cmd.exe', 'certutil', 'bitsadmin', 'mshta',
     'rundll32', 'regsvr32', 'reg', 'sc', 'netsh', 'schtasks', 'wevtutil', 'vssadmin', 'bcdedit', 'diskpart', 'cipher',
     'format', 'wmic', 'net', 'net1')
@@ -101,6 +101,8 @@ function Get-CommandCalls($within, [string]$name) {
 function In-List([string[]]$list, [string]$value) { return [bool]($list | Where-Object { $_ -ieq $value }) }
 
 $commandAsts = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true))
+$paramNamesEarly = @()
+if ($ast.ParamBlock) { $paramNamesEarly = @($ast.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath }) }
 
 # ---- Invoke-Command: -Session, -ScriptBlock (a variable assigned once), -ArgumentList only ----------------------------
 $remoteVars = @{}
@@ -214,11 +216,94 @@ foreach ($v in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Lan
 }
 
 # ---- other syntax that is not needed ------------------------------------------------------------------------------
-foreach ($f in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)) {
+$functionAsts = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true))
+foreach ($f in $functionAsts) {
     if (-not (In-List $ownFunctions $f.Name)) { Add-Problem $f "function '$($f.Name)' is not one of the runner's own functions" }
+    if (@($functionAsts | Where-Object { $_.Name -ieq $f.Name }).Count -gt 1) { Add-Problem $f "function '$($f.Name)' is defined more than once (a later definition would replace the checked one)" }
+    if ($f.Parent -isnot [System.Management.Automation.Language.NamedBlockAst] -or $f.Parent.Parent -ne $ast) { Add-Problem $f "function '$($f.Name)' must be defined at the top level of the script, not inside a condition or block" }
+}
+foreach ($own in $ownFunctions) {
+    if (@($functionAsts | Where-Object { $_.Name -ieq $own }).Count -eq 0) { $problems.Add("missing function $own") }
 }
 foreach ($u in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.UsingStatementAst] }, $true)) { Add-Problem $u '"using" statements are forbidden' }
 foreach ($r in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.FileRedirectionAst] }, $true)) { Add-Problem $r 'redirection to a file is forbidden (the run file is written through the checked FileStream only)' }
+
+# ---- variables the gates and remote calls depend on must not be changed -------------------------------------------------
+# name (lower case) -> number of assignments allowed (the one initialisation). Parameters of the runner are all protected
+# (OutFile may be defaulted twice and LabTargetsFile once, as the runner does); so are the gate and remote-call variables.
+$protectedMax = @{}
+foreach ($pn in $paramNamesEarly) { $protectedMax[$pn.ToLowerInvariant()] = 0 }
+$protectedMax['outfile'] = 2
+$protectedMax['labtargetsfile'] = 1
+foreach ($pn in 'sessionArgs', 'info', 'typed', 'tests', 'camp', 'campaignName', 'tech', 'guid', 'markerBlock', 'utcNowBlock', 'runBlock',
+    'cleanupBlock', 'collectBlock', 'TechniquePattern', 'GuidPattern', 'MaxTests', 'ErrorActionPreference') { $protectedMax[$pn.ToLowerInvariant()] = 1 }
+$protectedMax['session'] = 2   # $session = $null, then $session = New-PSSession @sessionArgs
+foreach ($pn in 'WhatIfPreference', 'ConfirmPreference', 'PSDefaultParameterValues', 'ExecutionContext', 'PSCmdlet', 'MyInvocation', 'PSBoundParameters',
+    'PSScriptRoot', 'ErrorView', 'PSModuleAutoLoadingPreference') { $protectedMax[$pn.ToLowerInvariant()] = 0 }
+function Get-VarName($v) {
+    $n = $v.VariablePath.UserPath
+    $n = $n -replace '^(?i)(script|global|local|private|using):', ''
+    return $n
+}
+function Get-TargetVars($t) {
+    # the variables an assignment target writes to: direct ones, and the root of member/index targets
+    if ($t -is [System.Management.Automation.Language.VariableExpressionAst]) { return @([pscustomobject]@{ Var = $t; Direct = $true }) }
+    if ($t -is [System.Management.Automation.Language.MemberExpressionAst] -or $t -is [System.Management.Automation.Language.IndexExpressionAst]) {
+        $root = $t
+        while ($root -is [System.Management.Automation.Language.MemberExpressionAst] -or $root -is [System.Management.Automation.Language.IndexExpressionAst]) {
+            if ($root -is [System.Management.Automation.Language.IndexExpressionAst]) { $root = $root.Target } else { $root = $root.Expression }
+        }
+        if ($root -is [System.Management.Automation.Language.VariableExpressionAst]) { return @([pscustomobject]@{ Var = $root; Direct = $false }) }
+        return @()
+    }
+    if ($t -is [System.Management.Automation.Language.ConvertExpressionAst]) { return @(Get-TargetVars $t.Child) }
+    if ($t -is [System.Management.Automation.Language.ParenExpressionAst]) { return @(Get-TargetVars $t.Pipeline.PipelineElements[0].Expression) }
+    if ($t -is [System.Management.Automation.Language.ArrayLiteralAst]) { $o = @(); foreach ($e in $t.Elements) { $o += @(Get-TargetVars $e) }; return $o }
+    return @()
+}
+$writes = New-Object System.Collections.Generic.List[object]   # @{ Var; Direct; Node }
+foreach ($a in $assignments) { foreach ($tv in @(Get-TargetVars $a.Left)) { $writes.Add([pscustomobject]@{ Var = $tv.Var; Direct = $tv.Direct; Node = $a }) } }
+foreach ($u in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.UnaryExpressionAst] -and $n.TokenKind -in 'PlusPlus', 'PostfixPlusPlus', 'MinusMinus', 'PostfixMinusMinus' }, $true)) {
+    foreach ($tv in @(Get-TargetVars $u.Child)) { $writes.Add([pscustomobject]@{ Var = $tv.Var; Direct = $false; Node = $u }) }
+}
+foreach ($fe in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.ForEachStatementAst] }, $true)) {
+    $writes.Add([pscustomobject]@{ Var = $fe.Variable; Direct = $false; Node = $fe })
+}
+foreach ($rf in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.ConvertExpressionAst] -and $n.Type.TypeName.Name -ieq 'ref' }, $true)) {
+    Add-Problem $rf '[ref] is forbidden (it lets a call write to a variable)'
+}
+$directCount = @{}
+foreach ($w in $writes) {
+    $name = Get-VarName $w.Var
+    if ($name -match ':') { Add-Problem $w.Node "writing to the '$($name.Split(':')[0]):' drive or to a drive-qualified variable is forbidden ('$name')"; continue }
+    $key = $name.ToLowerInvariant()
+    if (-not $protectedMax.ContainsKey($key)) { continue }
+    if ($key -eq 'sessionargs' -and -not $w.Direct -and $w.Node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $w.Node.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and $w.Node.Left.Member.Extent.Text -eq 'UseSSL' -and $w.Node.Right.Extent.Text.Trim() -eq '$true') { continue }
+    if (-not $w.Direct) { Add-Problem $w.Node "`$$name must not be modified (member, index, ++/-- or loop-variable write)"; continue }
+    $directCount[$key] = 1 + [int]$directCount[$key]
+    if ($directCount[$key] -gt $protectedMax[$key]) { Add-Problem $w.Node "`$$name is assigned again; it may only be initialised once (a gate or a remote call depends on it)" }
+}
+foreach ($c in $commandAsts) {
+    $els = @($c.CommandElements)
+    for ($i = 1; $i -lt $els.Count; $i++) {
+        if ($els[$i] -isnot [System.Management.Automation.Language.CommandParameterAst]) { continue }
+        if ($els[$i].ParameterName -notmatch '(?i)^(ev|ov|wv|iv|pv|Er+orV\w*|OutV\w*|WarningV\w*|InformationV\w*|PipelineV\w*)$') { continue }
+        $val = $null
+        if ($els[$i].Argument) { $val = $els[$i].Argument } elseif ($i + 1 -lt $els.Count) { $val = $els[$i + 1] }
+        $vn = ''
+        if ($val -is [System.Management.Automation.Language.StringConstantExpressionAst]) { $vn = $val.Value.TrimStart('+') } elseif ($val) { $vn = $val.Extent.Text.Trim('$') }
+        if ($protectedMax.ContainsKey($vn.ToLowerInvariant()) -or $vn -match ':') { Add-Problem $c "-$($els[$i].ParameterName) must not name the protected variable or drive '$vn'" }
+    }
+}
+foreach ($im in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and $n.Expression -is [System.Management.Automation.Language.VariableExpressionAst] -and $n.Expression.VariablePath.UserPath -ieq 'sessionArgs' }, $true)) {
+    Add-Problem $im '$sessionArgs must not be changed with a method call'
+}
+# splatting: only New-PSSession @sessionArgs
+foreach ($sv in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and $n.Splatted }, $true)) {
+    $okSplat = ($sv.VariablePath.UserPath -eq 'sessionArgs' -and $sv.Parent -is [System.Management.Automation.Language.CommandAst] -and $sv.Parent.GetCommandName() -eq 'New-PSSession')
+    if (-not $okSplat) { Add-Problem $sv "splatting (@$($sv.VariablePath.UserPath)) is forbidden; it can pass parameters this check does not see (only New-PSSession @sessionArgs is allowed)" }
+}
 
 # ---- the session is opened to the named target only -------------------------------------------------------------------
 $sessionCalls = @(Get-CommandCalls $ast 'New-PSSession')
@@ -238,6 +323,14 @@ else {
         foreach ($kv in $ht.KeyValuePairs) { if ($kv.Item1.Extent.Text -ieq 'ComputerName') { $cn = $kv.Item2.Extent.Text } }
     }
     if ($cn -ne '$Target') { $problems.Add('$sessionArgs must set ComputerName = $Target (the one allow-listed target)') }
+    if ($ht -is [System.Management.Automation.Language.HashtableAst]) {
+        $allowedKeys = @{ computername = '$Target'; credential = '$Credential'; erroraction = "'Stop'" }
+        foreach ($kv in $ht.KeyValuePairs) {
+            $k = $kv.Item1.Extent.Text.ToLowerInvariant()
+            if (-not $allowedKeys.ContainsKey($k)) { $problems.Add("`$sessionArgs key '$($kv.Item1.Extent.Text)' is not allowed (only ComputerName, Credential, ErrorAction)") }
+            elseif ($kv.Item2.Extent.Text.Trim() -ne $allowedKeys[$k]) { $problems.Add("`$sessionArgs value for '$($kv.Item1.Extent.Text)' must be $($allowedKeys[$k])") }
+        }
+    } else { $problems.Add('$sessionArgs must be built from a literal hashtable') }
 }
 foreach ($a in $assignments) {
     if ($a.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and $a.Left.Expression.Extent.Text -eq '$sessionArgs' -and $a.Left.Member.Extent.Text -ne 'UseSSL') {
@@ -273,38 +366,57 @@ if (-not $hasShouldProcess) { $problems.Add('[CmdletBinding(SupportsShouldProces
 
 # ---- the gates, structurally ----------------------------------------------------------------------------------------
 $ifs = @($ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.IfStatementAst] }, $true))
-function Get-GateIf([scriptblock]$condition) {
-    # The condition of an if statement that matches, with a clause body that calls Stop-Refused.
+function Norm([string]$t) { return (($t -replace '\s+', ' ').Trim()) }
+function Test-LiveContext($node) {
+    # A gate must not sit in a branch that may never run: no enclosing if/loop/switch/function/catch/script block.
+    $p = $node.Parent
+    while ($p) {
+        if ($p -is [System.Management.Automation.Language.IfStatementAst] -or $p -is [System.Management.Automation.Language.WhileStatementAst] -or
+            $p -is [System.Management.Automation.Language.DoWhileStatementAst] -or $p -is [System.Management.Automation.Language.DoUntilStatementAst] -or
+            $p -is [System.Management.Automation.Language.ForStatementAst] -or $p -is [System.Management.Automation.Language.ForEachStatementAst] -or
+            $p -is [System.Management.Automation.Language.SwitchStatementAst] -or $p -is [System.Management.Automation.Language.FunctionDefinitionAst] -or
+            $p -is [System.Management.Automation.Language.CatchClauseAst] -or $p -is [System.Management.Automation.Language.TrapStatementAst] -or
+            $p -is [System.Management.Automation.Language.ScriptBlockExpressionAst]) { return $false }
+        $p = $p.Parent
+    }
+    return $true
+}
+function Get-GateIf([string]$expected) {
+    # The condition of an if statement whose FIRST clause has exactly this condition, whose body starts with a direct
+    # Stop-Refused call, and which is not inside a conditional branch.
     foreach ($if in $ifs) {
-        foreach ($cl in $if.Clauses) {
-            if ((& $condition $cl.Item1) -and (Get-CommandCalls $cl.Item2 'Stop-Refused').Count -gt 0) { return $cl.Item1 }
-        }
+        $cl = $if.Clauses[0]
+        if ((Norm $cl.Item1.Extent.Text) -ne $expected) { continue }
+        if (-not (Test-LiveContext $if)) { continue }
+        $st = $cl.Item2.Statements | Select-Object -First 1
+        if ($st -is [System.Management.Automation.Language.PipelineAst] -and $st.PipelineElements.Count -eq 1 -and
+            $st.PipelineElements[0] -is [System.Management.Automation.Language.CommandAst] -and $st.PipelineElements[0].GetCommandName() -eq 'Stop-Refused') { return $cl.Item1 }
     }
     return $null
 }
-function Has-Text($expr, [string]$pattern) { return ($expr.Extent.Text -match $pattern) }
 $firstSession = [int]::MaxValue
 if ($sessionCalls.Count -gt 0) { $firstSession = $sessionCalls[0].Extent.StartOffset }
 
 # 1. allow-list: if (-not (Test-AllowListed ...)) { Stop-Refused } before any session
-$gAllow = Get-GateIf { param($x) (Has-Text $x '^\s*-not\s*\(\s*Test-AllowListed\b') -and (Has-Text $x '-Name\s+\$Target\b') }
-if ($null -eq $gAllow) { $problems.Add('missing the allow-list gate: if (-not (Test-AllowListed -Name $Target ...)) { Stop-Refused ... }') }
+$gAllow = Get-GateIf '-not (Test-AllowListed -Name $Target -Path $LabTargetsFile)'
+if ($null -eq $gAllow) { $problems.Add('missing the allow-list gate: if (-not (Test-AllowListed -Name $Target -Path $LabTargetsFile)) { Stop-Refused ... } as an unconditional top-level statement') }
 elseif ($gAllow.Extent.StartOffset -gt $firstSession) { $problems.Add('the allow-list gate must come before New-PSSession') }
 $fnAllow = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Test-AllowListed' }, $true)
 if ($null -eq $fnAllow) { $problems.Add('missing function Test-AllowListed') }
 elseif ($fnAllow.Extent.Text -match '(?i)\s-(like|match|clike|cmatch|notlike|notmatch)\b') { $problems.Add('Test-AllowListed must compare names exactly, not with -like or -match') }
 # 2. -WhatIf is handled before any credential check, never needs a credential and ends the script
-$whatIf = $ifs | Where-Object { $_.Clauses[0].Item1.Extent.Text.Trim() -eq '$WhatIfPreference' } | Select-Object -First 1
-if ($null -eq $whatIf) { $problems.Add('missing the -WhatIf branch (if ($WhatIfPreference) { ... return })') }
+$whatIf = $ifs | Where-Object { (Norm $_.Clauses[0].Item1.Extent.Text) -eq '$WhatIfPreference' -and (Test-LiveContext $_) } | Select-Object -First 1
+if ($null -eq $whatIf) { $problems.Add('missing the -WhatIf branch (if ($WhatIfPreference) { ... return }) as a top-level statement') }
 else {
     $wBody = $whatIf.Clauses[0].Item2
     $returns = @($wBody.FindAll({ param($n) $n -is [System.Management.Automation.Language.ReturnStatementAst] -or $n -is [System.Management.Automation.Language.ExitStatementAst] }, $true))
-    if ($returns.Count -eq 0) { Add-Problem $whatIf 'the -WhatIf branch must end the script (return)' }
+    $lastSt = $wBody.Statements | Select-Object -Last 1
+    if ($returns.Count -eq 0 -or -not ($lastSt -is [System.Management.Automation.Language.ReturnStatementAst])) { Add-Problem $whatIf 'the -WhatIf branch must end the script with a top-level return' }
     if ($wBody.Extent.Text -match '(?i)\$Credential\b|New-PSSession|Invoke-Command|Read-Host|FileStream') { Add-Problem $whatIf 'the -WhatIf branch must not use a credential, open a session, prompt or write a file' }
 }
 # 3. -Credential is refused when missing, after -WhatIf and before the session
-$gCred = Get-GateIf { param($x) (Has-Text $x '^\s*-not\s+\$Credential\s*$') }
-if ($null -eq $gCred) { $problems.Add('missing the refusal when -Credential is not supplied: if (-not $Credential) { Stop-Refused ... }') }
+$gCred = Get-GateIf '-not $Credential'
+if ($null -eq $gCred) { $problems.Add('missing the refusal when -Credential is not supplied: if (-not $Credential) { Stop-Refused ... } as an unconditional top-level statement') }
 else {
     if ($gCred.Extent.StartOffset -gt $firstSession) { $problems.Add('the -Credential check must come before New-PSSession') }
     if ($whatIf -and $gCred.Extent.StartOffset -lt $whatIf.Extent.StartOffset) { $problems.Add('the -WhatIf branch must come before the -Credential check so that -WhatIf works without a credential') }
@@ -325,7 +437,7 @@ else {
     $mb = $remoteByVar['markerBlock']
     if ($null -eq $mb -or $mb.Extent.Text -notmatch 'HKLM:\\SOFTWARE\\PurpleBench' -or $mb.Extent.Text -notmatch "'LabTarget'") { $problems.Add('the marker block must read HKLM:\SOFTWARE\PurpleBench LabTarget') }
 }
-$gMarker = Get-GateIf { param($x) (Has-Text $x '\$info\.Marker\s+-isnot\s+\[int\]') -and (Has-Text $x '\$info\.Marker\s+-ne\s+1\b') }
+$gMarker = Get-GateIf '($info.Marker -isnot [int]) -or ($info.Marker -ne 1)'
 if ($null -eq $gMarker) { $problems.Add('missing the marker gate: if (($info.Marker -isnot [int]) -or ($info.Marker -ne 1)) { Stop-Refused ... }') }
 elseif ($markerCall -and $gMarker.Extent.StartOffset -lt $markerCall.Extent.StartOffset) { $problems.Add('the marker gate must come after the marker check call') }
 # 5. typed confirmation: the Read-Host answer is compared with -cne $Target in an if that calls Stop-Refused
@@ -340,8 +452,7 @@ else {
 }
 $gTyped = $null
 if ($typedVar) {
-    $typedPattern = '^\s*\$' + [regex]::Escape($typedVar) + '\s+-cne\s+\$Target\s*$'
-    $gTyped = Get-GateIf { param($x) (Has-Text $x $typedPattern) }
+    $gTyped = Get-GateIf ('$' + $typedVar + ' -cne $Target')
     if ($null -eq $gTyped) { $problems.Add('missing the typed-confirmation gate: if ($typed -cne $Target) { Stop-Refused ... } (exact, case-sensitive)') }
 }
 # 6. order: allow-list < whatif < credential < session < marker call < marker gate < typed gate < every state-changing remote call

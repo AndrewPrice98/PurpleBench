@@ -64,7 +64,7 @@ Lab mode lets you run the campaign's Atomic Red Team tests on a disposable Windo
 4. A WinRM `-Credential` is supplied (required for every real run; the script exits 1 without it).
 5. Each test is followed by `Invoke-AtomicTest -Cleanup`. Revert the VM snapshot when you are done.
 
-It never downloads anything, never evaluates fetched text and talks WinRM to one target only. CI parses it with the PowerShell AST and applies an **allow-list**: only the commands, .NET calls and parameters the runner needs may appear (native executables, aliases, `&`, dot-sourcing, `-EncodedCommand`, `Invoke-Command -FilePath` and anything else fail), and the gates must be present in the right order. A self-test proves the checker fails. A static check is defence in depth, not a sandbox: read the script before you run it. Setup and details: [lab/README.md](lab/README.md).
+It never downloads anything, never evaluates fetched text and talks WinRM to one target only. CI parses it with the PowerShell AST and applies an **allow-list**: only the commands, .NET calls and parameters the runner needs may appear (native executables, aliases, `&`, dot-sourcing, `-EncodedCommand`, `Invoke-Command -FilePath` and anything else fail), and the gates must be present in the right order. A self-test proves the checker fails. It also guards the runner's structure against edits (no redefined gate functions, no changes to the variables the gates use, no splatting, no environment writes, gates that cannot be skipped). A static check is defence in depth, not a sandbox: read the script before you run it. Setup and details: [lab/README.md](lab/README.md).
 
 ## Datasets and licences
 
@@ -173,7 +173,7 @@ Counts from the last full run on Windows with PowerShell available:
 
 - **Backend: 673 pytest tests passed** (0 skipped locally). The tests that run PowerShell are skipped where neither `powershell` nor `pwsh` is on the PATH, and CI runs pytest with `-rs` so any skip is named in the log.
 - **Frontend: 46 `node --test` unit tests passed**, plus a production build.
-- **PowerShell static safety check**: the runner passes; a self-test of 110 cases (the unchanged runner, 73 appended bypass attempts, 12 inside the remote script blocks, 23 weakened gates, and a fixture file) proves the checker fails on each.
+- **PowerShell static safety check**: the runner passes; a self-test of 175 cases (the unchanged runner, 124 appended bypass attempts, 15 inside the remote script blocks, 34 weakened gates, and a fixture file) proves the checker fails on each.
 - **Browser smoke test** (`e2e/smoke.mjs`, Playwright with Chrome): guest read-only plus one page per area. Run locally; it runs in CI as a non-blocking job.
 - Data checks: `catalog --check`, `docs --check`, `demo --check`.
 

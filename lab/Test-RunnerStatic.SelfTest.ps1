@@ -121,6 +121,61 @@ $added = [ordered]@{
     "Disable-NetFire~wallProfile -Profile Domain"                       = "forbidden command 'Disable-NetFirewallProfile'"
     "'a' > out.txt"                                                     = 'redirection to a file is forbidden'
     "function Evil { 1 }"                                               = "is not one of the runner's own functions"
+    # --- round 2: redefining a gate function, or writing to the function: drive
+    "function Stop-Refused { }"                                         = 'defined more than once'
+    "function Test-AllowListed { `$true }"                              = 'defined more than once'
+    "`${function:Stop-Refused} = { }"                                   = "'function:' drive"
+    "`${function:Test-AllowListed} = { `$true }"                        = "'function:' drive"
+    "Set-Item function:Stop-Refused { }"                                = "forbidden command 'Set-Item'"
+    "if (`$true) { function Stop-Refused { } }"                         = 'must be defined at the top level'
+    # --- round 2: changing variables the gates and remote calls depend on
+    "`$Target = 'other'"                                                = '$Target is assigned again'
+    "`$script:Target = 'other'"                                         = '$Target is assigned again'
+    "`$global:Target = 'other'"                                         = '$Target is assigned again'
+    "[string]`$Target = 'other'"                                        = '$Target is assigned again'
+    "`$Target += 'x'"                                                   = '$Target is assigned again'
+    "`$Target++"                                                        = '$Target must not be modified'
+    "`$a, `$Target = 1, 2"                                              = '$Target is assigned again'
+    "foreach (`$Target in 1) { }"                                       = '$Target must not be modified'
+    "`$Campaign = 'x'"                                                  = '$Campaign is assigned again'
+    "`$Credential = `$null"                                             = '$Credential is assigned again'
+    "`$WhatIfPreference = `$false"                                      = '$WhatIfPreference is assigned again'
+    "`$AtomicsPath = 'C:\x'"                                            = '$AtomicsPath is assigned again'
+    "`$sessionArgs['ComputerName'] = 'other'"                           = '$sessionArgs must not be modified'
+    "`$sessionArgs.ComputerName = 'other'"                              = 'must not be changed'
+    "`$sessionArgs.UseSSL = `$false"                                    = '$sessionArgs must not be modified'
+    "`$sessionArgs.Add('Name', 'x')"                                    = 'method'
+    "`$sessionArgs = @{ ComputerName = 'other' }"                       = '$sessionArgs is assigned again'
+    "`$runBlock = { 1 }"                                                = '$runBlock is assigned again'
+    "`$cleanupBlock = { 1 }"                                            = '$cleanupBlock is assigned again'
+    "`$collectBlock = { 1 }"                                            = '$collectBlock is assigned again'
+    "`$tests = @()"                                                     = '$tests is assigned again'
+    "`$info = `$null"                                                   = '$info is assigned again'
+    "`$typed = `$Target"                                                = '$typed is assigned again'
+    "`$session = `$null"                                                = '$session is assigned again'
+    "`$ErrorActionPreference = 'SilentlyContinue'"                      = '$ErrorActionPreference is assigned again'
+    "`$null = Get-Date -ErrorVariable Target"                           = "must not name the protected variable"
+    "Get-Date -ev Credential"                                           = "must not name the protected variable"
+    "Get-Date -OutVariable sessionArgs"                                 = "must not name the protected variable"
+    "Get-Date -PipelineVariable Target"                                 = "must not name the protected variable"
+    "Get-Date -ErrorVariable env:PSModulePath"                          = "must not name the protected variable"
+    "Set-Var~iable -Name Target -Value 'x'"                             = "forbidden command 'Set-Variable'"
+    "New-Var~iable -Name Target -Value 'x'"                             = "forbidden command 'New-Variable'"
+    "Clear-Var~iable -Name Target"                                      = "forbidden command 'Clear-Variable'"
+    "Remove-Var~iable -Name Target"                                     = "forbidden command 'Remove-Variable'"
+    "`$x = [ref]`$Target"                                               = 'it lets a call write to a variable'
+    # --- round 2: splatting hides parameters from the check
+    "`$h = @{ Get~Prereqs = `$true }`nWrite-Host @h"                    = 'splatting (@h) is forbidden'
+    "Write-Host @PSBoundParameters"                                     = 'splatting'
+    "`$s2 = New-PSSession @sessionArgs"                                 = 'exactly one session'
+    # --- round 2: module hijack through the environment, and default parameter values
+    "`$env:PSModulePath = '\\server\mods'"                              = "'env:' drive"
+    "`${env:PSModulePath} = 'x'"                                        = "'env:' drive"
+    "`$env:Path += ';x'"                                                = "'env:' drive"
+    "`$PSDefaultParameterValues = @{}"                                  = '$PSDefaultParameterValues is assigned again'
+    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'"            = '$PSDefaultParameterValues must not be modified'
+    "Set-Item env:PSModulePath 'x'"                                     = "forbidden command 'Set-Item'"
+    "New-Item env:X"                                                    = "command 'New-Item' is not on the allow-list"
     "`$markerBlock = { 1 }"                                             = 'assigned exactly once'
 }
 foreach ($key in $added.Keys) { $line = $key.Replace('~', ''); Test-Case "add: $line" ($runner + "`n" + $line + "`n") $added[$key] }
@@ -139,6 +194,9 @@ $remote = [ordered]@{
     "Import-Module -Name 'Invoke-AtomicRedTeam' -Force" = 'parameter -Force is not allowed'
     "New-Object System.Net.Web~Client"               = 'New-Object type'
     "`$x = [Reflection.Assembly]::Lo~ad(`$b)"        = "forbidden member 'Load'"
+    "`$env:PSModulePath = '\\server\mods'; Import-Module -Name 'Invoke-AtomicRedTeam' -ErrorAction Stop" = "'env:' drive"
+    "`$h = @{ Get~Prereqs = `$true }; Invoke-AtomicTest T1003.001 @h" = 'splatting'
+    "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'; Import-Module -Name 'Invoke-AtomicRedTeam' -ErrorAction Stop" = '$PSDefaultParameterValues must not be modified'
 }
 foreach ($key in $remote.Keys) {
     $line = $key.Replace('~', '')
@@ -170,6 +228,17 @@ $gates = [ordered]@{
     'session name changed after build' = @('$sessionArgs.UseSSL = $true', '$sessionArgs.ComputerName = $Other', 'must not be changed')
     'no -Session on a remote call'     = @('Invoke-Command -Session $session -ScriptBlock $utcNowBlock', 'Invoke-Command -ScriptBlock $utcNowBlock', 'must use -Session')
     'unknown remote block'             = @('-ScriptBlock $cleanupBlock', '-ScriptBlock $otherBlock', 'otherBlock')
+    'typed refusal in a dead branch'   = @("if (`$typed -cne `$Target) { Stop-Refused ""the typed name did not match '`$Target'."" }", "if (`$typed -cne `$Target) { if (`$false) { Stop-Refused ""the typed name did not match '`$Target'."" } }", 'typed-confirmation gate')
+    'typed refusal not first statement' = @('Stop-Refused "the typed name did not match', "Write-Host 'x'; Stop-Refused ""the typed name did not match", 'typed-confirmation gate')
+    'typed condition made never true'  = @('if ($typed -cne $Target) {', 'if (($typed -cne $Target) -and $false) {', 'typed-confirmation gate')
+    'credential gate in a dead branch' = @("if (-not `$Credential) { Stop-Refused ""a real run needs -Credential (a lab account on '`$Target')."" }", "if (`$false) { if (-not `$Credential) { Stop-Refused ""a real run needs -Credential (a lab account on '`$Target')."" } }", 'refusal when -Credential')
+    'credential condition never true'  = @('if (-not $Credential) {', 'if ((-not $Credential) -and $false) {', 'refusal when -Credential')
+    'marker condition never true'      = @('if (($info.Marker -isnot [int]) -or ($info.Marker -ne 1)) {', 'if ((($info.Marker -isnot [int]) -or ($info.Marker -ne 1)) -and $false) {', 'marker gate')
+    'marker refusal not first statement' = @('Stop-Refused "the registry marker', "Write-Host 'x'; Stop-Refused ""the registry marker", 'marker gate')
+    'allow-list condition never true'  = @('if (-not (Test-AllowListed -Name $Target -Path $LabTargetsFile)) {', 'if ((-not (Test-AllowListed -Name $Target -Path $LabTargetsFile)) -and $false) {', 'allow-list gate')
+    'allow-list refusal not first statement' = @('Stop-Refused "target', "Write-Host 'x'; Stop-Refused ""target", 'allow-list gate')
+    'session args with an extra key'   = @("ErrorAction = 'Stop' }", "ErrorAction = 'Stop'; Name = 'x' }", "key 'Name' is not allowed")
+    'session args credential replaced' = @('Credential = $Credential;', 'Credential = $null;', 'value for')
     'New-Object type changed'          = @('System.Text.UTF8Encoding', 'System.Net.Web~Client', 'New-Object type')
 }
 foreach ($name in $gates.Keys) {
