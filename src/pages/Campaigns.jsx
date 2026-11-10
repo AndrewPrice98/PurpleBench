@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { api, downloads } from '../api.js'
 import { ATOMIC_URL, GITHUB_URL, attackUrl, formatDate, formatScore, plural } from '../lib.js'
 import {
-  LAB_TARGET_EXAMPLE, campaignFileName, campaignProblems, groupLibrary, runnerCommands,
+  LAB_TARGET_EXAMPLE, campaignFileName, campaignProblems, groupLibrary, runnerCommands, writeErrorMessage,
 } from '../model.js'
 import {
   Empty, ErrorState, ExternalLink, Icon, Loading, ModeChip, TacticTag, useAsync, usePageTitle, useSession,
@@ -250,8 +250,10 @@ export function CampaignNew() {
       const c = await api.createCampaign({ name: name.trim(), description: description.trim(), techniques: picked })
       navigate(`/campaigns/${c.id}`)
     } catch (err) {
-      setSubmitError(err.status === 409 ? 'A campaign with this name already exists. Choose another name.'
-        : err.status === 403 ? 'Only an admin can create campaigns.' : err.message)
+      setSubmitError(writeErrorMessage(err, {
+        forbidden: 'Only an admin can create campaigns.',
+        conflict: 'A campaign with this name already exists. Choose another name.',
+      }))
       setBusy(false)
     }
   }

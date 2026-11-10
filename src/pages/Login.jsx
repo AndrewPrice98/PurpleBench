@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api.js'
+import { writeErrorMessage } from '../model.js'
 import { MISSED_MEANING } from '../lib.js'
 import { BrandMark, usePageTitle } from '../components/ui.jsx'
 
@@ -19,7 +20,7 @@ export default function Login({ onLogin, notice, onCancel }) {
       setPassword('')
       await onLogin()
     } catch (err) {
-      setError(err.status === 429 ? 'Too many failed attempts. Wait a few minutes and try again.' : err.message)
+      setError(err.status === 429 ? 'Too many failed attempts. Wait a few minutes and try again.' : writeErrorMessage(err))
       setBusy(false)
     }
   }

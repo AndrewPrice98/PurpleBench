@@ -4,7 +4,7 @@ import {
   STATUS, STATUS_ORDER, closingRules, countEntries, filterExecutions, firstLink, formatClock, formatDate,
   formatDateTime, formatOffset, formatScore, formatTtd, gaugeArc, linePath, linePoints, pickStartHere, scale,
   splitLinks, splitRuleRefs, tacticLabel, tacticsOf, timelineModel, tsMs, eventName, summaryField, attackUrl,
-  gapText, matchTotal, timelineLabel,
+  gapText, matchPaging, matchTotal, timelineLabel,
 } from './lib.js'
 
 test('every status has a label, glyph, tone and help text', () => {
@@ -211,4 +211,35 @@ test('event names, summary fields and ATT&CK links', () => {
   assert.equal(attackUrl('T1003.001'), 'https://attack.mitre.org/techniques/T1003/001/')
   assert.equal(attackUrl('T1105'), 'https://attack.mitre.org/techniques/T1105/')
   assert.equal(attackUrl('javascript:alert(1)'), null)
+})
+
+test('matched-event pager: a selected rule uses the server total and bounds Next by it', () => {
+  const hits = [{ rule: { id: 'a' }, count: 3 }, { rule: { id: 'b' }, count: 44 }]
+  const events = { items: [{}, {}], total: 3, total_is_lower_bound: false, has_more: true }
+  const p = matchPaging(events, hits, 'a', 0, 2)
+  assert.equal(p.total, 3)
+  assert.equal(p.range, 'Matches 1\u20132 of 3')
+  assert.equal(p.hasNext, true)
+  const last = matchPaging({ items: [{}], total: 3, total_is_lower_bound: false, has_more: true }, hits, 'a', 1, 2)
+  assert.equal(last.range, 'Matches 3\u20133 of 3')
+  assert.equal(last.hasNext, false) // the total wins over a stale has_more
+  assert.equal(last.hasPrev, true)
+  assert.equal(matchPaging({ items: [{}], total: 5 }, hits, 'a', 0, 2).total, 5) // server total beats the rule count
+})
+
+test('matched-event pager: with no rule selected N is the union, never the sum of per-rule counts', () => {
+  const hits = [{ rule: { id: 'a' }, count: 3 }, { rule: { id: 'b' }, count: 44 }]
+  const p = matchPaging({ items: [{}, {}], total: 45, total_is_lower_bound: false, has_more: true }, hits, '', 0, 2)
+  assert.equal(p.total, 45)
+  assert.match(p.unionNote, /^45 events matched by at least one rule/)
+  assert.match(p.unionNote, /not the sum/)
+  const lb = matchPaging({ items: [{}, {}], total: 20, total_is_lower_bound: true, has_more: true }, hits, '', 0, 2)
+  assert.equal(lb.range, 'Matches 1\u20132 of at least 20')
+  assert.match(lb.unionNote, /^At least 20 events/)
+  assert.equal(lb.hasNext, true) // a lower bound cannot end the list; has_more decides
+  assert.equal(matchPaging({ items: [{}], total: 20, total_is_lower_bound: true, has_more: false }, hits, '', 9, 2).hasNext, false)
+  const old = matchPaging({ items: [{}], has_more: false }, hits, '', 0, 2) // an old response without a total
+  assert.equal(old.total, null)
+  assert.equal(old.range, 'Matches 1\u20131 (end)')
+  assert.equal(old.unionNote, null)
 })

@@ -399,6 +399,29 @@ export function matchTotal(hits, ruleId = '') {
   return list.length === 1 ? list[0].count ?? null : null
 }
 
+/**
+ * What the matched-events pager shows. The server's `total` (distinct events passing the filters; an event that
+ * several rules matched counts once) is preferred. Without it, a selected rule's own count is used; the
+ * per-rule counts are never summed. `lowerBound` is true when the server only counted what it scanned.
+ * Next/Previous are bounded by the total when it is exact, and by `has_more` otherwise.
+ */
+export function matchPaging(events, hits, ruleId, page, perPage) {
+  const items = events?.items?.length || 0
+  const offset = page * perPage
+  const serverTotal = Number.isFinite(events?.total) ? events.total : null
+  const total = serverTotal ?? matchTotal(hits, ruleId)
+  const lowerBound = serverTotal != null && !!events?.total_is_lower_bound
+  const exact = total != null && !lowerBound
+  const first = items ? offset + 1 : 0
+  const last = offset + items
+  const hasNext = exact ? last < total : !!events?.has_more
+  const atLeast = lowerBound ? 'at least ' : ''
+  const range = `Matches ${first}\u2013${last}${total != null ? ` of ${atLeast}${total}` : (events?.has_more ? '' : ' (end)')}`
+  const unionNote = total == null ? null
+    : `${lowerBound ? 'At least ' : ''}${total} ${total === 1 ? 'event' : 'events'} matched by at least one rule (an event matched by several rules counts once, so this is not the sum of the per-rule counts).`
+  return { total, lowerBound, first, last, hasNext, hasPrev: page > 0, range, unionNote }
+}
+
 /** Fields that best describe an event, most telling first. */
 export const KEY_FIELDS = [
   'CommandLine', 'Image', 'NewProcessName', 'ParentImage', 'ParentProcessName', 'ParentCommandLine',

@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, downloads } from '../api.js'
 import { STATUS, STATUS_ORDER, formatScore, plural } from '../lib.js'
-import { diffCoverage, matrixColumns, previousRun, scoreDelta, statusCounts } from '../model.js'
+import { diffCoverage, matrixColumns, previousRun, runDownloadName, scoreDelta, statusCounts } from '../model.js'
 import {
   Empty, ErrorState, ExternalLink, Icon, Loading, StatusChip, useAsync, usePageTitle,
 } from '../components/ui.jsx'
@@ -216,7 +216,7 @@ export default function Coverage() {
             onChange={(v) => set('compare', v)} extra={<option value="none">No comparison</option>} />
         </div>
         <div className="toolbar-actions">
-          <DownloadLink href={downloads.navigator(runId)} fileName={`purplebench-run-${runId}-navigator.json`}>
+          <DownloadLink href={downloads.navigator(runId)} fileName={runDownloadName.navigator(runId)}>
             Navigator layer (JSON)
           </DownloadLink>
           <p className="small muted">

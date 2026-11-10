@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import {
   NOT_TESTED, STATUS, TTD_LABEL, attackUrl, eventName, firstLink, formatClock, formatDateTime, formatOffset,
-  formatTtd, matchTotal, plural, summaryField, KEY_FIELDS, timelineModel, tsMs,
+  formatTtd, matchPaging, plural, summaryField, KEY_FIELDS, timelineModel, tsMs,
 } from '../lib.js'
 import { clampSegments, highlightPlan, highlightSegments, parseDetection } from '../sigma.js'
 import {
@@ -265,11 +265,9 @@ function MatchedEvents({ ex, detections, catalog, order }) {
   }, signal), [ex.id, page, ruleFilter])
   const events = data?.events
   const items = events?.items || []
-  const total = matchTotal(ex.hits, ruleFilter)
+  const paging = matchPaging(events, ex.hits, ruleFilter, page, MATCHES_PER_PAGE)
   const hitsById = new Map(ex.hits.map((h) => [h.rule.id, h.rule]))
   const ruleOptions = [...ex.hits].sort((a, b) => (order.get(a.rule.id) ?? 99) - (order.get(b.rule.id) ?? 99))
-  const first = page * MATCHES_PER_PAGE + 1
-  const last = page * MATCHES_PER_PAGE + items.length
   const selected = ruleFilter ? ex.hits.find((h) => h.rule.id === ruleFilter) : null
   return (
     <section className="matched" aria-labelledby="matched-title">
@@ -293,9 +291,9 @@ function MatchedEvents({ ex, detections, catalog, order }) {
         </div>
       )}
       <p className="small" role="status">
-        {total != null
-          ? `${plural(total, 'matching event')}${selected ? ` for ${selected.rule.title} (${selected.rule.author || 'author unknown'})` : ''}.`
-          : `Events that any of the ${ex.hits.length} rules matched; each rule's count is in the list above.`}
+        {selected
+          ? `${paging.lowerBound ? 'At least ' : ''}${plural(paging.total ?? selected.count, 'matching event')} for ${selected.rule.title} (${selected.rule.author || 'author unknown'}).`
+          : (paging.unionNote || `Events that any of the ${ex.hits.length} rules matched; each rule's count is in the list above.`)}
       </p>
       {error && <ErrorState error={error} onRetry={reload} />}
       {loading && !data && <Loading label="Loading matching events…" />}
@@ -307,15 +305,13 @@ function MatchedEvents({ ex, detections, catalog, order }) {
             hitsById={hitsById} catalog={catalog} />
         ))}
       </div>
-      {events?.available && (page > 0 || events.has_more) && (
+      {events?.available && (paging.hasPrev || paging.hasNext) && (
         <div className="pager">
           <button type="button" className="btn secondary small" aria-disabled={page === 0 || loading}
             onClick={() => page > 0 && !loading && setPage(page - 1)}>Previous</button>
-          <span>
-            Matches {items.length ? first : 0}–{last}{total != null ? ` of ${total}` : (events.has_more ? '' : ' (end)')}
-          </span>
-          <button type="button" className="btn secondary small" aria-disabled={!events.has_more || loading}
-            onClick={() => events.has_more && !loading && setPage(page + 1)}>Next</button>
+          <span>{paging.range}</span>
+          <button type="button" className="btn secondary small" aria-disabled={!paging.hasNext || loading}
+            onClick={() => paging.hasNext && !loading && setPage(page + 1)}>Next</button>
         </div>
       )}
     </section>

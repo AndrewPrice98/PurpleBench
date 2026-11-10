@@ -202,12 +202,16 @@ async def last_resort(request: Request, exc: Exception):
     return JSONResponse({"detail": "Internal server error"}, status_code=500, headers=SECURITY_HEADERS)
 
 
-def get_conn() -> Iterator[sqlite3.Connection]:
+def _open_conn() -> sqlite3.Connection:
     try:
-        conn = db.connect()
+        return db.connect()
     except (sqlite3.Error, OSError):
         log.exception("Could not open the database")
         raise HTTPException(503, "The database is not available") from None
+
+
+def get_conn() -> Iterator[sqlite3.Connection]:
+    conn = _open_conn()
     if config.demo_mode():
         if _seed_unavailable():
             conn.close()
@@ -216,7 +220,7 @@ def get_conn() -> Iterator[sqlite3.Connection]:
             conn.close()
             if not _try_seed():
                 raise HTTPException(503, "Demo data is not available yet")
-            conn = db.connect()
+            conn = _open_conn()
     try:
         yield conn
     finally:
@@ -517,6 +521,7 @@ def campaign(campaign_id: str, conn: Conn):
     c = _campaign_or_404(conn, campaign_id)
     stats = _all_run_stats(conn)
     return {"id": c["id"], "name": c["name"], "description": c["description"],
+            "download_filename": _campaign_filename(c),
             "techniques": _campaign_techniques(c["techniques"]),
             "runs": [{"id": r["id"], "started_at": r["started_at"], "mode": r["mode"],
                       "ruleset_version": r["ruleset_version"],
@@ -526,6 +531,11 @@ def campaign(campaign_id: str, conn: Conn):
 
 def _slug(text: str) -> str:
     return (re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40].strip("-")) or "campaign"
+
+
+def _campaign_filename(c) -> str:
+    """The name of the campaign file download; the one definition, also sent to the frontend."""
+    return f"purplebench-campaign-{c['id']}-{_slug(c['name'])}.json"
 
 
 def _attachment(body: bytes | str, media_type: str, filename: str) -> Response:
@@ -547,7 +557,7 @@ def campaign_export(campaign_id: str, conn: Conn):
             tests.append({"technique_id": tech.attack_id, "test_guid": t["test_guid"]})
     payload = {"format": "purplebench-campaign", "version": 1, "name": c["name"], "tests": tests}
     return _attachment(json.dumps(payload, indent=2) + "\n", "application/json",
-                       f"purplebench-campaign-{c['id']}-{_slug(c['name'])}.json")
+                       _campaign_filename(c))
 
 
 class CampaignBody(BaseModel):
@@ -754,7 +764,7 @@ def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: 
     lose an event. Filters (matched only, one rule) apply before paging.
 
     With a filter the whole file is scanned, so ``total`` (distinct events passing the filters; an event matched
-    by several rules counts once) and ``skipped_lines`` are exact. Without a filter the scan stops once the
+    by several rules counts once) is exact; ``skipped_lines`` counts the unusable lines that pass the filter. Without a filter the scan stops once the
     page and one more event are found: ``total`` and ``skipped_lines`` then only count what was scanned
     (``total_is_lower_bound``), because counting every line of a large lab file on each page would be costly.
     """
@@ -821,9 +831,10 @@ def execution(execution_id: str, conn: Conn,
     events: dict[str, Any] = {"source": run["mode"], "items": [], "offset": offset, "limit": limit,
                               "has_more": False, "available": False, "note": None, "skipped_lines": 0,
                               "total": 0, "total_is_lower_bound": False,
-                              "skipped_lines_note": "Lines left out because they were not usable events. Exact "
-                                                    "when a filter is used; otherwise a lower bound (only the "
-                                                    "lines scanned so far are counted)."}
+                              "skipped_lines_note": "Lines left out because they were not usable events. With a "
+                                                    "filter, counts the unusable lines that pass the filter; "
+                                                    "otherwise a lower bound (only the lines scanned so far "
+                                                    "are counted)."}
     path = _events_path(run["mode"], ex["events_ref"]) if ex["events_ref"] else None
     if path is None or not path.is_file():
         events["note"] = "The events for this execution are not available."
@@ -910,6 +921,7 @@ def rules_list(conn: Conn, run: Annotated[str | None, Query(max_length=9)] = Non
 
 _UUID = re.compile(r"^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
 MAX_RULE_BYTES = 256 * 1024
+RULE_HITS_LIMIT = 500
 
 
 @protected.get("/api/rules/{rule_id}")
@@ -927,14 +939,16 @@ def rule_detail(rule_id: str, conn: Conn):
     rule = _rules_by_id().get(cat["id"])
     hits = [dict(h) for h in conn.execute(
         "SELECT e.run_id, h.execution_id, e.technique_id, h.count, h.relation, h.noisy FROM hits h "
-        "JOIN executions e ON e.id = h.execution_id WHERE h.rule_id = ? ORDER BY e.run_id, e.id LIMIT 500",
-        (cat["id"],))]
+        "JOIN executions e ON e.id = h.execution_id WHERE h.rule_id = ? ORDER BY e.run_id, e.id LIMIT ?",
+        (cat["id"], RULE_HITS_LIMIT))]
+    hits_total = conn.execute("SELECT COUNT(*) FROM hits WHERE rule_id = ?", (cat["id"],)).fetchone()[0]
     return {**rule_obj(cat["id"]), "yaml": text, "description": rule.description if rule else None,
             "references": list(rule.references) if rule else [],
             "falsepositives": list(rule.falsepositives) if rule else [],
             "sigma_status": rule.sigma_status if rule else None, "date": rule.date if rule else None,
             "modified": rule.modified if rule else None, "logsource": rule.logsource if rule else {},
-            "licence_notice": rulesets.DRL_URL, "hits": hits}
+            "licence_notice": rulesets.DRL_URL, "hits": hits,
+            "hits_total": hits_total, "hits_capped": hits_total > len(hits)}
 
 
 # -- gaps --------------------------------------------------------------------------------------------

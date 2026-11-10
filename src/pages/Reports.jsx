@@ -4,7 +4,7 @@ import {
   ATOMIC_URL, ATTACK_DATA_URL, DRL_URL, MISSED_MEANING, NOT_TESTED, SIGMAHQ_URL, STATUS, TTD_LABEL, countEntries,
   formatDate, formatDateTime, formatScore, formatTtd, gapText, plural,
 } from '../lib.js'
-import { diffCoverage, previousRun, scoreDelta } from '../model.js'
+import { diffCoverage, previousRun, runDownloadName, scoreDelta } from '../model.js'
 import {
   ErrorState, ExternalLink, Icon, LinkedText, Loading, ModeChip, RuleName, RuleText, StatusChip, useAsync,
   usePageTitle,
@@ -27,11 +27,11 @@ async function load(runParam, signal) {
 function Downloads({ runId }) {
   return (
     <div className="download-row">
-      <DownloadLink href={downloads.reportHtml(runId)} fileName={`purplebench-run-${runId}-report.html`} className="btn primary">
+      <DownloadLink href={downloads.reportHtml(runId)} fileName={runDownloadName.reportHtml(runId)} className="btn primary">
         HTML report
       </DownloadLink>
-      <DownloadLink href={downloads.reportMd(runId)} fileName={`purplebench-run-${runId}-report.md`}>Markdown report</DownloadLink>
-      <DownloadLink href={downloads.navigator(runId)} fileName={`purplebench-run-${runId}-navigator.json`}>Navigator layer</DownloadLink>
+      <DownloadLink href={downloads.reportMd(runId)} fileName={runDownloadName.reportMd(runId)}>Markdown report</DownloadLink>
+      <DownloadLink href={downloads.navigator(runId)} fileName={runDownloadName.navigator(runId)}>Navigator layer</DownloadLink>
     </div>
   )
 }
@@ -249,9 +249,9 @@ export default function Reports() {
                 <td data-label="Mode"><ModeChip mode={r.mode} /></td>
                 <td data-label="Coverage">{formatScore(r.score)}</td>
                 <td data-label="Downloads" className="dl-cell">
-                  <a href={downloads.reportHtml(r.id)} download={`purplebench-run-${r.id}-report.html`}>HTML<span className="sr-only"> report for run {r.id}</span></a>
-                  <a href={downloads.reportMd(r.id)} download={`purplebench-run-${r.id}-report.md`}>Markdown<span className="sr-only"> report for run {r.id}</span></a>
-                  <a href={downloads.navigator(r.id)} download={`purplebench-run-${r.id}-navigator.json`}>Navigator<span className="sr-only"> layer for run {r.id}</span></a>
+                  <a href={downloads.reportHtml(r.id)} download={runDownloadName.reportHtml(r.id)}>HTML<span className="sr-only"> report for run {r.id}</span></a>
+                  <a href={downloads.reportMd(r.id)} download={runDownloadName.reportMd(r.id)}>Markdown<span className="sr-only"> report for run {r.id}</span></a>
+                  <a href={downloads.navigator(r.id)} download={runDownloadName.navigator(r.id)}>Navigator<span className="sr-only"> layer for run {r.id}</span></a>
                 </td>
               </tr>
             ))}

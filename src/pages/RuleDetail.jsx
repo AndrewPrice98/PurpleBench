@@ -7,7 +7,6 @@ import {
 } from '../components/ui.jsx'
 import { SourceLabel, SupportChip } from './Rules.jsx'
 
-const HIT_LIMIT = 500 // the API lists at most this many executions per rule
 
 async function load(ruleId, signal) {
   const [rule, runs, library] = await Promise.all([
@@ -52,7 +51,7 @@ function WhereFired({ rule, runs, techniques }) {
   }
   return (
     <>
-      {rule.hits.length >= HIT_LIMIT && <p className="small muted" role="note">Showing the first {HIT_LIMIT} executions.</p>}
+      {rule.hits_capped && <p className="small muted" role="note">Showing the first {rule.hits.length} of {rule.hits_total} executions.</p>}
       <ul className="fired-runs">
         {groups.map(({ runId, hits }) => {
           const run = runById.get(runId)

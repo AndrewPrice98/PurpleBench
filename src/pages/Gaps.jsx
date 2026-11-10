@@ -2,7 +2,7 @@ import { useId, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { GAP_KIND, plural } from '../lib.js'
-import { GAP_STATES, gapDirty, gapPatch } from '../model.js'
+import { GAP_STATES, gapDirty, gapPatch, writeErrorMessage } from '../model.js'
 import {
   Empty, ErrorState, Icon, Loading, RuleText, StatusChip, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
@@ -34,7 +34,7 @@ function GapEditor({ gap, onSaved, onCancel }) {
       const updated = await api.patchGap(gap.id, gapPatch(gap, draft))
       onSaved(updated)
     } catch (err) {
-      setError(err.status === 403 ? 'Only an admin can edit gaps.' : err.message)
+      setError(writeErrorMessage(err, { forbidden: 'Only an admin can edit gaps.' }))
       setBusy(false)
     }
   }

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   TACTICS_V20, campaignFileName, campaignProblems, diffCoverage, filterRules, gapDirty, gapPatch, groupLibrary,
-  hitsByRun, matrixColumns, previousRun, runnerCommands, scoreDelta, slugify, statusCounts, techCompare,
+  hitsByRun, matrixColumns, previousRun, runnerCommands, scoreDelta, writeErrorMessage, runDownloadName, statusCounts, techCompare,
   uploadMessage, uploadProblem, validateLayer,
 } from './model.js'
 
@@ -139,12 +139,10 @@ test('gap edits: dirty only when something changed; patch carries only the chang
   assert.deepEqual(gapPatch(gap, { status: 'closed', notes: '' }), { status: 'closed', notes: '' })
 })
 
-test('campaign file names match the API and runner commands use them', () => {
-  assert.equal(slugify('Initial access to credential theft'), 'initial-access-to-credential-theft')
-  assert.equal(slugify('  ***  '), 'campaign')
-  assert.equal(slugify('A'.repeat(39) + ' b c'), `${'a'.repeat(39)}`)
-  assert.equal(campaignFileName({ id: 3, name: 'Lab smoke test!' }), 'purplebench-campaign-3-lab-smoke-test.json')
-  const cmd = runnerCommands({ id: 3, name: 'Lab smoke test' })
+test('campaign file name comes from the server; runner commands use it', () => {
+  const c = { id: 3, name: 'Lab smoke test!', download_filename: 'purplebench-campaign-3-lab-smoke-test.json' }
+  assert.equal(campaignFileName(c), c.download_filename)
+  const cmd = runnerCommands(c)
   assert.equal(cmd.rehearse, '.\\Invoke-PurpleBenchRun.ps1 -Target LAB-WS01 -Campaign .\\purplebench-campaign-3-lab-smoke-test.json -WhatIf')
   assert.match(cmd.run, /-Credential \(Get-Credential\)$/)
   assert.ok(!/WhatIf/.test(cmd.run))
@@ -199,4 +197,20 @@ test('Navigator layer validation matches the layer 4.5 fields', () => {
   assert.ok(validateLayer({ ...good, techniques: [{ ...good.techniques[0], color: 'blue' }] }).some((e) => /color/.test(e)))
   assert.ok(validateLayer({ ...good, domain: 'x' }).some((e) => /domain/.test(e)))
   assert.ok(validateLayer({ ...good, gradient: { colors: [] } }).some((e) => /gradient/.test(e)))
+})
+
+test('run download names come from one helper', () => {
+  assert.equal(runDownloadName.reportHtml(7), 'purplebench-run-7-report.html')
+  assert.equal(runDownloadName.reportMd(7), 'purplebench-run-7-report.md')
+  assert.equal(runDownloadName.navigator(7), 'purplebench-run-7-navigator.json')
+})
+
+test('write errors: 503 and network failures get friendly text, never the raw message', () => {
+  const raw = 'Demo data is not available yet'
+  assert.match(writeErrorMessage({ status: 503, message: raw }), /temporarily unavailable/)
+  assert.ok(!writeErrorMessage({ status: 503, message: raw }).includes(raw))
+  assert.match(writeErrorMessage({ status: 0, message: 'Cannot reach the PurpleBench API.' }), /Cannot reach the PurpleBench server/)
+  assert.equal(writeErrorMessage({ status: 403 }, { forbidden: 'Only an admin can edit gaps.' }), 'Only an admin can edit gaps.')
+  assert.match(writeErrorMessage({ status: 409 }, { conflict: 'Name taken.' }), /Name taken/)
+  assert.match(writeErrorMessage({ status: 500, message: 'Internal server error' }), /nothing was saved/)
 })

@@ -586,3 +586,41 @@ def test_database_open_failure_is_503(seeded_db, monkeypatch):
         _login(c)
         r = c.get("/api/runs")
     assert r.status_code == 503 and r.json() == {"detail": "The database is not available"}
+
+
+def test_database_open_failure_after_cold_seed_is_503(seeded_db, monkeypatch):
+    """The reconnect after a cold-start seeding is covered by the same 503 handling."""
+    import sqlite3
+    real = db.connect
+    state = {"n": 0}
+
+    def flaky(*a, **k):
+        state["n"] += 1
+        if state["n"] == 1:
+            conn = real(*a, **k)
+            conn.execute("DELETE FROM campaigns")  # looks like a cold database
+            conn.commit()
+            return conn
+        raise sqlite3.OperationalError("unable to open database file")
+    monkeypatch.setenv("PURPLEBENCH_DEMO", "1")
+    monkeypatch.setattr(db, "connect", flaky)
+    monkeypatch.setattr(demo, "ensure_seeded", lambda: None)
+    monkeypatch.setattr(api, "_seed_failed_until", 0.0)
+    r = TestClient(api.app).get("/api/overview")
+    assert r.status_code == 503 and r.json() == {"detail": "The database is not available"}
+
+
+def test_campaign_download_filename_and_rule_hits_cap(admin):
+    c = admin.get("/api/campaigns/1").json()
+    exp = admin.get("/api/campaigns/1/export.json")
+    assert c["download_filename"] in exp.headers["content-disposition"]
+    rid = next(r["id"] for r in admin.get("/api/rules").json()["rules"] if r["executions_fired"])
+    d = admin.get(f"/api/rules/{rid}").json()
+    assert d["hits_total"] >= len(d["hits"]) and d["hits_capped"] is (d["hits_total"] > len(d["hits"]))
+    import purplebench.api as api_mod
+    api_mod.RULE_HITS_LIMIT = 1
+    try:
+        d1 = admin.get(f"/api/rules/{rid}").json()
+    finally:
+        api_mod.RULE_HITS_LIMIT = 500
+    assert len(d1["hits"]) == 1 and d1["hits_capped"] == (d1["hits_total"] > 1)

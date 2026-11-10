@@ -185,16 +185,9 @@ export function gapPatch(gap, draft) {
 
 export const LAB_TARGET_EXAMPLE = 'LAB-WS01'
 
-/** The server's slug for download names: lower-case, runs of other characters to "-", at most 40. */
-export function slugify(text) {
-  const s = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
-    .slice(0, 40).replace(/^-+|-+$/g, '')
-  return s || 'campaign'
-}
-
-/** The file name the campaign export downloads as (matches the API's Content-Disposition). */
+/** The file name the campaign export downloads as: chosen by the server (GET /campaigns/{id}), never rebuilt here. */
 export function campaignFileName(campaign) {
-  return `purplebench-campaign-${campaign.id}-${slugify(campaign.name)}.json`
+  return campaign?.download_filename || 'purplebench-campaign.json'
 }
 
 /**
@@ -241,6 +234,33 @@ export function groupLibrary(techniques, q = '') {
     .map(([tactic, list]) => ({ tactic, name: tacticLabel(tactic), techniques: list.sort((a, b) => techCompare(a.id, b.id)) }))
 }
 
+// -- download names and write errors ---------------------------------------------------------------
+
+/** File names of a run's downloads (one place, so the links and the page text agree). */
+export const runDownloadName = {
+  reportHtml: (runId) => `purplebench-run-${runId}-report.html`,
+  reportMd: (runId) => `purplebench-run-${runId}-report.md`,
+  navigator: (runId) => `purplebench-run-${runId}-navigator.json`,
+}
+
+/**
+ * A friendly message for a failed write (create a campaign, edit a gap, ...). A 503 or a network error says
+ * what happened in plain words instead of the raw error text.
+ */
+export function writeErrorMessage(err, { forbidden = 'Only an admin can do that.', conflict } = {}) {
+  switch (err?.status) {
+    case 0: return 'Cannot reach the PurpleBench server. Check your connection and try again.'
+    case 503: return 'The service is temporarily unavailable (the demo may be restarting). Nothing was saved; try again in a moment.'
+    case 429: return 'Too many requests. Wait a minute and try again.'
+    case 401: return 'Your session has expired. Sign in again and retry.'
+    case 403: return forbidden
+    case 409: return conflict || 'That conflicts with something that already exists.'
+    case 413: return 'The request was too large.'
+    case 400: case 422: return err.message || 'The server refused the request.'
+    default: return 'Something went wrong and nothing was saved. Try again.'
+  }
+}
+
 // -- uploads ---------------------------------------------------------------------------------------
 
 /** A clear message for a failed run upload, from the API status and detail. */
@@ -252,7 +272,8 @@ export function uploadMessage(err, maxMb) {
     case 401: return 'Your session has expired. Sign in again and retry.'
     case 403: return 'Only an admin can upload runs. Sign in as the admin.'
     case 400: case 422: return `The run file was refused: ${detail}`
-    case 0: return detail
+    case 0: return 'Cannot reach the PurpleBench server. Check your connection and try again.'
+    case 503: return 'The service is temporarily unavailable (the demo may be restarting). Nothing was uploaded; try again in a moment.'
     default: return `The upload failed: ${detail}`
   }
 }
