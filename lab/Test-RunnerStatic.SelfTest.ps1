@@ -66,7 +66,7 @@ $added = [ordered]@{
     "Remove-Item -Recurse `$somePath"                                   = "forbidden command 'Remove-Item'"
     "& `$cmd"                                                           = 'dynamic invocation'
     "Invoke-Command -ComputerName other -ScriptBlock { 1 }"             = 'parameter -ComputerName is not allowed'
-    # --- bypasses found in review: aliases and Start-Process
+    # --- aliases and Start-Process
     "start notepad"                                                     = "forbidden command 'start'"
     "saps notepad"                                                      = "forbidden command 'saps'"
     "Start-Pro~cess notepad"                                            = "forbidden command 'Start-Process'"
@@ -121,14 +121,14 @@ $added = [ordered]@{
     "Disable-NetFire~wallProfile -Profile Domain"                       = "forbidden command 'Disable-NetFirewallProfile'"
     "'a' > out.txt"                                                     = 'redirection to a file is forbidden'
     "function Evil { 1 }"                                               = "is not one of the runner's own functions"
-    # --- round 2: redefining a gate function, or writing to the function: drive
+    # --- redefining a gate function, or writing to the function: drive
     "function Stop-Refused { }"                                         = 'defined more than once'
     "function Test-AllowListed { `$true }"                              = 'defined more than once'
     "`${function:Stop-Refused} = { }"                                   = "'function:' drive"
     "`${function:Test-AllowListed} = { `$true }"                        = "'function:' drive"
     "Set-Item function:Stop-Refused { }"                                = "forbidden command 'Set-Item'"
     "if (`$true) { function Stop-Refused { } }"                         = 'must be defined at the top level'
-    # --- round 2: changing variables the gates and remote calls depend on
+    # --- changing variables the gates and remote calls depend on
     "`$Target = 'other'"                                                = '$Target is assigned again'
     "`$script:Target = 'other'"                                         = '$Target is assigned again'
     "`$global:Target = 'other'"                                         = '$Target is assigned again'
@@ -164,11 +164,11 @@ $added = [ordered]@{
     "Clear-Var~iable -Name Target"                                      = "forbidden command 'Clear-Variable'"
     "Remove-Var~iable -Name Target"                                     = "forbidden command 'Remove-Variable'"
     "`$x = [ref]`$Target"                                               = 'it lets a call write to a variable'
-    # --- round 2: splatting hides parameters from the check
+    # --- splatting hides parameters from the check
     "`$h = @{ Get~Prereqs = `$true }`nWrite-Host @h"                    = 'splatting (@h) is forbidden'
     "Write-Host @PSBoundParameters"                                     = 'splatting'
     "`$s2 = New-PSSession @sessionArgs"                                 = 'exactly one session'
-    # --- round 2: module hijack through the environment, and default parameter values
+    # --- module hijack through the environment, and default parameter values
     "`$env:PSModulePath = '\\server\mods'"                              = "'env:' drive"
     "`${env:PSModulePath} = 'x'"                                        = "'env:' drive"
     "`$env:Path += ';x'"                                                = "'env:' drive"
@@ -176,7 +176,7 @@ $added = [ordered]@{
     "`$PSDefaultParameterValues['Import-Module:Name'] = 'x'"            = 'member or index write on $PSDefaultParameterValues is forbidden'
     "Set-Item env:PSModulePath 'x'"                                     = "forbidden command 'Set-Item'"
     "New-Item env:X"                                                    = "command 'New-Item' is not on the allow-list"
-    # --- round 3: aliasing the session arguments or the marker answer
+    # --- aliasing the session arguments or the marker answer
     "`$h = `$sessionArgs"                                               = '$sessionArgs may only be initialised'
     "`$h = `$sessionArgs`n`$h.ComputerName = 'other'"                   = '$sessionArgs may only be initialised'
     "`$h = `$sessionArgs`n`$h['ComputerName'] = 'other'"                = 'member or index write on $h is forbidden'
@@ -194,6 +194,21 @@ $added = [ordered]@{
     "`$tests[0].technique_id = 'T9999'"                                 = 'member or index write on $tests is forbidden'
     "`$camp.tests = @()"                                                = 'member or index write on $camp is forbidden'
     "`$markerBlock = { 1 }"                                             = 'assigned exactly once'
+    # --- the result record: only its own literal may be assigned to it, and nothing may alias it
+    "`$exec = `$tests[1]"                                               = '$exec may only be assigned from its own'
+    "`$exec = `$tests[1]`n`$exec.test_guid = 'x'"                       = '$exec may only be assigned from its own'
+    "`$exec += 1"                                                       = '$exec may only be assigned from its own'
+    "`$exec, `$other = 1, 2"                                            = '$exec may only be assigned from its own'
+    "[object]`$exec = `$camp"                                           = '$exec may only be assigned from its own'
+    "`$exec = [ordered]@{ technique_id = 'x' }"                         = '$exec is assigned again'
+    "foreach (`$exec in `$tests) { `$exec.test_guid = 'x' }"            = '$exec must not be modified'
+    "for (`$exec = 0; `$exec -lt 1; `$exec++) { }"                      = '$exec may only be assigned from its own'
+    "`$exec++"                                                          = '$exec must not be modified'
+    "Get-Date -OutVariable exec"                                        = 'must not name the protected variable'
+    "Get-Date -ErrorVariable exec"                                      = 'must not name the protected variable'
+    "Get-Date -ov exec"                                                 = 'must not name the protected variable'
+    "`$h = `$exec`n`$h.technique_id = 'T9999'"                          = 'member or index write on $h is forbidden'
+    "`$h = `$exec`n`$h['test_guid'] = 'x'"                              = 'member or index write on $h is forbidden'
 }
 foreach ($key in $added.Keys) { $line = $key.Replace('~', ''); Test-Case "add: $line" ($runner + "`n" + $line + "`n") $added[$key] }
 

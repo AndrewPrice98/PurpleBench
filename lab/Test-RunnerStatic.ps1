@@ -254,6 +254,7 @@ $protectedMax['labtargetsfile'] = 1
 foreach ($pn in 'sessionArgs', 'info', 'typed', 'tests', 'camp', 'campaignName', 'tech', 'guid', 'markerBlock', 'utcNowBlock', 'runBlock',
     'cleanupBlock', 'collectBlock', 'TechniquePattern', 'GuidPattern', 'MaxTests', 'ErrorActionPreference') { $protectedMax[$pn.ToLowerInvariant()] = 1 }
 $protectedMax['session'] = 2   # $session = $null, then $session = New-PSSession @sessionArgs
+$protectedMax['exec'] = 1      # $exec = [ordered]@{ ... } (the one literal), plus member writes; see the check below
 foreach ($pn in 'WhatIfPreference', 'ConfirmPreference', 'PSDefaultParameterValues', 'ExecutionContext', 'PSCmdlet', 'MyInvocation', 'PSBoundParameters',
     'PSScriptRoot', 'ErrorView', 'PSModuleAutoLoadingPreference') { $protectedMax[$pn.ToLowerInvariant()] = 0 }
 function Get-VarName($v) {
@@ -307,7 +308,18 @@ foreach ($w in $writes) {
     if (-not $protectedMax.ContainsKey($key)) { continue }
     if ($key -eq 'sessionargs' -and -not $w.Direct -and $w.Node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
         $w.Node.Left -is [System.Management.Automation.Language.MemberExpressionAst] -and $w.Node.Left.Member.Extent.Text -eq 'UseSSL' -and $w.Node.Right.Extent.Text.Trim() -eq '$true') { continue }
+    if ($key -eq 'exec' -and $viaMember) { continue }   # `$exec.Prop = ...`: the runner fills its own result record
     if (-not $w.Direct) { Add-Problem $w.Node "`$$name must not be modified (member, index, ++/-- or loop-variable write)"; continue }
+    if ($key -eq 'exec') {
+        # The runner's result record carries the technique and test GUID that reach Invoke-AtomicTest, so `$exec` may be assigned
+        # only from its own `[ordered]@{ ... }` literal; `$exec = $tests[1]` or a loop variable would make it an alias of validated data.
+        $nd = $w.Node
+        $okExec = ($nd -is [System.Management.Automation.Language.AssignmentStatementAst]) -and ($nd.Left -is [System.Management.Automation.Language.VariableExpressionAst]) -and
+            ($nd.Operator -eq [System.Management.Automation.Language.TokenKind]::Equals) -and ($nd.Right -is [System.Management.Automation.Language.CommandExpressionAst]) -and
+            ($nd.Right.Expression -is [System.Management.Automation.Language.ConvertExpressionAst]) -and ($nd.Right.Expression.Type.TypeName.Name -ieq 'ordered') -and
+            ($nd.Right.Expression.Child -is [System.Management.Automation.Language.HashtableAst])
+        if (-not $okExec) { Add-Problem $w.Node "`$exec may only be assigned from its own [ordered]@{ ... } literal (an alias of other data could change the technique or test GUID that is run)"; continue }
+    }
     $directCount[$key] = 1 + [int]$directCount[$key]
     if ($directCount[$key] -gt $protectedMax[$key]) { Add-Problem $w.Node "`$$name is assigned again; it may only be initialised once (a gate or a remote call depends on it)" }
 }
@@ -332,7 +344,7 @@ foreach ($im in $ast.FindAll({ param($n) $n -is [System.Management.Automation.La
 # `$info` (the marker answer) is a mutable object the marker gate reads, so it may appear only as the target of its one
 # assignment and as `$info.Property` reads. Not restricted, on purpose: `$session` (opened after the gates; an alias cannot change
 # where it points), `$Credential` (an immutable PSCredential), `$tests`/`$camp` (JSON data; changing their contents needs a member or
-# index write, which is forbidden above), `$executions`/`$problems` (output lists).
+# index write, which is forbidden above), `$executions`/`$problems` (output lists). `$exec` is restricted above.
 foreach ($rv in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] -and ((($n.VariablePath.UserPath) -replace '^(?i)(script|global|local|private|using):', '') -ieq 'sessionArgs') }, $true)) {
     $par = $rv.Parent
     $okRef = $false
