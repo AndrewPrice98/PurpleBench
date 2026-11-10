@@ -14,7 +14,7 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 - Licence: Apache License 2.0. https://raw.githubusercontent.com/splunk/attack_data/master/LICENSE
 - Use: trimmed, normalised subsets of selected Windows Sysmon event logs (the events in each test window plus a benign lead-in baseline), committed under `backend/data/telemetry/`. The Apache-2.0 text (`LICENSE-Apache-2.0.txt`), a trimming notice (`NOTICE.md`) and, per file in `manifest.json`, the original dataset path, URL, commit, author and window derivation accompany them. Dataset authors are named in each upstream `.yml` manifest and copied into the manifest.
 - Upstream NOTICE: the repository has no `NOTICE` file at the pinned commit (full tree checked), so none is carried; `NOTICE.md` in the telemetry folder is PurpleBench's own modification notice.
-- Fallback (not used): OTRF Security-Datasets, https://github.com/OTRF/Security-Datasets, MIT `LICENSE` file but a conflicting "GPL-3.0" line in its README, so it is not committed unless clarified.
+- **Not used: OTRF Security-Datasets** (https://github.com/OTRF/Security-Datasets). Licence conflict: the `LICENSE` file is MIT but the README also states GPL-3.0, so no OTRF data is committed or used unless the project clarifies it.
 
 ## SigmaHQ rules
 
@@ -29,3 +29,7 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 - Sigma Rules Specification 2.1.0, https://github.com/SigmaHQ/sigma-specification (public domain). Implemented independently; no code is copied.
 - MITRE ATT&CK Enterprise v20 (data release 20.1), https://github.com/mitre-attack/attack-stix-data. ATT&CK is (c) The MITRE Corporation; use is subject to the ATT&CK Terms of Use at https://attack.mitre.org/resources/legal-and-branding/terms-of-use/ (not fetched in this task; confirm before publishing the catalog).
 - ATT&CK Navigator layer format 4.5, https://github.com/mitre-attack/attack-navigator (Apache-2.0).
+
+## Development tools (not shipped)
+
+- Playwright 1.61.0 (`e2e/`, Apache-2.0) drives the installed Chrome for the browser smoke test; a dev dependency of `e2e/` only.

@@ -246,3 +246,18 @@ def test_out_file_folder_checked_before_any_connection():
     i = CODE.index("-PathType Container")
     assert i < CODE.index("New-PSSession")
     assert CODE.index("Test-Path -LiteralPath $OutFile") < CODE.index("New-PSSession")
+
+
+@pytest.mark.skipif(shutil.which("powershell") is None and shutil.which("pwsh") is None, reason="needs PowerShell")
+def test_static_checker_self_test_proves_it_can_fail():
+    """Test-RunnerStatic.SelfTest.ps1 mutates the runner text in memory (forbidden commands, removed gates)
+    and requires the checker to fail on every mutation, and to pass on the unchanged runner."""
+    ps = shutil.which("pwsh") or shutil.which("powershell")
+    res = subprocess.run([ps, "-NoProfile", "-File", str(LAB / "Test-RunnerStatic.SelfTest.ps1")],
+                         capture_output=True, text=True, timeout=300)
+    assert res.returncode == 0, res.stdout + res.stderr
+    assert "self-test passed" in res.stdout
+    fixture = LAB / "selftest" / "forbidden-command.fixture.ps1"
+    bad = subprocess.run([ps, "-NoProfile", "-File", str(LAB / "Test-RunnerStatic.ps1"), "-Path", str(fixture)],
+                         capture_output=True, text=True, timeout=120)
+    assert bad.returncode != 0 and "Invoke-Expression" in (bad.stdout + bad.stderr)

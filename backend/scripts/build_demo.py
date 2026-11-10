@@ -245,10 +245,10 @@ def render() -> str:
     return json.dumps(build(), indent=1, ensure_ascii=False) + "\n"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="fail if the committed fixture is stale")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     text = render()
     if args.check:
         current = OUT.read_text(encoding="utf-8").replace("\r\n", "\n") if OUT.exists() else ""

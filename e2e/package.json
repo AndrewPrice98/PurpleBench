@@ -1,0 +1,13 @@
+{
+  "name": "purplebench-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser smoke test for the PurpleBench demo. Uses the installed Chrome, so no browser download.",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.0"
+  }
+}
