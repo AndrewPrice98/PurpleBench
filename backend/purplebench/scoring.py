@@ -26,6 +26,9 @@ library alias table when a rule is loaded, so ``attack.t1562.001`` already reads
 ``untested``
     the execution has no usable recording (for example the dataset holds no execution of the
     technique). Untested executions are excluded from coverage denominators.
+``did_not_run``
+    lab mode: the test did not run (failed, prerequisites missing, skipped) or its event collection failed.
+    Never scored and never "missed"; excluded from coverage denominators like ``untested``.
 
 Time to detect (TTD) is the first matching event's timestamp minus the execution start (the anchor:
 the first event of the executed command, not the window start, which is 30 s earlier). It is clamped at

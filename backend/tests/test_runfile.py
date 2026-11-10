@@ -145,7 +145,7 @@ def test_truncated_collection_is_flagged_in_reason(seeded_db, good, conn):
     good["executions"][0]["truncated"] = True
     rid = runfile.import_run(conn, _raw(good))
     ex = db.list_executions(conn, rid)[0]
-    assert "may be incomplete" in ex["reason"]
+    assert "later events were not collected" in ex["reason"]
 
 
 def test_coverage_excludes_did_not_run():
@@ -298,9 +298,44 @@ def _with_event(good, **fields):
     return d
 
 
-def test_one_megabyte_command_line_rejected(good):
-    d = _with_event(good, CommandLine="A" * 1_000_000)
-    with pytest.raises(RunFileError, match="longer"):
+def test_one_megabyte_command_line_event_is_skipped_not_the_file(good, recorded):
+    d = copy.deepcopy(good)
+    d["executions"][0]["events_xml"].append(to_xml(_ev(fields={"CommandLine": "A" * 1_000_000})))
+    d["executions"][0]["events_xml"].append(to_xml(_ev(fields={"Details": "B" * (runfile.MAX_FIELD_VALUE + 1)})))
+    out = runfile.validate(_raw(d))
+    ex = out["executions"][0]
+    assert ex["skipped_oversize"] == 2
+    assert len(ex["events"]) == len(good["executions"][0]["events_xml"])  # the normal events survive
+
+
+def test_field_at_the_limit_is_kept(good):
+    d = _with_event(good, Details="x" * runfile.MAX_FIELD_VALUE)
+    ex = runfile.validate(_raw(d))["executions"][0]
+    assert ex["skipped_oversize"] == 0 and len(ex["events"]) == 1
+
+
+def test_skipped_and_dropped_events_are_flagged_in_the_stored_reason(seeded_db, good, conn):
+    good["executions"][0]["events_xml"].append(to_xml(_ev(fields={"Details": "B" * 70_000})))
+    good["executions"][0]["dropped_oversize"] = 3
+    good["executions"][0]["truncated"] = True
+    rid = runfile.import_run(conn, _raw(good))
+    reason = db.list_executions(conn, rid)[0]["reason"]
+    assert "4 event(s) over the size limit were left out (3 by the runner, 1 on import)" in reason
+    assert "collection hit its cap" in reason and "later events were not collected" in reason
+
+
+def test_dropped_oversize_must_be_a_count(good):
+    for bad in (-1, True, "3", 1.5):
+        d = copy.deepcopy(good)
+        d["executions"][0]["dropped_oversize"] = bad
+        with pytest.raises(RunFileError, match="dropped_oversize"):
+            runfile.validate(_raw(d))
+
+
+def test_unicode_digits_are_not_ascii_digits(good):
+    d = copy.deepcopy(good)
+    d["executions"][0]["technique_id"] = "T١٢٣٤"
+    with pytest.raises(RunFileError, match="ATT&CK"):
         runfile.validate(_raw(d))
 
 
@@ -311,10 +346,10 @@ def test_nul_byte_rejected(good):
         runfile.validate(_raw(d))
 
 
-def test_too_many_fields_rejected(good):
+def test_too_many_fields_event_is_skipped(good):
     d = _with_event(good, **{f"f{i}": "x" for i in range(runfile.MAX_FIELDS_PER_EVENT + 1)})
-    with pytest.raises(RunFileError, match="fields"):
-        runfile.validate(_raw(d))
+    ex = runfile.validate(_raw(d))["executions"][0]
+    assert ex["skipped_oversize"] == 1 and ex["events"] == []
 
 
 def test_deep_nesting_rejected_without_recursion_error():

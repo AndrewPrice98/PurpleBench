@@ -94,8 +94,10 @@ if (-not $LabTargetsFile) {
 $PreSeconds = 5      # collect from start - 5 s (clock skew tolerance)
 $PostSeconds = 120   # collect until end + 120 s
 $MaxTests = 500
-$MaxEventXmlChars = 400000
-$TechniquePattern = '^T\d{4}(\.\d{3})?\z'
+$MaxEventXmlChars = 60000      # an event whose XML is longer is dropped and counted (the importer limits one field to 65,536)
+$MaxRunFileBytes = 33554432    # 32 MB: the importer refuses a larger file
+$WarnRunFileBytes = 26214400   # warn at about 80% of the cap while collecting
+$TechniquePattern = '^T[0-9]{4}(\.[0-9]{3})?\z'
 $GuidPattern = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\z'
 $inv = [System.Globalization.CultureInfo]::InvariantCulture
 $rt = [System.Globalization.DateTimeStyles]::RoundtripKind
@@ -155,6 +157,10 @@ if (-not $OutFile) {
     $OutFile = Join-Path (Get-Location).Path "purplebench-run-$Target-$stamp.json"
 }
 $OutFile = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutFile)
+$outDir = Split-Path -Parent $OutFile
+if (-not $outDir -or -not (Test-Path -LiteralPath $outDir -PathType Container)) {
+    Stop-Refused "the folder for the run file ('$outDir') does not exist."
+}
 
 # --- -WhatIf: show the plan, execute nothing, contact nothing ---------------------------------------------
 if ($WhatIfPreference) {
@@ -241,6 +247,7 @@ $collectBlock = {
     $from = [DateTime]::Parse($FromIso, $ci, $style).ToLocalTime()
     $to = [DateTime]::Parse($ToIso, $ci, $style).ToLocalTime()
     $truncated = $false
+    $dropped = 0
     $problems = New-Object System.Collections.Generic.List[string]
     foreach ($log in @('Microsoft-Windows-Sysmon/Operational', 'Security')) {
         $events = @()
@@ -255,11 +262,11 @@ $collectBlock = {
         if ($events.Count -ge $MaxEvents) { $truncated = $true }
         foreach ($e in $events) {
             $xml = [string]$e.ToXml()
-            if ($xml.Length -gt $MaxChars) { $truncated = $true; continue }
+            if ($xml.Length -gt $MaxChars) { $dropped++; continue }
             $xml
         }
     }
-    [pscustomobject]@{ Truncated = $truncated; CollectionError = ($problems -join '; ') }
+    [pscustomobject]@{ Truncated = $truncated; Dropped = $dropped; CollectionError = ($problems -join '; ') }
 }
 
 # --- 1b. connect, then check the on-target marker (read-only) -----------------------------------------------
@@ -300,6 +307,7 @@ try {
 
     # --- 3. tests ---------------------------------------------------------------------------------------------
     $n = 0
+    $approxBytes = 0
     $aborted = $null
     $lastUtc = Invoke-Command -Session $session -ScriptBlock $utcNowBlock
     foreach ($t in $tests) {
@@ -308,7 +316,7 @@ try {
         $guid = [string]$t.test_guid
         $exec = [ordered]@{
             technique_id = $tech; test_guid = $guid.ToLowerInvariant(); started_at = ''; ended_at = ''
-            run_status = 'skipped'; error = ''; collection_error = ''; truncated = $false; events_xml = @()
+            run_status = 'skipped'; error = ''; collection_error = ''; truncated = $false; dropped_oversize = 0; events_xml = @()
         }
         if ($aborted) {
             $exec.started_at = ConvertTo-IsoUtc (Get-RoundtripDate $lastUtc)
@@ -358,6 +366,7 @@ try {
                     }
                     else {
                         $exec.truncated = [bool]$summary.Truncated
+                        $exec.dropped_oversize = [int]$summary.Dropped
                         $exec.collection_error = [string]$summary.CollectionError
                     }
                 }
@@ -365,6 +374,9 @@ try {
                     $exec.events_xml = @()
                     $exec.collection_error = $_.Exception.Message
                 }
+                foreach ($x in $exec.events_xml) { $approxBytes += $x.Length + 4 }
+                if ($approxBytes -gt $WarnRunFileBytes) { Write-Warning "The run file is about $([int]($approxBytes / 1048576)) MB so far; the importer refuses files over 32 MB. Split the campaign into smaller runs." }
+                if ($exec.dropped_oversize -gt 0) { Write-Warning "$($exec.dropped_oversize) event(s) for $tech were over $MaxEventXmlChars characters and were left out." }
                 if ($exec.truncated) { Write-Warning "Event collection for $tech reached its cap; the events may be incomplete." }
                 if ($exec.collection_error) { Write-Warning "Event collection for $tech failed: $($exec.collection_error)" }
             }
@@ -402,6 +414,7 @@ finally {
         $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($json)
         $fs = New-Object System.IO.FileStream($OutFile, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None)
         try { $fs.Write($bytes, 0, $bytes.Length) } finally { $fs.Dispose() }
+        if ($bytes.Length -gt $MaxRunFileBytes) { Write-Warning "The run file is $([int]($bytes.Length / 1048576)) MB, over the importer's 32 MB cap. Split the campaign into smaller runs." }
         Write-Host "Run file written: $OutFile ($($executions.Count) execution(s)). Import it in PurpleBench, then revert the lab VM to its snapshot."
     }
 }

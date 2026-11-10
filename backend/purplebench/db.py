@@ -107,6 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_gaps_run          ON gaps(run_id);
 CREATE INDEX IF NOT EXISTS idx_ruleset_rules_set ON ruleset_rules(ruleset_id);
 """
 
+SCHEMA_VERSION = 2  # 2: executions.status also allows 'did_not_run'
 BUSY_TIMEOUT_SECONDS = 15.0
 GAP_KINDS = ("missed", "telemetry_gap", "partial")
 
@@ -131,8 +132,44 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     _use_wal(conn)
+    _migrate(conn)
     conn.executescript(SCHEMA)
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Bring a database created by an older version up to date, keeping its rows.
+
+    Version 2 widened the CHECK on ``executions.status`` (SQLite cannot alter a CHECK in place, so the
+    table is rebuilt: create new, copy, drop old, rename; child tables keep pointing at the name).
+    """
+    def stale() -> bool:
+        row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'executions'").fetchone()
+        return row is not None and "did_not_run" not in row[0]
+
+    if not stale():
+        return
+    conn.execute("PRAGMA foreign_keys = OFF")  # cannot change inside a transaction
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            if stale():  # another process may have migrated while we waited for the lock
+                ddl = SCHEMA[SCHEMA.index("CREATE TABLE IF NOT EXISTS executions"):]
+                ddl = ddl[:ddl.index(");") + 2].replace("CREATE TABLE IF NOT EXISTS executions",
+                                                         "CREATE TABLE executions_new", 1)
+                conn.execute("DROP TABLE IF EXISTS executions_new")
+                conn.execute(ddl)
+                cols = "id, run_id, technique_id, test_guid, started_at, ended_at, status, ttd_ms, events_ref, reason"
+                conn.execute(f"INSERT INTO executions_new ({cols}) SELECT {cols} FROM executions")
+                conn.execute("DROP TABLE executions")
+                conn.execute("ALTER TABLE executions_new RENAME TO executions")
+            conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
+    finally:
+        conn.execute("PRAGMA foreign_keys = ON")
 
 
 def _use_wal(conn: sqlite3.Connection) -> None:

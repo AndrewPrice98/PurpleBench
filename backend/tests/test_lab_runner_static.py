@@ -219,3 +219,30 @@ def test_allow_list_missing_file_or_key_is_refused(tmp_path):
         res = subprocess.run([ps, "-NoProfile", "-File", str(LAB / "Test-AllowList.ps1"), "-Name", "LAB-WS01",
                               "-Path", str(f)], capture_output=True, text=True, timeout=120)
         assert res.stdout.strip().startswith("REFUSED"), (content, res.stdout, res.stderr)
+
+
+BS = chr(92)
+
+
+def test_patterns_use_ascii_digit_classes():
+    assert "[0-9]{4}" in CODE
+    for line in re.findall(r"(?:ValidatePattern\('[^\n]*|Pattern = '[^\n]*)", CODE):
+        assert BS + "d" not in line, line
+
+
+def test_oversize_events_are_dropped_and_counted_not_truncated():
+    assert "$MaxEventXmlChars = 60000" in CODE
+    assert "$dropped++" in CODE and "dropped_oversize" in CODE and "Dropped = $dropped" in CODE
+    # the old behaviour (flagging an oversize event as truncation) is gone
+    assert not re.search(r"Length -gt \$MaxChars\) \{ \$truncated", CODE)
+
+
+def test_output_size_is_tracked_against_the_importer_cap():
+    assert "$MaxRunFileBytes = 33554432" in CODE and "$WarnRunFileBytes" in CODE
+    assert CODE.count("importer") >= 2
+
+
+def test_out_file_folder_checked_before_any_connection():
+    i = CODE.index("-PathType Container")
+    assert i < CODE.index("New-PSSession")
+    assert CODE.index("Test-Path -LiteralPath $OutFile") < CODE.index("New-PSSession")

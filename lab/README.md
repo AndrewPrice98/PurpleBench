@@ -29,6 +29,8 @@ text is kept), `prereqs_missing` (checked first with `-CheckPrereqs`; the wordin
 verified against a real install, so check the first run) or `skipped` (the run was aborted). A test that did not run
 is imported as **did not run**, with the reason, and is excluded from the coverage score like an untested
 technique. It is never counted as a miss. The same goes for a test whose event collection failed.
+`failed` is conservative: the test is left out of the score even if it partly ran (its error text is shown, and
+its events are still stored for you to read).
 
 ## Lab setup
 
@@ -120,13 +122,17 @@ Use a machine that holds nothing you care about. Do not join it to a domain or a
 ## Run file and import
 
 The run file is `purplebench-run` **version 2**: per execution `technique_id`, `test_guid`, `started_at`,
-`ended_at`, `run_status`, `error`, `collection_error`, `truncated` and `events_xml`. Events are shipped as the
+`ended_at`, `run_status`, `error`, `collection_error`, `truncated`, `dropped_oversize` and `events_xml`. Events are shipped as the
 `Event.ToXml()` text Windows produces and normalised only on import by the project's one event parser (defusedxml,
 DTDs refused), with all timestamps in the invariant culture.
 
 `backend/purplebench/runfile.py` validates the file before storing anything: size cap (32 MB), JSON nesting depth,
 schema (unknown keys are refused), timestamps, GUID and technique id formats, event and field counts, string
-lengths (a 1 MB command line is rejected, not truncated), no NUL or control characters in names. Lab runs are scored with the newest rule set unless one is chosen.
+lengths, no NUL or control characters in names. An **event with an over-limit field** (for example a 1 MB command
+line, or a field over 65,536 characters) is left out and counted, not truncated and not a reason to refuse the
+file; the runner already drops events whose XML exceeds 60,000 characters (`dropped_oversize`). Both counts are
+shown in the execution's reason, and a capped collection (`truncated`) is worded separately. The 32 MB file cap is
+the importer's; the runner warns when its output approaches it (split the campaign if it does). Lab runs are scored with the newest rule set unless one is chosen.
 Two deliberate differences from recorded mode, written into every lab run's notes: no benign baseline is
 collected, so **rule noise is not measured**; and the telemetry profile is the events of the run itself, so a rule
 whose event type never occurred in the lab reads as a telemetry gap. Because there is no baseline, the collected

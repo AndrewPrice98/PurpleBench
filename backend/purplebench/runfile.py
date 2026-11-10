@@ -12,7 +12,7 @@ File format (``format = "purplebench-run"``, ``version = 2``)::
      "executions": [{"technique_id": "T1003.001", "test_guid": "<guid>|null",
                      "started_at": "...", "ended_at": "...",
                      "run_status": "ran|failed|prereqs_missing|skipped", "error": "...",
-                     "collection_error": "...", "truncated": false,
+                     "collection_error": "...", "truncated": false, "dropped_oversize": 0,
                      "events_xml": ["<Event ...>...</Event>", ...]}]}
 
 Events are shipped exactly as Windows renders them (``Event.ToXml()``) and normalised here by
@@ -59,15 +59,19 @@ MAX_DEPTH = 6  # run file > executions > execution > events_xml > string (+ marg
 RUN_STATUSES = ("ran", "failed", "prereqs_missing", "skipped")
 _TOP_KEYS = {"format", "version", "mode", "target", "started_at", "campaign", "executions"}
 _EXEC_KEYS = {"technique_id", "test_guid", "started_at", "ended_at", "run_status", "error", "collection_error",
-              "truncated", "events_xml"}
+              "truncated", "dropped_oversize", "events_xml"}
 
-_TECH = re.compile(r"T\d{4}(\.\d{3})?")
-_HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,254}")
-_GUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+_TECH = re.compile(r"T[0-9]{4}(\.[0-9]{3})?", re.ASCII)
+_HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,254}", re.ASCII)
+_GUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", re.ASCII)
 
 
 class RunFileError(ValueError):
     """The run file is not acceptable. The message says why and is safe to show to the user."""
+
+
+class _Oversize(RunFileError):
+    """One event is over a size limit: the event is skipped and counted, the file is still accepted."""
 
 
 def _depth_ok(raw: bytes) -> bool:
@@ -132,7 +136,7 @@ def _event(xml: Any, where: str) -> dict[str, Any]:
     if not isinstance(xml, str):
         raise RunFileError(f"{where}: event is not a string of event XML")
     if len(xml) > MAX_EVENT_XML_CHARS:
-        raise RunFileError(f"{where}: event XML is longer than {MAX_EVENT_XML_CHARS} characters")
+        raise _Oversize(f"{where}: event XML is longer than {MAX_EVENT_XML_CHARS} characters")
     if "\x00" in xml:
         raise RunFileError(f"{where}: event contains a NUL byte")
     try:
@@ -140,15 +144,15 @@ def _event(xml: Any, where: str) -> dict[str, Any]:
     except TelemetryError as exc:
         raise RunFileError(f"{where}: {exc}") from exc
     if len(ev["fields"]) > MAX_FIELDS_PER_EVENT:
-        raise RunFileError(f"{where}: more than {MAX_FIELDS_PER_EVENT} fields")
+        raise _Oversize(f"{where}: more than {MAX_FIELDS_PER_EVENT} fields")
     for k, v in ev["fields"].items():
         if len(k) > MAX_FIELD_NAME:
-            raise RunFileError(f"{where}: field name is longer than {MAX_FIELD_NAME} characters")
+            raise _Oversize(f"{where}: field name is longer than {MAX_FIELD_NAME} characters")
         if len(v) > MAX_FIELD_VALUE:
-            raise RunFileError(f"{where}: field {k!r} is longer than {MAX_FIELD_VALUE} characters")
+            raise _Oversize(f"{where}: field {k!r} is longer than {MAX_FIELD_VALUE} characters")
     for key in ("channel", "host"):
         if len(ev[key]) > MAX_SHORT:
-            raise RunFileError(f"{where}: {key} is longer than {MAX_SHORT} characters")
+            raise _Oversize(f"{where}: {key} is longer than {MAX_SHORT} characters")
     if not 0 <= ev["event_id"] <= 65535 or not 0 <= ev["record_id"] < 2**63:
         raise RunFileError(f"{where}: event id or record id out of range")
     return ev
@@ -240,12 +244,21 @@ def validate(raw: bytes | str | Path) -> dict[str, Any]:
         total += len(evs)
         if total > MAX_EVENTS_TOTAL:
             raise RunFileError(f"more than {MAX_EVENTS_TOTAL} events in the run")
-        events = [_event(e, f"{where}, event {j + 1}") for j, e in enumerate(evs)]
+        dropped = row.get("dropped_oversize", 0)
+        if type(dropped) is not int or not 0 <= dropped <= 10_000_000:
+            raise RunFileError(f"{where}: dropped_oversize must be a non-negative integer")
+        events, skipped = [], 0
+        for j, e in enumerate(evs):
+            try:
+                events.append(_event(e, f"{where}, event {j + 1}"))
+            except _Oversize:
+                skipped += 1  # an over-limit event is left out and counted; the rest of the file is kept
         executions.append({
             "technique_id": tech, "test_guid": guid.lower() if guid else None, "started_at": t0, "ended_at": t1,
             "run_status": status, "error": _message(row.get("error"), f"{where}: error"),
             "collection_error": _message(row.get("collection_error"), f"{where}: collection_error"),
-            "truncated": truncated, "events": events})
+            "truncated": truncated, "dropped_oversize": dropped, "skipped_oversize": skipped,
+            "events": events})
     return {"target": target, "started_at": started, "campaign": {"name": camp_name, "techniques": camp_techs},
             "executions": executions}
 
@@ -343,8 +356,14 @@ def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id:
                 for ev in ex["events"]:
                     fh.write(json.dumps(ev, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
             reason = es.reason
-            if ex["truncated"] and es.status != scoring.DID_NOT_RUN:
-                reason += " Event collection hit its cap for this test, so the events may be incomplete."
+            if es.status != scoring.DID_NOT_RUN:
+                if ex["truncated"]:
+                    reason += " Event collection hit its cap for this test, so later events were not collected."
+                left_out = ex["dropped_oversize"] + ex["skipped_oversize"]
+                if left_out:
+                    reason += (f" {left_out} event(s) over the size limit were left out "
+                               f"({ex['dropped_oversize']} by the runner, {ex['skipped_oversize']} on import), "
+                               "so the events may be incomplete.")
             db.add_execution(conn, run_id, {
                 "technique_id": ex["technique_id"], "test_guid": ex["test_guid"], "started_at": ex["started_at"],
                 "ended_at": ex["ended_at"], "status": es.status,
