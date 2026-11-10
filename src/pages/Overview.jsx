@@ -8,6 +8,7 @@ import {
 } from '../components/ui.jsx'
 import { Gauge, TacticBars, TrendChart } from '../components/charts.jsx'
 import ModeNotice from '../components/ModeNotice.jsx'
+import { NoRunsCTA } from '../components/common.jsx'
 
 const GAP_STATUS = { missed: 'missed', partial: 'partial', telemetry_gap: 'telemetry_gap' }
 
@@ -237,9 +238,7 @@ export default function Overview() {
       </header>
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {data && !data.overview.latest && (
-        <Empty>No runs yet. Once a run is uploaded, its coverage appears here.</Empty>
-      )}
+      {data && !data.overview.latest && <NoRunsCTA what="this overview" />}
       {data?.overview.latest && (
         <>
           <ModeNotice run={data.overview.latest.run} full />

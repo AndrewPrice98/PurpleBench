@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { STATUS, countEntries, formatDate, formatScore } from '../lib.js'
 import {
-  Empty, ErrorState, Icon, Loading, ModeChip, useAsync, usePageTitle,
+  ErrorState, Icon, Loading, ModeChip, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
+import { NoRunsCTA, UploadRun } from '../components/common.jsx'
 
 function ScoreBar({ score }) {
   return (
@@ -31,6 +32,8 @@ function Counts({ counts }) {
 
 export default function Runs() {
   usePageTitle('Runs')
+  const session = useSession()
+  const admin = session && !session.guest
   const { data, loading, error, reload } = useAsync((signal) => api.runs(signal), [])
   const runs = data ? [...data].reverse() : []
   return (
@@ -46,7 +49,13 @@ export default function Runs() {
       </header>
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
-      {data && data.length === 0 && <Empty>No runs yet.</Empty>}
+      {data && data.length === 0 && <NoRunsCTA what="this list" />}
+      {admin && data && data.length > 0 && (
+        <details className="card upload-card">
+          <summary><Icon name="upload" size={16} /> Upload a lab run</summary>
+          <UploadRun />
+        </details>
+      )}
       {runs.length > 0 && (
         <section className="card flush" aria-labelledby="runs-title">
           <h2 id="runs-title" className="sr-only">All runs</h2>

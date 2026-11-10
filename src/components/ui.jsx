@@ -82,6 +82,13 @@ export function Icon({ name, size = 16, label }) {
     noise: <><path d="M2 10h2l1.5-4 2 9 2-12 2 11 2-7 1.5 3H18" /></>,
     check: <path d="m4.5 10.5 3.5 3.5 7.5-8" />,
     construct: <><path d="M3 17h14" /><path d="M5 17V9l5-5 5 5v8" /><path d="M8.5 17v-4h3v4" /></>,
+    download: <><path d="M10 3v10" /><path d="m5.5 8.5 4.5 4.5 4.5-4.5" /><path d="M3.5 16.5h13" /></>,
+    upload: <><path d="M10 13V3" /><path d="M5.5 7.5 10 3l4.5 4.5" /><path d="M3.5 16.5h13" /></>,
+    copy: <><rect x="7" y="7" width="9.5" height="9.5" rx="1.5" /><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7" /></>,
+    plus: <><path d="M10 4v12" /><path d="M4 10h12" /></>,
+    warning: <><path d="M10 2.8 18 16.5H2Z" /><path d="M10 8v4" /><path d="M10 14.3v.1" /></>,
+    grid: <><rect x="3" y="3" width="5.5" height="5.5" rx="1" /><rect x="11.5" y="3" width="5.5" height="5.5" rx="1" /><rect x="3" y="11.5" width="5.5" height="5.5" rx="1" /><rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1" /></>,
+    file: <><path d="M5 2.5h6.5L15.5 6.5v11H5Z" /><path d="M11.5 2.5v4h4" /><path d="M7.5 10.5h5M7.5 13.5h5" /></>,
   }
   return (
     <svg className="icon" width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor"

@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/lib.test.js src/sigma.test.js"
+    "test": "node --test src/lib.test.js src/sigma.test.js src/model.test.js"
   },
   "dependencies": {
     "react": "^18.3.1",

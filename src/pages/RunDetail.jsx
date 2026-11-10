@@ -198,7 +198,8 @@ export default function RunDetail() {
         </section>
         <section className="card" aria-labelledby="run-noisy-title">
           <h2 id="run-noisy-title">Noisy rules in this rule set</h2>
-          {run.noisy_rules.length === 0 ? <Empty>No rule fired on the benign baseline.</Empty> : (
+          {run.mode === 'lab' ? <Empty>Not measured: lab runs have no benign baseline to measure noise against.</Empty>
+            : run.noisy_rules.length === 0 ? <Empty>No rule fired on the benign baseline.</Empty> : (
             <>
               <p className="muted small">They fire on the benign baseline recording, so their matches earn no credit.</p>
               <ul className="noisy-list">

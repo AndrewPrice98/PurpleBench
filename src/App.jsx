@@ -9,7 +9,12 @@ import Overview from './pages/Overview.jsx'
 import Runs from './pages/Runs.jsx'
 import RunDetail from './pages/RunDetail.jsx'
 import ExecutionDetail from './pages/ExecutionDetail.jsx'
-import Placeholder from './pages/Placeholder.jsx'
+import Coverage from './pages/Coverage.jsx'
+import Rules from './pages/Rules.jsx'
+import RuleDetail from './pages/RuleDetail.jsx'
+import Gaps from './pages/Gaps.jsx'
+import Reports from './pages/Reports.jsx'
+import { CampaignDetail, CampaignList, CampaignNew } from './pages/Campaigns.jsx'
 import Login from './pages/Login.jsx'
 
 const NAV = [
@@ -100,14 +105,6 @@ function Footer() {
   )
 }
 
-const PLACEHOLDERS = {
-  campaigns: ['Campaigns', 'The technique plans behind each run, their run history, and the campaign file the lab runner reads.'],
-  coverage: ['Coverage', 'An ATT&CK-matrix heatmap of detected, partial and missed techniques per run, the change since the previous run, and the ATT&CK Navigator layer download.'],
-  rules: ['Rules', 'Every bundled Sigma rule with its author, licence, support status, hits and baseline noise, and the YAML it was evaluated from.'],
-  gaps: ['Gaps', 'Every missed, partial and telemetry-gap result with the telemetry or rule idea that would close it.'],
-  reports: ['Reports', 'Printable purple-team exercise reports for each run, in HTML and Markdown.'],
-}
-
 function Shell({ onLogout, onSignIn }) {
   const mainRef = useRef(null)
   useFocusOnNavigate(mainRef)
@@ -139,9 +136,14 @@ function Shell({ onLogout, onSignIn }) {
           <Route path="/runs" element={<Runs />} />
           <Route path="/runs/:runId" element={<RunDetail />} />
           <Route path="/executions/:executionId" element={<ExecutionDetail />} />
-          {Object.entries(PLACEHOLDERS).map(([path, [title, what]]) => (
-            <Route key={path} path={`/${path}/*`} element={<Placeholder title={title} what={what} />} />
-          ))}
+          <Route path="/campaigns" element={<CampaignList />} />
+          <Route path="/campaigns/new" element={<CampaignNew />} />
+          <Route path="/campaigns/:campaignId" element={<CampaignDetail />} />
+          <Route path="/coverage" element={<Coverage />} />
+          <Route path="/rules" element={<Rules />} />
+          <Route path="/rules/:ruleId" element={<RuleDetail />} />
+          <Route path="/gaps" element={<Gaps />} />
+          <Route path="/reports" element={<Reports />} />
           <Route path="*" element={<Empty><h1 tabIndex={-1} className="h-inline">Page not found.</h1></Empty>} />
         </Routes>
       </main>
@@ -157,7 +159,10 @@ function App() {
   const check = useCallback(async () => {
     try {
       const health = await api.health()
-      const base = { version: health.version, demo: health.demo, authConfigured: health.auth_configured }
+      const base = {
+        version: health.version, demo: health.demo, authConfigured: health.auth_configured,
+        maxUploadMb: health.max_upload_mb,
+      }
       if (!health.guest && !health.auth_configured) return setState({ phase: 'unconfigured' })
       let me
       try {
@@ -185,7 +190,7 @@ function App() {
 
   const session = useMemo(() => (state.phase === 'user' ? {
     user: state.user, guest: state.guest, demo: state.demo, version: state.version,
-    authConfigured: state.authConfigured,
+    authConfigured: state.authConfigured, maxUploadMb: state.maxUploadMb,
   } : null), [state])
 
   async function logout() {
