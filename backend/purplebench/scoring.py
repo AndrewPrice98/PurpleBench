@@ -53,7 +53,7 @@ from .telemetry import parse_ts, read_jsonl_gz
 DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED = "detected", "partial", "missed", "telemetry_gap", "untested"
 STATUSES = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED)
 
-EXACT, PARENT, RELATED = "exact", "parent", "related"
+EXACT, PARENT, RELATED, NONE = "exact", "parent", "related", "none"
 
 DEFAULT_NOISE_THRESHOLD = 0
 DEFAULT_SKEW_SECONDS = 5.0
@@ -71,7 +71,7 @@ class Execution:
     tactics: tuple[str, ...]
     events: Sequence[dict[str, Any]] = field(default=(), repr=False)
     anchor_ts: str | None = None  # execution start (normalised timestamp)
-    window_seconds: float = DEFAULT_WINDOW_SECONDS
+    window_seconds: float | None = None  # None: the run-level window_seconds applies
     untested_reason: str | None = None
     atomic_test: str | None = None
 
@@ -83,7 +83,7 @@ class RuleHit:
     rule_id: str
     title: str
     techniques: tuple[str, ...]
-    relation: str  # exact | parent | related
+    relation: str  # exact | parent | related | none (rule has no ATT&CK tags: listed, earns no credit)
     noisy: bool
     noise_hits: int
     events: int  # matching events inside the window
@@ -165,6 +165,8 @@ def _seconds(a: str, b: str) -> float:
 
 def _relation(tested: str, rule_techniques: Iterable[str]) -> str:
     techs = set(rule_techniques)
+    if not techs:
+        return NONE
     if tested in techs:
         return EXACT
     if "." in tested and tested.split(".")[0] in techs:
@@ -207,7 +209,7 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
     if ex.untested_reason or ex.anchor_ts is None:
         return ExecutionScore(status=UNTESTED, reason=ex.untested_reason or "no execution start time recorded",
                               hits=(), ttd_seconds=None, out_of_window=0, tagged_rules=0, **base)
-    window = ex.window_seconds or window
+    window = ex.window_seconds if ex.window_seconds is not None else window
     index = EventIndex(ex.events)
     hits: list[RuleHit] = []
     outside = 0
@@ -229,28 +231,31 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
             noisy=bool(n and n.noisy), noise_hits=n.hits if n else 0, events=len(inside), first_ts=first,
             ttd_seconds=max(0.0, _seconds(first, ex.anchor_ts)),
         ))
-    rank = {EXACT: 0, PARENT: 1, RELATED: 2}
+    rank = {EXACT: 0, PARENT: 1, RELATED: 2, NONE: 3}
     hits.sort(key=lambda h: (h.noisy, rank[h.relation], h.first_ts, h.rule_id))
 
     clean = [h for h in hits if not h.noisy]
     exact = [h for h in clean if h.relation == EXACT]
     parent = [h for h in clean if h.relation == PARENT]
     related = [h for h in clean if h.relation == RELATED]
-    noisy = [h for h in hits if h.noisy]
+    noisy = [h for h in hits if h.noisy and h.relation != NONE]
+    suppressed = [h for h in noisy if h.relation == EXACT]
+    sup_note = ("; noisy rule(s) for this technique earned no credit: " + "; ".join(
+        f"{h.title} [{h.rule_id}] ({h.noise_hits} baseline hits)" for h in suppressed)) if suppressed else ""
 
     def ttd(hs: Sequence[RuleHit]) -> float:
         return min(h.ttd_seconds for h in hs)
 
     common = {"hits": tuple(hits), "out_of_window": outside, "tagged_rules": len(tagged), **base}
     if exact:
-        return ExecutionScore(status=DETECTED, reason=f"detected by {_names(exact)}", ttd_seconds=ttd(exact), **common)
+        return ExecutionScore(status=DETECTED, reason=f"detected by {_names(exact)}{sup_note}", ttd_seconds=ttd(exact), **common)
     if parent:
-        return ExecutionScore(status=PARTIAL, reason=f"parent-technique rule: {_names(parent)}",
+        return ExecutionScore(status=PARTIAL, reason=f"parent-technique rule: {_names(parent)}{sup_note}",
                               ttd_seconds=ttd(parent), **common)
     if related:
         ids = sorted({t for h in related for t in h.techniques})
         return ExecutionScore(status=PARTIAL, reason=f"detected via related technique {', '.join(ids)}: "
-                              f"{_names(related)}", ttd_seconds=ttd(related), **common)
+                              f"{_names(related)}{sup_note}", ttd_seconds=ttd(related), **common)
     if noisy:
         return ExecutionScore(status=PARTIAL, reason="noisy rule: " + "; ".join(
             f"{h.title} [{h.rule_id}] ({h.noise_hits} baseline hits)" for h in noisy),

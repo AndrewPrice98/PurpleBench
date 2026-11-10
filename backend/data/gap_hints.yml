@@ -79,5 +79,5 @@ T1105:
   telemetry_needed: Sysmon event 1 command lines for certutil, bitsadmin, curl and PowerShell, Sysmon event 3 and 22 (network and DNS) for the process.
   rule_idea: Match certutil -urlcache -split -f, bitsadmin /transfer, and curl or PowerShell downloads writing executables to user-writable paths.
 T1490:
-  telemetry_needed: Sysmon event 1 command lines for vssadmin, wmic, bcdedit and PowerShell; Sysmon event 23 or Security 4688.
+  telemetry_needed: Process creation with command lines (Sysmon event 1 or Security 4688) for vssadmin, wmic and wbadmin, plus Volume Shadow Copy service events (System log VSS, Application log) for deletions.
   rule_idea: Match vssadmin delete shadows, wmic shadowcopy delete, bcdedit recoveryenabled no, and Get-WmiObject Win32_Shadowcopy with Delete.

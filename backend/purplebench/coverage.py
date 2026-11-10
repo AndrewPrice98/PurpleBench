@@ -42,7 +42,7 @@ class TechniqueCoverage:
     reason: str
     executions: int
     ttd_seconds: float | None
-    rules: tuple[str, ...]  # rule ids that fired in the best execution
+    rules: tuple[str, ...]  # rules that matched in the best execution (any relation, noisy ones included)
 
     def to_dict(self) -> dict[str, Any]:
         return dict(self.__dict__, tactics=list(self.tactics), rules=list(self.rules))

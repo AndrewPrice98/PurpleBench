@@ -40,7 +40,7 @@ def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: 
             comment += f" (time to detect {t.ttd_seconds:.1f} s)"
         meta = [{"name": "status", "value": t.status}]
         if t.rules:
-            meta.append({"name": "rules fired", "value": ", ".join(t.rules)})
+            meta.append({"name": "rules that matched (any relation)", "value": ", ".join(t.rules)})
         if t.ttd_seconds is not None:
             meta.append({"name": "time to detect (s)", "value": f"{t.ttd_seconds:.1f}"})
         entry: dict[str, Any] = {"techniqueID": t.technique, "color": COLORS[t.status], "comment": comment,

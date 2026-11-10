@@ -71,8 +71,10 @@ def test_skew_and_window_are_configurable():
     assert run([R_EVIL], [e], skew_seconds=10).executions[0].status == DETECTED
     late = ex(events=[evil(200)])
     assert run([R_EVIL], [late]).executions[0].status == MISSED
-    assert run([R_EVIL], [late], window_seconds=300).executions[0].status == MISSED  # Execution.window_seconds wins
+    assert run([R_EVIL], [late], window_seconds=300).executions[0].status == DETECTED  # run-level value applies
     assert run([R_EVIL], [ex(events=[evil(200)], window_seconds=300)]).executions[0].status == DETECTED
+    # A per-execution window wins over the run-level one.
+    assert run([R_EVIL], [ex(events=[evil(200)], window_seconds=60)], window_seconds=300).executions[0].status == MISSED
 
 
 def test_noisy_rule_excluded_from_coverage():
@@ -263,3 +265,24 @@ def test_recorded_run_is_deterministic(recorded_run):
     again = scoring.score_run(rules, scoring.recorded_executions(), scoring.recorded_baseline(),
                               sigma.recorded_profile())
     assert again == recorded_run
+
+
+def test_untagged_rule_earns_no_credit():
+    untagged = rule("r-untagged", "\\evil.exe", tags=())
+    assert untagged.techniques == ()
+    s = run([untagged], [ex(events=[evil(2)])]).executions[0]
+    assert s.status == MISSED
+    assert s.hits and s.hits[0].relation == "none" and s.hits[0].rule_id == "r-untagged"  # still listed
+    # Next to a tagged rule it neither adds credit nor appears in the reason.
+    s2 = run([untagged, R_EVIL], [ex(events=[evil(2)])]).executions[0]
+    assert s2.status == DETECTED and "r-untagged" not in s2.reason
+    # A noisy untagged rule does not produce a "noisy rule" partial either.
+    base = [proc(50, ts(-500), Image="C:\\benign\\evil.exe")]
+    assert run([untagged], [ex(events=[evil(2)])], base).executions[0].status == MISSED
+
+
+def test_suppressed_noisy_exact_rule_is_noted():
+    base = [proc(50, ts(-500), Image="C:\\benign\\evil.exe")]
+    clean = rule("r-clean", "\\u\\evil.exe", title="clean")
+    s = run([R_EVIL, clean], [ex(events=[evil(2)])], base).executions[0]
+    assert s.status == DETECTED and "earned no credit" in s.reason and "r-evil" in s.reason
