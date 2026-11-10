@@ -33,6 +33,20 @@ jobs:
         working-directory: backend
         run: python scripts/build_demo.py --check
 
+  # Parses the lab runner with the PowerShell AST and fails on parse errors, download or dynamic-execution
+  # commands, or an Invoke-Command that is not bound to the single target session. Never runs the runner.
+  lab-script:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lab runner static check (Windows PowerShell 5.1)
+        shell: powershell
+        run: ./lab/Test-RunnerStatic.ps1
+      - name: Lab runner static check (PowerShell 7)
+        shell: pwsh
+        run: ./lab/Test-RunnerStatic.ps1
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
