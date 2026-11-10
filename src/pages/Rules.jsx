@@ -4,7 +4,7 @@ import { api } from '../api.js'
 import { DRL_URL, SIGMAHQ_URL, plural } from '../lib.js'
 import { filterRules } from '../model.js'
 import {
-  Chip, Empty, ErrorState, ExternalLink, Icon, Loading, NoisyChip, useAsync, usePageTitle,
+  Empty, ErrorState, ExternalLink, Icon, Loading, NoisyChip, Select, useAsync, usePageTitle,
 } from '../components/ui.jsx'
 import { RunSelect } from '../components/common.jsx'
 
@@ -29,9 +29,9 @@ function FilterSelect({ name, value, onChange }) {
   return (
     <span className="filter-field">
       <label htmlFor={id}>{f.label}</label>
-      <select id={id} value={value} onChange={(e) => onChange(name, e.target.value)}>
+      <Select id={id} value={value} onChange={(e) => onChange(name, e.target.value)}>
         {f.options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-      </select>
+      </Select>
     </span>
   )
 }
@@ -47,8 +47,8 @@ export function SourceLabel({ rule }) {
 
 export function SupportChip({ rule }) {
   return rule.status === 'ok'
-    ? <Chip tone="outline" glyph="✓" title="Every Sigma feature it uses is in the evaluator's supported subset.">Supported</Chip>
-    : <Chip tone="gap" glyph="⊘" title={`Not evaluated: ${rule.reason}`}>Unsupported</Chip>
+    ? <span className="status s-supported" title="Every Sigma feature it uses is in the evaluator's supported subset.">Supported</span>
+    : <span className="status s-unsupported" title={`Not evaluated: ${rule.reason}`}>Unsupported</span>
 }
 
 export default function Rules() {
@@ -76,21 +76,18 @@ export default function Rules() {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="eyebrow">Rules</p>
           <h1 tabIndex={-1}>Detection rules</h1>
-          <p className="lede">
+          <p className="page-sub">
             Every bundled Sigma rule, with its author. SigmaHQ rules are kept unmodified under the{' '}
-            <ExternalLink href={DRL_URL}>Detection Rule License 1.1</ExternalLink>; custom rules are PurpleBench&apos;s
-            own. Rules that use Sigma features outside the evaluator&apos;s subset are listed as unsupported, never
-            silently treated as not matching.
+            <ExternalLink href={DRL_URL}>Detection Rule License 1.1</ExternalLink>; custom rules are PurpleBench&apos;s own.
           </p>
         </div>
       </header>
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && (
-        <section className="card flush" aria-labelledby="rules-title">
-          <div className="card-head padded">
+        <section className="panel" aria-labelledby="rules-title">
+          <div className="panel-head rule">
             <h2 id="rules-title">{plural(data.rules.length, 'bundled rule')}</h2>
             <span className="muted small">
               {run ? <>Hits and noise for run {run.id} (rule set {run.ruleset_version})</> : 'No runs yet: hits and noise appear once a run exists'}
@@ -117,7 +114,7 @@ export default function Rules() {
             <span className="filter-count" role="status">Showing {shown.length} of {plural(data.rules.length, 'rule')}</span>
           </div>
           {shown.length === 0 ? <Empty>No rules match these filters.</Empty> : (
-            <table className="table cards rules-table">
+            <table className="table wide rules-table">
               <thead>
                 <tr>
                   <th scope="col">Rule (author)</th>
@@ -146,7 +143,7 @@ export default function Rules() {
                     </td>
                     {run && (
                       <td data-label={`In rule set ${run.ruleset_version}`}>
-                        {r.in_ruleset ? <span className="yes"><span aria-hidden="true">✓</span> Yes</span> : <span className="muted">No</span>}
+                        {r.in_ruleset ? <span className="yes">Yes</span> : <span className="muted">No</span>}
                       </td>
                     )}
                     {run && (
@@ -171,12 +168,12 @@ export default function Rules() {
           )}
           <p className="table-note">
             <Icon name="info" size={14} /> SigmaHQ rules come from the <ExternalLink href={SIGMAHQ_URL}>SigmaHQ repository</ExternalLink>,
-            pinned to one commit. Noise is the number of benign-baseline events a rule matches; a noisy rule earns no
-            detection credit.
+            pinned to one commit. Rules that use Sigma features outside the evaluator&apos;s subset are listed as
+            unsupported, never silently treated as not matching. Noise is the number of benign-baseline events a rule
+            matches; a noisy rule earns no detection credit.
           </p>
         </section>
       )}
     </div>
   )
 }
-

@@ -8,7 +8,7 @@ import {
 import { clampSegments, highlightPlan, highlightSegments, parseDetection } from '../sigma.js'
 import {
   Chip, Empty, ErrorState, ExternalLink, Icon, Loading, ModeChip, NoisyChip, RelationChip, RuleName, RuleText,
-  StatusChip, TacticTag, useAsync, usePageTitle,
+  Select, StatusChip, TacticTag, useAsync, usePageTitle,
 } from '../components/ui.jsx'
 import { TtdTimeline } from '../components/charts.jsx'
 import ModeNotice from '../components/ModeNotice.jsx'
@@ -53,7 +53,7 @@ function AttackPane({ ex }) {
   const mitre = attackUrl(tech.id)
   return (
     <section className="pane attack" aria-labelledby="attack-title">
-      <h2 id="attack-title"><Icon name="target" size={20} /> Attack</h2>
+      <h2 id="attack-title">Attack</h2>
       <dl className="facts">
         <div>
           <dt>Technique</dt>
@@ -76,7 +76,7 @@ function AttackPane({ ex }) {
               <dt>Executor</dt>
               <dd>
                 <span className="mono">{a.executor}</span>
-                {a.elevation_required && <Chip tone="outline" glyph="▲">Needs elevation</Chip>}
+                {a.elevation_required && <> <Chip>Needs elevation</Chip></>}
               </dd>
             </div>
           </>
@@ -279,7 +279,7 @@ function MatchedEvents({ ex, detections, catalog, order }) {
       {ex.hits.length > 1 && (
         <div className="filters inline-filters">
           <label htmlFor={filterId}>Show matches of</label>
-          <select id={filterId} value={ruleFilter} onChange={(e) => { setRuleFilter(e.target.value); setPage(0) }}>
+          <Select id={filterId} value={ruleFilter} onChange={(e) => { setRuleFilter(e.target.value); setPage(0) }}>
             <option value="">All rules that fired</option>
             {ruleOptions.map((h) => (
               <option key={h.rule.id} value={h.rule.id}>
@@ -287,7 +287,7 @@ function MatchedEvents({ ex, detections, catalog, order }) {
                 {' · '}{plural(h.count, 'event')}{h.noisy ? ' (noisy)' : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
       <p className="small" role="status">
@@ -336,7 +336,7 @@ function EventRow({ ev, start, detections }) {
         <td data-label="Summary" className="summary">
           {summary && <><span className="muted">{summary[0]}:</span> <span className="fv">{summary[1]}</span></>}
         </td>
-        <td data-label="Match">{ev.matched ? <Chip tone="match" glyph="◆">Match</Chip> : <span className="muted">—</span>}</td>
+        <td data-label="Match">{ev.matched ? <Chip tone="match">Match</Chip> : <span className="muted">—</span>}</td>
         <td data-label="Fields">
           <button type="button" className="btn ghost small" aria-expanded={open} aria-controls={id}
             onClick={() => setOpen((v) => !v)}>
@@ -405,7 +405,7 @@ function DetectionPane({ ex, catalog }) {
   const order = new Map((model?.markers || []).map((m, i) => [m.id, i + 1]))
   return (
     <section className="pane detect" aria-labelledby="detect-title">
-      <h2 id="detect-title"><Icon name="radar" size={20} /> Detection</h2>
+      <h2 id="detect-title">Detection</h2>
       <div className={`verdict ${status.tone || ''}`}>
         <StatusChip status={ex.status} />
         <p>{status.help}</p>
@@ -463,9 +463,9 @@ export default function ExecutionDetail() {
       </nav>
       <header className="page-head">
         <div>
-          <p className="eyebrow">Run {ex.run.id} · {ex.run.campaign_name} · rule set {ex.run.ruleset_version}</p>
           <h1 tabIndex={-1}><span className="mono">{ex.technique.id}</span> {ex.technique.name}</h1>
           <p className="meta-line">
+            <span>Run {ex.run.id} · {ex.run.campaign_name} · rule set {ex.run.ruleset_version}</span>
             <StatusChip status={ex.status} withHelp />
             {ex.hits.length > 0 && <span>{plural(ex.hits.length, 'rule')} fired</span>}
             {ex.ttd_ms != null && <span>{TTD_LABEL}: <strong className="mono">{formatTtd(ex.ttd_ms)}</strong></span>}

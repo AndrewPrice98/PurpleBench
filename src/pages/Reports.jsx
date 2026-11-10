@@ -46,9 +46,9 @@ function Preview({ data }) {
   const diff = prev?.sameCampaign ? diffCoverage(prevCoverage.techniques, techs) : null
   const delta = prev ? scoreDelta(prevCoverage.score, coverage.score) : null
   return (
-    <article className="card report-preview" aria-labelledby="rp-title">
+    <article className="panel report-preview" aria-labelledby="rp-title">
       <header className="rp-head">
-        <p className="eyebrow">Preview, built from the same data as the downloads</p>
+        <p className="rp-kicker">Preview, built from the same data as the downloads</p>
         <h2 id="rp-title">PurpleBench exercise report: {run.campaign_name} (run {run.id})</h2>
         <p className="meta-line"><ModeChip mode={run.mode} /><span>Started {formatDateTime(run.started_at)}</span></p>
       </header>
@@ -65,7 +65,7 @@ function Preview({ data }) {
           </div>
           <div>
             <dt>Results</dt>
-            <dd className="tags">{countEntries(coverage.counts).map(([s, n]) => <span key={s}><StatusChip status={s} /> {n}</span>)}</dd>
+            <dd className="tags">{countEntries(coverage.counts).map(([s, n]) => <span key={s}><StatusChip status={s} /> <strong>{n}</strong></span>)}</dd>
           </div>
         </dl>
         <p className="small muted">{MISSED_MEANING}</p>
@@ -220,12 +220,10 @@ export default function Reports() {
   const head = (
     <header className="page-head">
       <div>
-        <p className="eyebrow">Reports</p>
         <h1 tabIndex={-1}>Exercise reports</h1>
-        <p className="lede">
-          A purple-team exercise report for each run: scope, mode and data sources, results by tactic, the change
-          since the previous run, gaps with recommendations, noisy rules, and the rule authors. The HTML report is
-          self-contained and printable, with no scripts.
+        <p className="page-sub">
+          One report per run: scope, data sources, results by tactic, change since the previous run, gaps, noisy rules
+          and rule authors. The HTML report is self-contained and printable, with no scripts.
         </p>
       </div>
     </header>
@@ -236,10 +234,10 @@ export default function Reports() {
   return (
     <div className="page">
       {head}
-      <section className="card flush" aria-labelledby="all-reports-title">
-        <div className="card-head padded"><h2 id="all-reports-title">Downloads by run</h2></div>
+      <section className="panel" aria-labelledby="all-reports-title">
+        <div className="panel-head rule"><h2 id="all-reports-title">Downloads by run</h2></div>
         <table className="table cards reports-table">
-          <thead><tr><th scope="col">Run</th><th scope="col">Campaign</th><th scope="col">Mode</th><th scope="col">Coverage</th><th scope="col">Downloads</th></tr></thead>
+          <thead><tr><th scope="col">Run</th><th scope="col">Campaign</th><th scope="col">Mode</th><th scope="col" className="num">Coverage</th><th scope="col">Downloads</th></tr></thead>
           <tbody>
             {[...data.runs].reverse().map((r) => (
               <tr key={r.id} className={r.id === data.runId ? 'current' : ''}>
@@ -248,8 +246,8 @@ export default function Reports() {
                   <span className="muted small"> · {r.ruleset_version} · {formatDate(r.started_at)}</span>
                 </th>
                 <td data-label="Campaign">{r.campaign_name}</td>
-                <td data-label="Mode"><ModeChip mode={r.mode} /></td>
-                <td data-label="Coverage">{formatScore(r.score)}</td>
+                <td data-label="Mode"><ModeChip mode={r.mode} plain /></td>
+                <td data-label="Coverage" className="num">{formatScore(r.score)}</td>
                 <td data-label="Downloads" className="dl-cell">
                   <a href={downloads.reportHtml(r.id)} download={runDownloadName.reportHtml(r.id)}>HTML<span className="sr-only"> report for run {r.id}</span></a>
                   <a href={downloads.reportMd(r.id)} download={runDownloadName.reportMd(r.id)}>Markdown<span className="sr-only"> report for run {r.id}</span></a>
@@ -260,14 +258,12 @@ export default function Reports() {
           </tbody>
         </table>
       </section>
-      <section className="card toolbar" aria-label="Report for one run">
-        <div className="filters flush-filters">
-          <RunSelect runs={data.runs} value={data.runId} label="Preview run" onChange={(v) => setParams(v ? { run: v } : {}, { replace: true })} />
-        </div>
-        <Downloads runId={data.runId} />
+      <section className="toolbar alone" aria-label="Report for one run">
+        <RunSelect runs={data.runs} value={data.runId} label="Preview run" onChange={(v) => setParams(v ? { run: v } : {}, { replace: true })} />
+        <span className="filter-count"><Downloads runId={data.runId} /></span>
       </section>
       {loading ? <Loading /> : <Preview data={data} />}
-      <p className="small muted"><Icon name="info" size={14} /> The preview is drawn from the API data; the downloads are rendered by the server from the same run.</p>
+      <p className="counts-line"><Icon name="info" size={14} /> The preview is drawn from the API data; the downloads are rendered by the server from the same run.</p>
     </div>
   )
 }

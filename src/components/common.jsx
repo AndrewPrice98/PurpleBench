@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
 import { DEMO_WRITE_NOTICE, formatDate, showDemoWriteNotice } from '../lib.js'
 import { GAP_STATES, uploadMessage, uploadProblem } from '../model.js'
-import { Chip, Icon, useSession } from './ui.jsx'
+import { Icon, Select, useSession } from './ui.jsx'
 
 /** "Run 4 · Ransomware precursors · v4 · Nov 9, 2026" */
 export function runOptionLabel(r) {
@@ -16,10 +16,10 @@ export function RunSelect({ runs, value, onChange, label = 'Run', extra = null }
   return (
     <span className="filter-field run-field">
       <label htmlFor={id}>{label}</label>
-      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+      <Select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
         {extra}
         {[...runs].reverse().map((r) => <option key={r.id} value={r.id}>{runOptionLabel(r)}</option>)}
-      </select>
+      </Select>
     </span>
   )
 }
@@ -28,7 +28,7 @@ export function RunSelect({ runs, value, onChange, label = 'Run', extra = null }
 export function DownloadLink({ href, children, className = 'btn secondary', fileName }) {
   return (
     <a className={className} href={href} download={fileName || ''}>
-      <Icon name="download" size={16} /> {children}
+      <Icon name="download" /> {children}
     </a>
   )
 }
@@ -69,9 +69,9 @@ export function CopyBlock({ label, text }) {
 export function GapStateChip({ gap }) {
   const st = GAP_STATES[gap.status] || GAP_STATES.open
   return (
-    <Chip tone={st.tone} glyph={st.glyph} title={st.help}>
+    <span className={`status s-${gap.status}`} title={st.help}>
       {st.label}{gap.status === 'closed' && gap.closed_in_run ? ` in run ${gap.closed_in_run}` : ''}
-    </Chip>
+    </span>
   )
 }
 
@@ -110,7 +110,7 @@ export function UploadRun({ compact = false }) {
         <input id={inputId} type="file" accept=".json,application/json" aria-describedby={helpId}
           onChange={(e) => { setFile(e.target.files?.[0] || null); setError(null) }} />
         <button type="submit" className="btn primary" aria-disabled={Boolean(problem) || busy}>
-          <Icon name="upload" size={16} /> {busy ? 'Uploading…' : 'Upload run'}
+          <Icon name="upload" /> {busy ? 'Uploading…' : 'Upload run'}
         </button>
       </div>
       <p id={helpId} className="small muted">
@@ -128,7 +128,7 @@ export function DemoWriteNotice() {
   if (!showDemoWriteNotice(session)) return null
   return (
     <p className="demo-write-notice" role="note">
-      <Icon name="info" size={16} /> <span>{DEMO_WRITE_NOTICE}</span>
+      <Icon name="info" /> <span>{DEMO_WRITE_NOTICE}</span>
     </p>
   )
 }
@@ -141,21 +141,20 @@ export function NoRunsCTA({ what = 'this page' }) {
   const session = useSession()
   const admin = session && !session.guest
   return (
-    <section className="card cta" aria-labelledby="cta-title">
-      <span className="ph-icon" aria-hidden="true"><Icon name="flag" size={22} /></span>
-      <div className="cta-body">
-        <h2 id="cta-title">No runs yet</h2>
-        <p>
+    <section className="panel cta" aria-labelledby="cta-title">
+      <div className="panel-head"><h2 id="cta-title">No runs yet</h2></div>
+      <div className="panel-body">
+        <p className="page-sub">
           A run evaluates one rule set against the telemetry of a campaign&apos;s techniques, and {what} is built
           from runs. Create a campaign, run it in your lab with the lab runner, then upload the run file it writes.
         </p>
         <ol className="cta-steps">
           <li>
-            <strong>Create a campaign</strong> — pick the ATT&amp;CK techniques to test.
+            <strong>Create a campaign</strong>: pick the ATT&amp;CK techniques to test.
             {admin && <> <Link className="btn primary small" to="/campaigns/new"><Icon name="plus" size={14} /> New campaign</Link></>}
           </li>
-          <li><strong>Run it in a lab</strong> — download the campaign file and run the lab runner against an isolated, snapshotted lab VM.</li>
-          <li><strong>Upload the run file</strong> — the results, coverage and gaps appear here.</li>
+          <li><strong>Run it in a lab</strong>: download the campaign file and run the lab runner against an isolated, snapshotted lab VM.</li>
+          <li><strong>Upload the run file</strong>: the results, coverage and gaps appear here.</li>
         </ol>
         {admin && <DemoWriteNotice />}
         {admin ? <UploadRun compact /> : (

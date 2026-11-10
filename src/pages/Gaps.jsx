@@ -4,7 +4,7 @@ import { api } from '../api.js'
 import { GAP_KIND, plural } from '../lib.js'
 import { GAP_STATES, gapDirty, gapPatch, writeErrorMessage } from '../model.js'
 import {
-  Empty, ErrorState, Icon, Loading, RuleText, StatusChip, useAsync, usePageTitle, useSession,
+  Empty, ErrorState, Icon, Loading, RuleText, Select, StatusChip, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
 import { DemoWriteNotice, GapStateChip, NoRunsCTA } from '../components/common.jsx'
 
@@ -43,9 +43,9 @@ function GapEditor({ gap, onSaved, onCancel }) {
       <div className="gap-edit-row">
         <span className="filter-field">
           <label htmlFor={statusId}>Status</label>
-          <select id={statusId} value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>
+          <Select id={statusId} value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}>
             {Object.entries(GAP_STATES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-          </select>
+          </Select>
         </span>
       </div>
       <label className="field" htmlFor={notesId}>Analyst notes</label>
@@ -66,10 +66,10 @@ function GapEditor({ gap, onSaved, onCancel }) {
   )
 }
 
-function GapCard({ gap, rules, admin, onSaved }) {
+function GapRow({ gap, rules, admin, onSaved }) {
   const [editing, setEditing] = useState(false)
   return (
-    <li className={`card gap-card kind-${gap.kind}`}>
+    <li className="gap-row">
       <div className="gap-head">
         <StatusChip status={gap.kind} withHelp />
         <Link to={`/runs/${gap.run_id}?status=${gap.kind}`} className="gap-tech">
@@ -141,13 +141,9 @@ export default function Gaps() {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="eyebrow">Gaps</p>
           <h1 tabIndex={-1}>Detection gaps</h1>
-          <p className="lede">
-            Every technique a run missed, could only partly detect, or could not match for lack of telemetry, with
-            the telemetry and rule idea that would close it. In the recorded demo, a gap closes when a later run of the same
-            campaign detects the technique; lab runs you upload open gaps but do not close earlier ones, so mark those
-            accepted or re-open them by hand.
+          <p className="page-sub">
+            Techniques a run missed, could only partly detect, or could not match for lack of telemetry, with what would close each.
           </p>
         </div>
       </header>
@@ -157,37 +153,37 @@ export default function Gaps() {
       {data && data.runs.length === 0 && <NoRunsCTA what="the gap list" />}
       {data && data.runs.length > 0 && (
         <>
-          <ul className="count-chips wide" aria-label="Gaps by state">
+          <ul className="count-row" aria-label="Gaps by state">
             {Object.entries(GAP_STATES).map(([k, v]) => (
               <li key={k}><GapStateChip gap={{ status: k }} /> <strong>{count('status', k)}</strong><span className="sr-only"> {v.label.toLowerCase()}</span></li>
             ))}
           </ul>
-          <section className="card flush" aria-labelledby="gaps-title">
-            <div className="card-head padded">
+          <section className="panel" aria-labelledby="gaps-title">
+            <div className="panel-head rule">
               <h2 id="gaps-title">{plural(all.length, 'gap')}</h2>
               {!admin && <span className="muted small"><Icon name="lock" size={13} /> Read-only: an admin can set the status and add notes</span>}
             </div>
             <div className="filters" role="group" aria-label="Filter gaps">
               <span className="filter-field">
                 <label htmlFor={statusId}>State</label>
-                <select id={statusId} value={status} onChange={(e) => set('status', e.target.value)}>
+                <Select id={statusId} value={status} onChange={(e) => set('status', e.target.value)}>
                   <option value="">All states</option>
                   {Object.entries(GAP_STATES).map(([k, v]) => <option key={k} value={k}>{v.label} ({count('status', k)})</option>)}
-                </select>
+                </Select>
               </span>
               <span className="filter-field">
                 <label htmlFor={kindId}>Kind</label>
-                <select id={kindId} value={kind} onChange={(e) => set('kind', e.target.value)}>
+                <Select id={kindId} value={kind} onChange={(e) => set('kind', e.target.value)}>
                   <option value="">All kinds</option>
                   {Object.entries(GAP_KIND).map(([k, v]) => <option key={k} value={k}>{v} ({count('kind', k)})</option>)}
-                </select>
+                </Select>
               </span>
               <span className="filter-field">
                 <label htmlFor={runId}>Run</label>
-                <select id={runId} value={run} onChange={(e) => set('run', e.target.value)}>
+                <Select id={runId} value={run} onChange={(e) => set('run', e.target.value)}>
                   <option value="">All runs</option>
                   {[...data.runs].reverse().map((r) => <option key={r.id} value={r.id}>Run {r.id} · {r.campaign_name}</option>)}
-                </select>
+                </Select>
               </span>
               {(status || kind || run) && (
                 <button type="button" className="btn ghost small" onClick={() => setParams(new URLSearchParams(), { replace: true })}>Clear filters</button>
@@ -195,13 +191,17 @@ export default function Gaps() {
               <span className="filter-count" role="status">Showing {shown.length} of {plural(all.length, 'gap')}</span>
             </div>
             {admin && <p className="save-notice small" role="status">{notice}</p>}
+            {shown.length === 0 ? <Empty>No gaps match these filters.</Empty> : (
+              <ul className="gap-cards">
+                {shown.map((g) => <GapRow key={g.id} gap={g} rules={data.rules} admin={admin} onSaved={onSaved} />)}
+              </ul>
+            )}
+            <p className="panel-note">
+              In the recorded demo, a gap closes when a later run of the same campaign detects the technique. Lab runs you
+              upload open gaps but do not close earlier ones, so mark those accepted or re-open them by hand.
+            </p>
           </section>
           {data.total > all.length && <p className="small muted" role="note">Showing the first {all.length} of {data.total} gaps.</p>}
-          {shown.length === 0 ? <Empty>No gaps match these filters.</Empty> : (
-            <ul className="gap-cards">
-              {shown.map((g) => <GapCard key={g.id} gap={g} rules={data.rules} admin={admin} onSaved={onSaved} />)}
-            </ul>
-          )}
         </>
       )}
     </div>

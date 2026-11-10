@@ -21,46 +21,49 @@ import { CampaignDetail, CampaignList, CampaignNew } from './pages/Campaigns.jsx
 import Login from './pages/Login.jsx'
 
 const NAV = [
-  ['/', 'Overview'],
-  ['/campaigns', 'Campaigns'],
-  ['/runs', 'Runs'],
-  ['/coverage', 'Coverage'],
-  ['/rules', 'Rules'],
-  ['/gaps', 'Gaps'],
-  ['/reports', 'Reports'],
+  { label: 'Workspace', items: [['/', 'Overview', 'overview'], ['/campaigns', 'Campaigns', 'campaigns'], ['/runs', 'Runs', 'runs']] },
+  { label: 'Analysis', items: [['/coverage', 'Coverage', 'coverage'], ['/rules', 'Rules', 'rules'], ['/gaps', 'Gaps', 'gaps'], ['/reports', 'Reports', 'reports']] },
 ]
+
+const SECTIONS = [
+  ['/campaigns', 'Campaigns'], ['/runs', 'Runs'], ['/executions', 'Runs'], ['/coverage', 'Coverage'],
+  ['/rules', 'Rules'], ['/gaps', 'Gaps'], ['/reports', 'Reports'],
+]
+
+function sectionName(pathname) {
+  if (pathname === '/') return 'Overview'
+  const hit = SECTIONS.find(([prefix]) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+  return hit ? hit[1] : 'Not found'
+}
 
 function Brand() {
   return (
     <NavLink to="/" className="brand" aria-label="PurpleBench, overview">
       <BrandMark size={28} />
-      <span className="brand-text">
-        <span className="brand-name">PurpleBench</span>
-        <span className="brand-sub">Detection validation</span>
-      </span>
+      <span className="brand-name">PurpleBench</span>
     </NavLink>
   )
 }
 
-function AccountArea({ onLogout, onSignIn }) {
-  const { user, guest, demo, authConfigured } = useSession()
-  if (guest) {
-    return (
-      <div className="account">
-        <span className="badge demo" title="Hosted demo with recorded-mode runs. Browsing is read-only.">
-          <Icon name="lock" size={13} /> Demo · read-only
-        </span>
-        {authConfigured && (
-          <button type="button" className="btn ghost small" onClick={onSignIn}>Sign in</button>
-        )}
-      </div>
-    )
-  }
+function SideStatus({ onLogout, onSignIn }) {
+  const { user, guest, demo, authConfigured, version } = useSession()
   return (
-    <div className="account">
-      {demo && <span className="badge demo" title="Hosted demo with recorded-mode runs.">Demo</span>}
-      <span className="account-user" title="Signed in">{user}</span>
-      <button type="button" className="btn ghost small" onClick={onLogout}>Sign out</button>
+    <div className="side-foot">
+      {guest ? (
+        <div className="row">
+          <span className="live-line" title="Hosted demo with recorded-mode runs. Browsing is read-only.">Demo, read-only</span>
+          {authConfigured && <button type="button" className="btn ghost small" onClick={onSignIn}>Sign in</button>}
+        </div>
+      ) : (
+        <>
+          {demo && <span className="live-line" title="Hosted demo with recorded-mode runs.">Demo</span>}
+          <div className="row">
+            <span className="user" title="Signed in">{user}</span>
+            <button type="button" className="btn ghost small" onClick={onLogout}>Sign out</button>
+          </div>
+        </>
+      )}
+      <span className="mono">v{version}</span>
     </div>
   )
 }
@@ -111,47 +114,73 @@ function Footer() {
 
 function Shell({ onLogout, onSignIn }) {
   const mainRef = useRef(null)
+  const { pathname } = useLocation()
+  const [navOpen, setNavOpen] = useState(false)
   useFocusOnNavigate(mainRef)
+  useEffect(() => { setNavOpen(false) }, [pathname])
+  useEffect(() => {
+    if (!navOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setNavOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [navOpen])
   return (
-    <div className="app">
+    <div className={`app ${navOpen ? 'nav-open' : ''}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <header className="topbar">
-        <div className="topbar-inner">
-          <Brand />
+      <aside className="sidebar" id="sidebar">
+        <Brand />
+        <nav className="nav" aria-label="Main">
+          {NAV.map((group) => (
+            <div key={group.label} className="nav-group">
+              <p className="nav-label">{group.label}</p>
+              <ul>
+                {group.items.map(([to, label, icon]) => (
+                  <li key={to}>
+                    <NavLink to={to} end={to === '/'}><Icon name={icon} />{label}</NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </nav>
+        <SideStatus onLogout={onLogout} onSignIn={onSignIn} />
+      </aside>
+      <button type="button" className="scrim" aria-label="Close menu" tabIndex={-1} onClick={() => setNavOpen(false)} />
+      <div className="content">
+        <header className="topbar">
+          <div className="topbar-left">
+            <button type="button" className="icon-btn menu-btn" aria-label="Menu" aria-expanded={navOpen}
+              aria-controls="sidebar" onClick={() => setNavOpen((v) => !v)}>
+              <Icon name={navOpen ? 'close' : 'menu'} size={18} />
+            </button>
+            <span className="crumb-top">PurpleBench / <strong>{sectionName(pathname)}</strong></span>
+          </div>
           <div className="topbar-right">
-            <a className="gh-link" href={GITHUB_URL} target="_blank" rel="noreferrer">
-              <Icon name="github" size={18} /><span className="gh-text">GitHub</span>
+            <a className="icon-btn" href={GITHUB_URL} target="_blank" rel="noreferrer">
+              <Icon name="github" /><span className="gh-text">GitHub</span>
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
-            <AccountArea onLogout={onLogout} onSignIn={onSignIn} />
           </div>
-        </div>
-        <nav className="nav" aria-label="Main">
-          <ul>
-            {NAV.map(([to, label]) => (
-              <li key={to}><NavLink to={to} end={to === '/'}>{label}</NavLink></li>
-            ))}
-          </ul>
-        </nav>
-      </header>
-      <main id="main" className="main" ref={mainRef}>
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/runs" element={<Runs />} />
-          <Route path="/runs/:runId" element={<RunDetail />} />
-          <Route path="/executions/:executionId" element={<ExecutionDetail />} />
-          <Route path="/campaigns" element={<CampaignList />} />
-          <Route path="/campaigns/new" element={<CampaignNew />} />
-          <Route path="/campaigns/:campaignId" element={<CampaignDetail />} />
-          <Route path="/coverage" element={<Coverage />} />
-          <Route path="/rules" element={<Rules />} />
-          <Route path="/rules/:ruleId" element={<RuleDetail />} />
-          <Route path="/gaps" element={<Gaps />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="*" element={<Empty><h1 tabIndex={-1} className="h-inline">Page not found.</h1></Empty>} />
-        </Routes>
-      </main>
-      <Footer />
+        </header>
+        <main id="main" className="main" ref={mainRef}>
+          <Routes>
+            <Route path="/" element={<Overview />} />
+            <Route path="/runs" element={<Runs />} />
+            <Route path="/runs/:runId" element={<RunDetail />} />
+            <Route path="/executions/:executionId" element={<ExecutionDetail />} />
+            <Route path="/campaigns" element={<CampaignList />} />
+            <Route path="/campaigns/new" element={<CampaignNew />} />
+            <Route path="/campaigns/:campaignId" element={<CampaignDetail />} />
+            <Route path="/coverage" element={<Coverage />} />
+            <Route path="/rules" element={<Rules />} />
+            <Route path="/rules/:ruleId" element={<RuleDetail />} />
+            <Route path="/gaps" element={<Gaps />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="*" element={<Empty><h1 tabIndex={-1} className="h-inline">Page not found.</h1></Empty>} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
     </div>
   )
 }

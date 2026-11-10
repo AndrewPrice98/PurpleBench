@@ -1,20 +1,25 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import {
+  ArrowDown, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUp, ChevronDown, ChevronRight, CircleDashed, Clock, Copy, Download,
+  ExternalLink as ExternalLinkIcon, FileText, GitBranch, Grid3x3, Info, Layers, LayoutDashboard, ListChecks, Lock, Menu, Minus,
+  Plus, ScrollText, TriangleAlert, Upload, X,
+} from 'lucide-react'
 import { RELATION, STATUS, splitLinks, splitRuleRefs, tacticLabel } from '../lib.js'
 
-// -- status chips: glyph + text label + tone, so they never rely on color alone ----------------
+// -- status and tags: a 6 px dot with text, or a compact tag; never colour alone ------------------
 
-export function Chip({ tone = 'neutral', glyph, children, title, className = '' }) {
-  return (
-    <span className={`chip ${tone} ${className}`} title={title}>
-      {glyph && <span className="chip-glyph" aria-hidden="true">{glyph}</span>}
-      {children}
-    </span>
-  )
+const TAG_TONE = {
+  noisy: 'amber', 'mode-lab': 'amber', 'rel-exact': 'accent', match: 'accent',
+}
+
+/** A compact tag: tinted background, no border, no icon. */
+export function Chip({ tone = 'neutral', children, title, className = '' }) {
+  return <span className={`tag ${TAG_TONE[tone] || ''} ${className}`.trim()} title={title}>{children}</span>
 }
 
 export function StatusChip({ status, withHelp = false }) {
-  const s = STATUS[status] || { label: status, tone: 'neutral', glyph: '?' }
-  return <Chip tone={s.tone} glyph={s.glyph} title={withHelp ? s.help : undefined}>{s.label}</Chip>
+  const s = STATUS[status] || { label: status, help: '' }
+  return <span className={`status s-${status}`} title={withHelp ? s.help : undefined}>{s.label}</span>
 }
 
 export function RelationChip({ relation }) {
@@ -24,16 +29,20 @@ export function RelationChip({ relation }) {
 
 export function NoisyChip({ hits }) {
   return (
-    <Chip tone="noisy" glyph="≈" title="Fires on the benign baseline, so it earns no detection credit.">
+    <Chip tone="noisy" title="Fires on the benign baseline, so it earns no detection credit.">
       Noisy{hits != null ? ` · ${hits} baseline ${hits === 1 ? 'hit' : 'hits'}` : ''}
     </Chip>
   )
 }
 
-export function ModeChip({ mode }) {
-  return mode === 'lab'
-    ? <Chip tone="mode-lab" glyph="⚗" title="Lab mode: not yet run against a real lab.">Lab</Chip>
-    : <Chip tone="mode-recorded" glyph="●" title="Recorded mode: telemetry from a public dataset; nothing was executed.">Recorded</Chip>
+/** Recorded or lab. `plain` renders text only, for table cells. */
+export function ModeChip({ mode, plain = false }) {
+  const lab = mode === 'lab'
+  const title = lab
+    ? 'Lab mode: not yet run against a real lab.'
+    : 'Recorded mode: telemetry from a public dataset; nothing was executed.'
+  if (plain) return <span title={title}>{lab ? 'Lab' : 'Recorded'}</span>
+  return <Chip tone={lab ? 'mode-lab' : 'mode-recorded'} title={title}>{lab ? 'Lab' : 'Recorded'}</Chip>
 }
 
 export function TacticTag({ tactic, name }) {
@@ -63,58 +72,54 @@ export function Empty({ children }) {
   return <div className="state">{children}</div>
 }
 
-// -- icons ------------------------------------------------------------------------------------
+// -- icons: lucide, 16 px, 1.5 stroke, currentColor -----------------------------------------------
 
-export function Icon({ name, size = 16, label }) {
-  const paths = {
-    github: <path d="M10 1.5a8.5 8.5 0 0 0-2.7 16.6c.4 0 .6-.2.6-.4v-1.5c-2.4.5-2.9-1-2.9-1-.4-1-1-1.3-1-1.3-.8-.5 0-.5 0-.5.9 0 1.3.9 1.3.9.8 1.3 2 1 2.5.7 0-.6.3-1 .6-1.2-1.9-.2-3.9-1-3.9-4.2 0-.9.3-1.7.9-2.3-.1-.2-.4-1.1.1-2.3 0 0 .7-.2 2.3.9a8 8 0 0 1 4.2 0c1.6-1.1 2.3-.9 2.3-.9.5 1.2.2 2 .1 2.3.5.6.9 1.4.9 2.3 0 3.3-2 4-3.9 4.2.3.3.6.8.6 1.6v2.4c0 .2.2.5.6.4A8.5 8.5 0 0 0 10 1.5Z" fill="currentColor" stroke="none" />,
-    back: <path d="M12.5 4.5 7 10l5.5 5.5" />,
-    arrow: <><path d="M4 10h11" /><path d="m11 5.5 4.5 4.5-4.5 4.5" /></>,
-    lock: <><rect x="4" y="9" width="12" height="8.5" rx="1.5" /><path d="M7 9V6.5a3 3 0 0 1 6 0V9" /></>,
-    external: <><path d="M11 3.5h5.5V9" /><path d="M16.5 3.5 9 11" /><path d="M14 12v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4" /></>,
-    info: <><circle cx="10" cy="10" r="7.5" /><path d="M10 9v5" /><path d="M10 6.2v.1" /></>,
-    record: <><circle cx="10" cy="10" r="7.5" /><circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" /></>,
-    target: <><circle cx="10" cy="10" r="7.5" /><circle cx="10" cy="10" r="4" /><path d="M10 1v4M10 15v4M1 10h4M15 10h4" /></>,
-    radar: <><path d="M10 2.5a7.5 7.5 0 1 0 7.5 7.5" /><path d="M10 6a4 4 0 1 0 4 4" /><path d="m10 10 6-6" /><circle cx="10" cy="10" r="1" fill="currentColor" stroke="none" /></>,
-    flag: <><path d="M4.5 17.5V3" /><path d="M4.5 3.5h10l-2 3.5 2 3.5h-10" /></>,
-    clock: <><circle cx="10" cy="10" r="7.5" /><path d="M10 5.5V10l3 2" /></>,
-    list: <><path d="M7 5h10M7 10h10M7 15h10" /><path d="M3 5h.01M3 10h.01M3 15h.01" /></>,
-    noise: <><path d="M2 10h2l1.5-4 2 9 2-12 2 11 2-7 1.5 3H18" /></>,
-    check: <path d="m4.5 10.5 3.5 3.5 7.5-8" />,
-    construct: <><path d="M3 17h14" /><path d="M5 17V9l5-5 5 5v8" /><path d="M8.5 17v-4h3v4" /></>,
-    download: <><path d="M10 3v10" /><path d="m5.5 8.5 4.5 4.5 4.5-4.5" /><path d="M3.5 16.5h13" /></>,
-    upload: <><path d="M10 13V3" /><path d="M5.5 7.5 10 3l4.5 4.5" /><path d="M3.5 16.5h13" /></>,
-    copy: <><rect x="7" y="7" width="9.5" height="9.5" rx="1.5" /><path d="M13 7V4.5A1.5 1.5 0 0 0 11.5 3h-7A1.5 1.5 0 0 0 3 4.5v7A1.5 1.5 0 0 0 4.5 13H7" /></>,
-    plus: <><path d="M10 4v12" /><path d="M4 10h12" /></>,
-    warning: <><path d="M10 2.8 18 16.5H2Z" /><path d="M10 8v4" /><path d="M10 14.3v.1" /></>,
-    grid: <><rect x="3" y="3" width="5.5" height="5.5" rx="1" /><rect x="11.5" y="3" width="5.5" height="5.5" rx="1" /><rect x="3" y="11.5" width="5.5" height="5.5" rx="1" /><rect x="11.5" y="11.5" width="5.5" height="5.5" rx="1" /></>,
-    file: <><path d="M5 2.5h6.5L15.5 6.5v11H5Z" /><path d="M11.5 2.5v4h4" /><path d="M7.5 10.5h5M7.5 13.5h5" /></>,
-  }
+const ICONS = {
+  github: GitBranch, back: ArrowLeft, arrow: ArrowRight, lock: Lock, external: ExternalLinkIcon, info: Info, clock: Clock,
+  download: Download, upload: Upload, copy: Copy, plus: Plus, warning: TriangleAlert, chevron: ChevronDown,
+  chevronRight: ChevronRight, menu: Menu, close: X, up: ArrowUp, down: ArrowDown, minus: Minus, swap: ArrowLeftRight,
+  overview: LayoutDashboard, campaigns: Layers, runs: ListChecks, coverage: Grid3x3, rules: ScrollText,
+  gaps: CircleDashed, reports: FileText,
+}
+
+export function Icon({ name, size = 16, label, className = '' }) {
+  const Glyph = ICONS[name]
+  if (!Glyph) return null
   return (
-    <svg className="icon" width={size} height={size} viewBox="0 0 20 20" fill="none" stroke="currentColor"
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+    <Glyph className={`icon ${className}`.trim()} size={size} strokeWidth={1.5} absoluteStrokeWidth
       aria-hidden={label ? undefined : 'true'} role={label ? 'img' : undefined} aria-label={label}
-      focusable="false">
-      {paths[name]}
+      focusable="false" />
+  )
+}
+
+/**
+ * The PurpleBench mark: two outlined rings (red team, blue team) whose overlap is filled violet.
+ * Colours come from CSS variables; public/logo-mark.svg is the same drawing with fixed colours.
+ */
+export function BrandMark({ size = 26 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="brand-svg">
+      <path d="M12 5.65A7.25 7.25 0 0 1 12 18.35A7.25 7.25 0 0 1 12 5.65Z" fill="var(--accent)" />
+      <circle cx="8.5" cy="12" r="7.25" fill="none" stroke="var(--ring-red)" strokeWidth="1.75" />
+      <circle cx="15.5" cy="12" r="7.25" fill="none" stroke="var(--ring-blue)" strokeWidth="1.75" />
     </svg>
   )
 }
 
-/** The PurpleBench mark: a red (attack) and a blue (detection) circle overlapping in violet. */
-export function BrandMark({ size = 26 }) {
+/** A styled native select: a real <select> underneath, so keyboard and screen readers work unchanged. */
+export function Select({ children, className = '', ...props }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" focusable="false" className="brand-svg">
-      <circle cx="7.6" cy="10" r="6.4" fill="var(--attack)" opacity="0.9" />
-      <circle cx="12.4" cy="10" r="6.4" fill="var(--detect)" opacity="0.9" />
-      <path d="M10 4.07A6.4 6.4 0 0 1 10 15.93A6.4 6.4 0 0 1 10 4.07Z" fill="var(--accent)" />
-    </svg>
+    <span className={`select ${className}`.trim()}>
+      <select {...props}>{children}</select>
+      <Icon name="chevron" size={14} />
+    </span>
   )
 }
 
 export function ExternalLink({ href, children, className }) {
   return (
     <a href={href} target="_blank" rel="noreferrer" className={className}>
-      {children}<Icon name="external" size={12} /><span className="sr-only"> (opens in a new tab)</span>
+      {children}<Icon name="external" size={12} className="ext" /><span className="sr-only"> (opens in a new tab)</span>
     </a>
   )
 }

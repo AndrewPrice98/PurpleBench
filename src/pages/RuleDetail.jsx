@@ -20,9 +20,9 @@ async function load(ruleId, signal) {
 function Attribution({ rule }) {
   const sigma = rule.source === 'sigmahq'
   return (
-    <aside className="attribution-box" aria-label="Rule attribution and licence">
-      <p className="ab-title">
-        {sigma ? 'SigmaHQ rule' : 'Custom PurpleBench rule'} by <strong className="rule-author-strong">{rule.author || 'author unknown'}</strong>
+    <aside className="attribution-line" aria-label="Rule attribution and licence">
+      <p>
+        {sigma ? 'SigmaHQ rule' : 'Custom PurpleBench rule'} by <strong>{rule.author || 'author unknown'}</strong>
       </p>
       {sigma ? (
         <p>
@@ -105,10 +105,10 @@ export default function RuleDetail() {
       </nav>
       <header className="page-head">
         <div>
-          <p className="eyebrow">{rule.source === 'sigmahq' ? 'SigmaHQ rule' : 'Custom rule'}{rule.level ? ` · ${rule.level}` : ''}</p>
           <h1 tabIndex={-1}>{rule.title}</h1>
           <p className="meta-line">
-            <span className="rule-name"><span className="rule-author">by {rule.author || 'author unknown'}</span></span>
+            <span>{rule.source === 'sigmahq' ? 'SigmaHQ rule' : 'Custom rule'}{rule.level ? ` · ${rule.level}` : ''}</span>
+            <span>by {rule.author || 'author unknown'}</span>
             <SourceLabel rule={rule} />
             <SupportChip rule={rule} />
           </p>
@@ -116,14 +116,18 @@ export default function RuleDetail() {
       </header>
       <Attribution rule={rule} />
       {rule.status !== 'ok' && (
-        <div className="state" role="note">
-          <strong>Not evaluated.</strong> {rule.reason}. PurpleBench lists the rule with the reason instead of treating
-          it as never matching.
+        <div className="notice-row" role="note">
+          <Icon name="info" />
+          <p>
+            <strong>Not evaluated.</strong> {rule.reason}. PurpleBench lists the rule with the reason instead of treating
+            it as never matching.
+          </p>
         </div>
       )}
       <div className="grid-2 rule-grid">
-        <section className="card" aria-labelledby="about-title">
-          <h2 id="about-title">About the rule</h2>
+        <section className="panel" aria-labelledby="about-title">
+          <div className="panel-head rule"><h2 id="about-title">About the rule</h2></div>
+          <div className="panel-body">
           {rule.description && <p className="desc">{rule.description}</p>}
           <dl className="facts">
             <div><dt>Rule id</dt><dd className="mono small">{rule.id}</dd></div>
@@ -138,7 +142,7 @@ export default function RuleDetail() {
             <div>
               <dt>Log source</dt>
               <dd>{['product', 'category', 'service'].filter((k) => log[k]).map((k) => (
-                <Chip key={k} tone="outline">{k}: {log[k]}</Chip>))}</dd>
+                <Chip key={k}>{k}: {log[k]}</Chip>))}</dd>
             </div>
             {rule.sigma_status && <div><dt>Sigma status</dt><dd>{rule.sigma_status}</dd></div>}
             {(rule.date || rule.modified) && (
@@ -163,19 +167,22 @@ export default function RuleDetail() {
               </div>
             )}
           </dl>
+          </div>
         </section>
-        <section className="card" aria-labelledby="fired-title">
-          <h2 id="fired-title">Where it fired</h2>
-          <p className="small muted">Every execution whose recorded events this rule matched, by run.</p>
-          <WhereFired rule={rule} runs={data.runs} techniques={data.techniques} />
+        <section className="panel" aria-labelledby="fired-title">
+          <div className="panel-head rule"><h2 id="fired-title">Where it fired</h2></div>
+          <div className="panel-body">
+            <p className="small muted">Every execution whose recorded events this rule matched, by run.</p>
+            <WhereFired rule={rule} runs={data.runs} techniques={data.techniques} />
+          </div>
         </section>
       </div>
-      <section className="card" aria-labelledby="yaml-title">
-        <div className="card-head">
+      <section className="panel" aria-labelledby="yaml-title">
+        <div className="panel-head rule">
           <h2 id="yaml-title">Rule file (YAML)</h2>
           <span className="muted small">The text the evaluator read, shown as text</span>
         </div>
-        <pre className="yaml" tabIndex={0} aria-labelledby="yaml-title"><code>{rule.yaml}</code></pre>
+        <div className="panel-body"><pre className="yaml" tabIndex={0} aria-labelledby="yaml-title"><code>{rule.yaml}</code></pre></div>
       </section>
     </div>
   )

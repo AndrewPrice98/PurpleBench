@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import {
-  STATUS, formatScore, gaugeArc, linePath, linePoints, scale, timelineLabel,
+  STATUS, formatScore, linePath, linePoints, scale, timelineLabel,
 } from '../lib.js'
 
 /** Width of an element in CSS pixels, kept current with a ResizeObserver. */
@@ -22,36 +22,30 @@ function useWidth(fallback = 600) {
   return [ref, width]
 }
 
-// -- coverage gauge -----------------------------------------------------------------------------
+// -- coverage score: a large numeral and a thin linear meter ---------------------------------------
 
-export function Gauge({ score, detected, tested }) {
-  const fraction = score == null ? 0 : score / 100
+/**
+ * The score as a numeral over a thin meter. The tick marks the score when partial results count as half.
+ */
+export function Gauge({ score, partialScore, detected, tested }) {
+  const fill = score == null ? 0 : Math.max(0, Math.min(100, score))
+  const tick = partialScore != null && score != null && partialScore > score ? Math.min(100, partialScore) : null
   const label = score == null
     ? 'Coverage score: no tested techniques yet.'
-    : `Coverage score ${formatScore(score)}: ${detected} of ${tested} tested techniques detected.`
+    : `Coverage score ${formatScore(score)}: ${detected} of ${tested} tested techniques detected.${
+      tick != null ? ` ${formatScore(partialScore)} counting partial as half.` : ''}`
   return (
-    <figure className="gauge">
-      <svg viewBox="0 0 200 124" role="img" aria-label={label}>
-        <defs>
-          <linearGradient id="gauge-grad" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0" stopColor="var(--attack)" />
-            <stop offset="0.5" stopColor="var(--accent)" />
-            <stop offset="1" stopColor="var(--detect)" />
-          </linearGradient>
-        </defs>
-        <path d={gaugeArc(100, 100, 82, 1)} className="gauge-track" />
-        {score != null && score > 0 && (
-          <path d={gaugeArc(100, 100, 82, fraction)} className="gauge-value" pathLength="100"
-            style={{ '--len': 100 }} />
-        )}
-        <text x="100" y="86" textAnchor="middle" className="gauge-score">{formatScore(score)}</text>
-        <text x="100" y="106" textAnchor="middle" className="gauge-caption">
-          {tested ? `${detected} of ${tested} detected` : 'nothing tested'}
-        </text>
-        <text x="18" y="122" textAnchor="middle" className="gauge-tick">0</text>
-        <text x="182" y="122" textAnchor="middle" className="gauge-tick">100</text>
-      </svg>
-    </figure>
+    <div className="gauge">
+      <div className="kpi-num">{formatScore(score)}</div>
+      <div className="meter" role="img" aria-label={label}>
+        <span className="meter-fill" style={{ width: `${fill}%` }} />
+        {tick != null && <span className="meter-tick" style={{ left: `${tick}%` }} />}
+      </div>
+      <div className="gauge-legend">
+        <span>{tested ? `${detected} of ${tested} detected` : 'nothing tested'}</span>
+        {tick != null && <span><span className="key-tick" aria-hidden="true" />{formatScore(partialScore)} counting partial as half</span>}
+      </div>
+    </div>
   )
 }
 
@@ -59,37 +53,53 @@ export function Gauge({ score, detected, tested }) {
 
 export function TrendChart({ trend }) {
   const [ref, width] = useWidth(640)
-  const height = 230
-  const padX = width < 480 ? 54 : 66
-  const padTop = 26
-  const padBottom = 46
-  const strict = linePoints(trend.map((t) => t.score), { width, height, padX, padTop, padBottom })
-  const partial = linePoints(trend.map((t) => t.partial_score), { width, height, padX, padTop, padBottom })
+  const compact = width < 520
+  const height = 220
+  const endPad = compact ? 52 : 150
+  const padX = compact ? 46 : 52
+  const padTop = 16
+  const padBottom = 44
+  const inner = width - endPad
+  const strict = linePoints(trend.map((t) => t.score), { width: inner, height, padX, padTop, padBottom })
+  const partial = linePoints(trend.map((t) => t.partial_score), { width: inner, height, padX, padTop, padBottom })
   const y = (v) => padTop + (height - padTop - padBottom) * (1 - v / 100)
   const label = `Coverage score over ${trend.length} runs: ${trend.map((t) => (
     `run ${t.run_id} (rule set ${t.ruleset_version}) ${formatScore(t.score)}`)).join(', ')}.`
-  const compact = width < 480
+  const last = strict.length - 1
+  const lastScore = last >= 0 ? strict[last] : null
+  const lastPartial = last >= 0 ? partial[last] : null
+  const showPartial = lastPartial?.y != null && lastScore?.y != null && lastPartial.value !== lastScore.value
+  const partialAbove = showPartial && lastPartial.value > lastScore.value
   return (
     <div className="trend" ref={ref}>
       <svg width={width} height={height} role="img" aria-label={label} className="trend-svg">
         {[0, 25, 50, 75, 100].map((v) => (
           <g key={v} className="grid">
-            <line x1={padX - 12} x2={width - padX + 12} y1={y(v)} y2={y(v)} />
-            <text x={padX - 18} y={y(v) + 4} textAnchor="end">{v}%</text>
+            <line x1={padX - 10} x2={inner - padX + 10} y1={y(v)} y2={y(v)} />
+            <text x={padX - 14} y={y(v) + 4} textAnchor="end">{v}%</text>
           </g>
         ))}
         <path d={linePath(partial)} className="trend-line partial" />
-        <path d={linePath(strict)} className="trend-line strict" pathLength="100" />
+        <path d={linePath(strict)} className="trend-line strict" />
         {strict.map((p, i) => (p.y === null ? null : (
           <g key={trend[i].run_id} className="trend-point">
-            <circle cx={p.x} cy={p.y} r="5" />
-            <text x={p.x} y={p.y - 11} textAnchor="middle" className="trend-value">{formatScore(p.value)}</text>
+            <circle cx={p.x} cy={p.y} r="3" />
           </g>
         )))}
+        {lastScore?.y != null && (
+          <text x={lastScore.x + 12} y={lastScore.y + (showPartial && partialAbove ? 12 : 4)} className="trend-end strict">
+            {compact ? formatScore(lastScore.value) : `Detected ${formatScore(lastScore.value)}`}
+          </text>
+        )}
+        {showPartial && (
+          <text x={lastPartial.x + 12} y={lastPartial.y + (partialAbove ? -2 : 14)} className="trend-end partial">
+            {compact ? formatScore(lastPartial.value) : `Partial as half ${formatScore(lastPartial.value)}`}
+          </text>
+        )}
         {strict.map((p, i) => (
           <g key={`x${trend[i].run_id}`} className="trend-x">
             <text x={p.x} y={height - padBottom + 20} textAnchor="middle">Run {trend[i].run_id}</text>
-            <text x={p.x} y={height - padBottom + 36} textAnchor="middle" className="sub">
+            <text x={p.x} y={height - padBottom + 35} textAnchor="middle" className="sub">
               {compact ? trend[i].ruleset_version : `rule set ${trend[i].ruleset_version}`}
             </text>
           </g>

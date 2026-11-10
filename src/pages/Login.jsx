@@ -27,13 +27,13 @@ export default function Login({ onLogin, notice, onCancel }) {
 
   return (
     <main className="login-wrap">
-      <form className="card login" onSubmit={submit} aria-labelledby="login-title">
+      <form className="panel login" onSubmit={submit} aria-labelledby="login-title">
         <div className="login-brand">
-          <BrandMark size={30} />
+          <BrandMark size={28} />
           <span className="brand-name">PurpleBench</span>
         </div>
         <h1 id="login-title">Sign in</h1>
-        <p className="muted">Admins can upload lab runs and manage campaigns and gaps. Everyone else can browse read-only.</p>
+        <p className="page-sub">Admins can upload lab runs and manage campaigns and gaps. Everyone else can browse read-only.</p>
         {notice && <div className="state" role="status">{notice}</div>}
         <label className="field">
           <span>Username</span>
