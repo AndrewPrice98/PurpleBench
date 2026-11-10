@@ -7,7 +7,6 @@ import {
 } from '../components/ui.jsx'
 import { SourceLabel, SupportChip } from './Rules.jsx'
 
-
 async function load(ruleId, signal) {
   const [rule, runs, library] = await Promise.all([
     api.rule(ruleId, signal), api.runs(signal), api.library(signal).catch((err) => {

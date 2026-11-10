@@ -23,7 +23,7 @@ jobs:
         run: pip install -r backend/requirements-dev.txt
       - name: Tests
         working-directory: backend
-        # -rs names every skipped test (on Linux the tests that need PowerShell are skipped).
+        # -rs names every skipped test (tests that need PowerShell run where powershell or pwsh is on the PATH).
         run: python -m pytest -q -rs
       # Validates data/telemetry/manifest.json (hashes, counts, windows) and the technique library.
       - name: Technique catalog is current
