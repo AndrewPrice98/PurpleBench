@@ -192,3 +192,10 @@ Built by `backend/scripts/build_datasets.py` from files fetched by `backend/scri
 - **Gap notes.** Importer text stays in `gaps.notes` (API `system_notes`); PATCH writes `gaps.analyst_notes` (API `notes`); API `display_notes` joins both. Schema version 4.
 - **Rule objects** carry `licence: "DRL-1.1"` (custom rules are derived from SigmaHQ rules). `load_all_rules` is cached per rule-file set (mtime-keyed).
 - **Dashboard data.** Execution events accept `matched=true` and `rule=<id>` (server-side, before paging); run detail lists each execution's fired rules (id, title, author, relation, noisy). Hit keys `[null, n]` and non-object event lines are tolerated (skipped and counted in `events.skipped_lines`).
+
+## Task 8 fix round 2
+
+- **Event paging.** An event is validated (parsed, object, usable time, renderable) before any paging decision, so a malformed line is skipped and counted the same way on every page; pages never repeat or lose an event. `json.loads` recursion errors are skipped and counted too.
+- **`skipped_lines` is a lower bound** unless a filter (`matched` or `rule`) is used: without a filter the scan stops after the page and one more event, so only the lines scanned so far are counted. The same applies to `total` (flagged `total_is_lower_bound`), because counting every line of a large lab file on each page request would be costly. With a filter the whole file is scanned and `total` (distinct events passing the filter; an event matched by several rules counts once) and `skipped_lines` are exact.
+- **Database open failure** returns 503 "The database is not available" instead of a 500.
+- The rule catalog cache is keyed by rule-file modification times.

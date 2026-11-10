@@ -99,3 +99,24 @@ def test_gaps_table_is_migrated_to_allow_accepted(tmp_path):
         assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     finally:
         c.close()
+
+
+def test_v3_database_gets_analyst_notes_column_only(tmp_path):
+    path = tmp_path / "v3.db"
+    c = sqlite3.connect(path)
+    c.executescript(db.SCHEMA.replace(",\n    analyst_notes     TEXT NOT NULL DEFAULT ''", ""))
+    assert "analyst_notes" not in [r[1] for r in c.execute("PRAGMA table_info(gaps)")]
+    c.execute("INSERT INTO campaigns (id, name) VALUES (1, 'c')")
+    c.execute("INSERT INTO rulesets (id, version, created_at, rules_json_hash) VALUES (1, 'v1', 't', 'h')")
+    c.execute("INSERT INTO runs (id, campaign_id, ruleset_id, mode, started_at) VALUES (1, 1, 1, 'lab', 't')")
+    c.execute("INSERT INTO gaps (id, run_id, technique_id, kind, notes, status) VALUES (1, 1, 'T1003.001', 'missed', 'importer', 'accepted')")
+    c.execute("PRAGMA user_version = 3")
+    c.commit()
+    c.close()
+    c = db.connect(path)
+    try:
+        row = c.execute("SELECT notes, analyst_notes, status FROM gaps WHERE id = 1").fetchone()
+        assert (row["notes"], row["analyst_notes"], row["status"]) == ("importer", "", "accepted")
+        assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
+    finally:
+        c.close()

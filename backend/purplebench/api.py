@@ -203,7 +203,11 @@ async def last_resort(request: Request, exc: Exception):
 
 
 def get_conn() -> Iterator[sqlite3.Connection]:
-    conn = db.connect()
+    try:
+        conn = db.connect()
+    except (sqlite3.Error, OSError):
+        log.exception("Could not open the database")
+        raise HTTPException(503, "The database is not available") from None
     if config.demo_mode():
         if _seed_unavailable():
             conn.close()
@@ -254,7 +258,7 @@ LICENCE = "DRL-1.1"  # SigmaHQ Detection Rule License 1.1 (the bundled custom ru
 
 
 @lru_cache(maxsize=2)
-def _rule_catalog(rules_dir: str) -> dict[str, dict[str, Any]]:
+def _rule_catalog(rules_dir: str, signature: tuple) -> dict[str, dict[str, Any]]:
     attr = rulesets.rule_attribution(rules_dir)
     out: dict[str, dict[str, Any]] = {}
     for rule in rulesets.load_all_rules(rules_dir).values():
@@ -274,7 +278,7 @@ def _rules_by_id() -> dict[str, Any]:
 
 
 def _catalog() -> dict[str, dict[str, Any]]:
-    return _rule_catalog(str(config.RULES_DIR))
+    return _rule_catalog(str(config.RULES_DIR), rulesets._signature(config.RULES_DIR))
 
 
 def rule_obj(rule_id: str, title: str | None = None, origin: str | None = None) -> dict[str, Any]:
@@ -596,11 +600,13 @@ def run_detail(run_id: str, conn: Conn):
     hit_counts = dict(conn.execute(
         "SELECT h.execution_id, COUNT(*) FROM hits h JOIN executions e ON e.id = h.execution_id "
         "WHERE e.run_id = ? GROUP BY h.execution_id", (run["id"],)).fetchall())
+    titles = {x["rule_id"]: x["title"] for x in conn.execute(
+        "SELECT rule_id, title FROM ruleset_rules WHERE ruleset_id = ?", (run["ruleset_id"],))}
     by_exec: dict[int, list[dict]] = {}
     for h in conn.execute(
             "SELECT h.execution_id, h.rule_id, h.relation, h.noisy FROM hits h JOIN executions e "
             "ON e.id = h.execution_id WHERE e.run_id = ? ORDER BY h.noisy, h.first_ts, h.rule_id", (run["id"],)):
-        r = rule_obj(h["rule_id"])
+        r = rule_obj(h["rule_id"], titles.get(h["rule_id"]))
         by_exec.setdefault(h["execution_id"], []).append(
             {"id": r["id"], "title": r["title"], "author": r["author"], "relation": h["relation"],
              "noisy": bool(h["noisy"])})
@@ -740,10 +746,20 @@ def _event_out(ev: dict, matched: list[str]) -> dict[str, Any]:
 
 
 def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: int, limit: int, *,
-                 only_matched: bool = False, rule: str | None = None) -> tuple[list, bool, int]:
-    """Stream the file and keep only the requested page (plus one event to learn whether more follow).
-    Filters (matched only, one rule) apply before paging. Returns (items, has_more, unreadable lines skipped)."""
-    items, seen, skipped = [], 0, 0
+                 only_matched: bool = False, rule: str | None = None) -> dict[str, Any]:
+    """Stream the file and keep only the requested page.
+
+    An event is *valid* when it parses, is an object, has a usable time (when a window applies) and can be
+    rendered; invalid lines are skipped and counted, identically whatever the offset, so pages never repeat or
+    lose an event. Filters (matched only, one rule) apply before paging.
+
+    With a filter the whole file is scanned, so ``total`` (distinct events passing the filters; an event matched
+    by several rules counts once) and ``skipped_lines`` are exact. Without a filter the scan stops once the
+    page and one more event are found: ``total`` and ``skipped_lines`` then only count what was scanned
+    (``total_is_lower_bound``), because counting every line of a large lab file on each page would be costly.
+    """
+    items, n, skipped, has_more = [], 0, 0, False
+    full_scan = only_matched or rule is not None
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         for line in fh:
             if not line.strip():
@@ -760,16 +776,21 @@ def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: 
                 matched = idx.get((ev.get("channel"), rid), []) + idx.get((None, rid), [])
                 if (only_matched and not matched) or (rule is not None and rule not in matched):
                     continue
-                if seen < offset:
-                    seen += 1
-                    continue
-                if len(items) == limit:
-                    return items, True, skipped
-                items.append(_event_out(ev, matched))
-                seen += 1
-            except (AttributeError, TypeError, KeyError, ValueError):
-                skipped += 1  # not an event object, or no usable time: left out and counted
-    return items, False, skipped
+                out = _event_out(ev, matched)  # validated before any paging decision
+            except (AttributeError, TypeError, KeyError, ValueError, RecursionError):
+                skipped += 1  # not an event object, deeply nested, or no usable time: left out and counted
+                continue
+            n += 1
+            if n <= offset:
+                continue
+            if len(items) < limit:
+                items.append(out)
+            else:
+                has_more = True
+                if not full_scan:
+                    break
+    return {"items": items, "has_more": has_more, "skipped_lines": skipped, "total": n,
+            "total_is_lower_bound": has_more and not full_scan}
 
 
 @protected.get("/api/executions/{execution_id}")
@@ -798,7 +819,11 @@ def execution(execution_id: str, conn: Conn,
                   "source_url": a.source_url,
                   "note": "Display only. PurpleBench never runs this command; the lab runner does, on an allow-listed target."}
     events: dict[str, Any] = {"source": run["mode"], "items": [], "offset": offset, "limit": limit,
-                              "has_more": False, "available": False, "note": None, "skipped_lines": 0}
+                              "has_more": False, "available": False, "note": None, "skipped_lines": 0,
+                              "total": 0, "total_is_lower_bound": False,
+                              "skipped_lines_note": "Lines left out because they were not usable events. Exact "
+                                                    "when a filter is used; otherwise a lower bound (only the "
+                                                    "lines scanned so far are counted)."}
     path = _events_path(run["mode"], ex["events_ref"]) if ex["events_ref"] else None
     if path is None or not path.is_file():
         events["note"] = "The events for this execution are not available."
@@ -810,9 +835,8 @@ def execution(execution_id: str, conn: Conn,
             window = (start, end)
             events["window"] = {"start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "end": end.strftime("%Y-%m-%dT%H:%M:%SZ")}
         try:
-            events["items"], events["has_more"], events["skipped_lines"] = _page_events(
-                path, window, _match_index(hits), offset, limit, only_matched=matched,
-                rule=rule.lower() if rule else None)
+            events.update(_page_events(path, window, _match_index(hits), offset, limit, only_matched=matched,
+                                       rule=rule.lower() if rule else None))
             events["available"] = True
         except (OSError, ValueError, EOFError):
             events["note"] = "The events for this execution could not be read."

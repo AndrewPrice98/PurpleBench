@@ -522,14 +522,67 @@ def test_hit_keys_and_odd_event_lines(admin, db_file, tmp_path):
     f = tmp_path / "e.jsonl.gz"
     with gzip.open(f, "wt", encoding="utf-8") as fh:
         fh.write('[1,2]\n"str"\n{"ts":"2026-01-01T00:00:00Z","record_id":1,"channel":"c","fields":{"a":"b"}}\n{"fields":5,"ts":"x"}\n')
-    items, more, skipped = api._page_events(f, None, {}, 0, 10)
-    assert len(items) == 1 and not more and skipped == 3
+    r = api._page_events(f, None, {}, 0, 10)
+    assert len(r["items"]) == 1 and not r["has_more"] and r["skipped_lines"] == 3
 
 
 def test_rule_loading_is_cached():
     from purplebench import rulesets
-    rulesets.load_all_rules.__wrapped__ if hasattr(rulesets.load_all_rules, "__wrapped__") else None
     rulesets._load_all.cache_clear()
     rulesets.load_all_rules(); rulesets.load_all_rules(); rulesets.load_all_rules()
     info = rulesets._load_all.cache_info()
     assert info.misses == 1 and info.hits >= 2
+
+
+def _write_events(path, lines):
+    import gzip
+    with gzip.open(path, "wt", encoding="utf-8") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+def _ev(i, **extra):
+    return json.dumps({"ts": "2026-01-01T00:00:%02dZ" % i, "record_id": i, "channel": "c", "fields": {"a": "b"}, **extra})
+
+
+def test_event_paging_with_malformed_events_has_no_repeats_or_losses(tmp_path):
+    bad_fields = '{"ts":"2026-01-01T00:00:00Z","record_id":99,"fields":5}'
+    nested = "[" * 100_000 + "]" * 100_000
+    lines = [bad_fields, _ev(1), _ev(2), nested, _ev(3), bad_fields, _ev(4), "[1]", _ev(5), _ev(6), bad_fields, _ev(7)]
+    f = tmp_path / "e.jsonl.gz"
+    _write_events(f, lines)
+    for size in (1, 2, 3):
+        seen, off = [], 0
+        while True:
+            r = api._page_events(f, None, {}, off, size)
+            seen += [e["record_id"] for e in r["items"]]
+            if not r["has_more"]:
+                break
+            off += size
+        assert seen == [1, 2, 3, 4, 5, 6, 7], size
+    # a filter scans everything: exact total and skipped count
+    idx = {("c", 2): ["r1"], ("c", 3): ["r1", "r2"], ("c", 6): ["r2"]}
+    r = api._page_events(f, None, idx, 0, 1, only_matched=True)
+    assert r["total"] == 3 and r["has_more"] and not r["total_is_lower_bound"] and r["skipped_lines"] == 2
+    assert api._page_events(f, None, idx, 0, 10, rule="r2")["total"] == 2
+    unfiltered = api._page_events(f, None, {}, 0, 2)
+    assert unfiltered["total_is_lower_bound"] and unfiltered["has_more"]
+
+
+def test_execution_total_counts_distinct_matched_events(admin):
+    run = admin.get("/api/runs/3").json()
+    ex = max(run["executions"], key=lambda e: e["rules_fired"])
+    allm = admin.get(f"/api/executions/{ex['id']}?matched=true&limit=1").json()["events"]
+    every = admin.get(f"/api/executions/{ex['id']}?matched=true&limit=200").json()["events"]["items"]
+    assert allm["total"] == len(every) and allm["total_is_lower_bound"] is False
+
+
+def test_database_open_failure_is_503(seeded_db, monkeypatch):
+    import sqlite3
+
+    def broken(*a, **k):
+        raise sqlite3.OperationalError("unable to open database file")
+    monkeypatch.setattr(db, "connect", broken)
+    with TestClient(api.app) as c:
+        _login(c)
+        r = c.get("/api/runs")
+    assert r.status_code == 503 and r.json() == {"detail": "The database is not available"}
