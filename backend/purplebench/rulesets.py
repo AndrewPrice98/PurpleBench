@@ -64,8 +64,9 @@ V2 = RuleSetDef("v2", 13, (
     "encoded-PowerShell rule. That rule fires on the benign baseline (5 hits) so it is flagged noisy and its "
     "credit is withheld. The Event Viewer UAC bypass rules from SigmaHQ are added too; they do not match the "
     "recorded telemetry (Sysmon writes the key as ...\\command\\(Default))."), (
-    (H + "powershell_encode", "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads "
-                              "as partial (noisy rule) until v3 adds a tuned replacement."),
+    (H + "powershell_encode", "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so its exact credit "
+                              "for T1059.001 is withheld (only a related mshta hit remains, partial) until v3 "
+                              "adds a tuned replacement."),
     (H + "wmic_process_creation", "WMI process creation (T1047)."),
     (H + "sc_create_service", "Service creation with sc.exe (T1543.003)."),
     (H + "susp_service_creation", "Second service creation rule."),
@@ -90,8 +91,8 @@ V3 = RuleSetDef("v3", 27, (
     "encoded-PowerShell rule, local group enumeration with net.exe, 7-Zip archives with split volumes or maximum "
     "compression, and quser/qwinsta session discovery. The noisy SigmaHQ rule stays enabled and visible but "
     "no longer carries any credit."), (
-    ("proc_creation_win_powershell_encoded_command_tuned", "Closes T1059.001 (missed in run 1, noisy partial in "
-                                                           "run 2) and T1027: encoded commands outside the "
+    ("proc_creation_win_powershell_encoded_command_tuned", "Closes T1059.001 (missed in run 1, partial in "
+                                                           "run 2 with the noisy rule's credit withheld) and T1027: encoded commands outside the "
                                                            "remote-management harness shapes that make the "
                                                            "SigmaHQ rule noisy."),
     (H + "net_localgroup_enumeration", "Closes T1069.001: the SigmaHQ wmic rule never matched the recorded "
@@ -158,7 +159,7 @@ def ruleset_stems(version: str, all_stems: list[str]) -> list[str]:
     return sorted(wanted)
 
 
-def added_in(stem: str, all_stems: list[str]) -> tuple[str, str]:
+def added_in(stem: str) -> tuple[str, str]:
     """(version that first enabled the rule, remark)."""
     for d in RULESETS[:-1]:
         for s, note in d.adds:

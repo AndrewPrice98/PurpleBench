@@ -158,9 +158,12 @@ class RunScore:
         }
 
 
-def _seconds(a: str, b: str) -> float:
+def seconds_between(a: str, b: str) -> float:
     """``a - b`` in seconds for two normalised timestamps."""
     return (parse_ts(a) - parse_ts(b)).total_seconds()
+
+
+_seconds = seconds_between  # old private name, still used by runfile.py
 
 
 def _relation(tested: str, rule_techniques: Iterable[str]) -> str:

@@ -146,9 +146,17 @@ def test_a_noisy_rule_is_visible_and_earns_no_credit(seeded):
     noise = {n["title"]: n for n in db.list_rule_noise(seeded, 2)}
     enc = noise[ENC]
     assert enc["hits"] == 5 and enc["noisy"] and enc["origin"] == "sigmahq"
-    # run 2: the noisy rule is the only thing that fires for T1059.001, so it is partial, not detected
-    ex2 = next(e for e in db.list_executions(seeded, 2) if e["technique_id"] == "T1059.001")
-    assert ex2["status"] == "partial" and "noisy rule" in ex2["reason"]
+    # run 2: the noisy rule's exact credit is withheld; only a related mshta hit (T1218.005) remains -> partial
+    run2 = {e["technique_id"]: e for e in db.list_executions(seeded, 2)}
+    ex2 = run2["T1059.001"]
+    hits2 = db.list_hits(seeded, ex2["id"])
+    assert ex2["status"] == "partial" and "T1218.005" in ex2["reason"] and "earned no credit" in ex2["reason"]
+    assert [(h["relation"], h["noisy"]) for h in hits2 if h["title"] == ENC] == [("exact", True)]
+    assert [h["relation"] for h in hits2 if not h["noisy"]] == ["related"]
+    # T1082 in run 2: only the noisy rule fired
+    ex82 = run2["T1082"]
+    assert ex82["status"] == "partial" and ex82["reason"].startswith("noisy rule")
+    assert all(h["noisy"] for h in db.list_hits(seeded, ex82["id"]))
     # run 4: still enabled and still flagged noisy, but the tuned custom rule carries the detection
     ex4 = next(e for e in db.list_executions(seeded, 4) if e["technique_id"] == "T1059.001")
     hits = {h["title"]: h for h in db.list_hits(seeded, ex4["id"])}

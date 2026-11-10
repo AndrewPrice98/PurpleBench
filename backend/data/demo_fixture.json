@@ -352,7 +352,7 @@
      "origin": "sigmahq",
      "title": "Suspicious Execution of Powershell with Base64",
      "added_in": "v2",
-     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so its exact credit for T1059.001 is withheld (only a related mshta hit remains, partial) until v3 adds a tuned replacement."
     },
     {
      "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
@@ -617,7 +617,7 @@
      "origin": "sigmahq",
      "title": "Suspicious Execution of Powershell with Base64",
      "added_in": "v2",
-     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so its exact credit for T1059.001 is withheld (only a related mshta hit remains, partial) until v3 adds a tuned replacement."
     },
     {
      "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
@@ -625,7 +625,7 @@
      "origin": "custom",
      "title": "PowerShell Encoded Command Outside The Remote Management Harness",
      "added_in": "v3",
-     "note": "Closes T1059.001 (missed in run 1, noisy partial in run 2) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
+     "note": "Closes T1059.001 (missed in run 1, partial in run 2 with the noisy rule's credit withheld) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
     },
     {
      "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
@@ -1002,7 +1002,7 @@
      "origin": "sigmahq",
      "title": "Suspicious Execution of Powershell with Base64",
      "added_in": "v2",
-     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so its exact credit for T1059.001 is withheld (only a related mshta hit remains, partial) until v3 adds a tuned replacement."
     },
     {
      "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
@@ -1010,7 +1010,7 @@
      "origin": "custom",
      "title": "PowerShell Encoded Command Outside The Remote Management Harness",
      "added_in": "v3",
-     "note": "Closes T1059.001 (missed in run 1, noisy partial in run 2) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
+     "note": "Closes T1059.001 (missed in run 1, partial in run 2 with the noisy rule's credit withheld) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
     },
     {
      "rule_id": "e32d4572-9826-4738-b651-95fa63747e8a",

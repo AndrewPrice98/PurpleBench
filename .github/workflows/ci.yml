@@ -48,6 +48,8 @@ jobs:
         run: ./lab/Test-RunnerStatic.ps1
 
   frontend:
+    # Placeholder until the frontend scaffold lands in a later task.
+    if: hashFiles('package.json') != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

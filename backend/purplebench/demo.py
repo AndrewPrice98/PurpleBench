@@ -34,6 +34,8 @@ def seed(conn: sqlite3.Connection) -> bool:
         return False
     fixture = load_fixture()
     conn.commit()  # no transaction may be open when taking the write lock
+    # Relies on sqlite3's legacy isolation (no implicit BEGIN before this explicit one); db.connect leaves
+    # isolation_level at its default.
     conn.execute("BEGIN IMMEDIATE")
     try:
         # Re-check under the write lock: another process may have seeded meanwhile.

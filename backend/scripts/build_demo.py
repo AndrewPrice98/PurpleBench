@@ -87,7 +87,7 @@ def _stem_of(rule) -> str:
 
 def _record_ids(rule, index: EventIndex, profile, anchor: str, skew: float, window: float) -> list[int]:
     res = evaluate(rule, index, profile)
-    return [ref.record_id for ref in res.matches if -skew <= scoring._seconds(ref.ts, anchor) <= window]
+    return [ref.record_id for ref in res.matches if -skew <= scoring.seconds_between(ref.ts, anchor) <= window]
 
 
 def _gap_text(es: scoring.ExecutionScore) -> str:
@@ -120,7 +120,7 @@ def build() -> dict:
         entries = []
         for s in rulesets.ruleset_stems(d.version, stems):
             r = all_rules[s]
-            first, note = rulesets.added_in(s, stems)
+            first, note = rulesets.added_in(s)
             entries.append({"rule_id": r.id, "file": Path(r.path).name, "origin": r.origin, "title": r.title,
                             "added_in": first, "note": note})
         rulesets_out.append({"id": set_ids[d.version], "version": d.version, "created_at": ts(d.offset_days, 8),
@@ -148,7 +148,9 @@ def build() -> dict:
             for h in es.hits:
                 ids = _record_ids(_rule_by_id(set_rules[version], h.rule_id), indexes[es.technique], profile,
                                   ex.anchor_ts, rs.skew_seconds, window)
-                assert len(ids) == h.events, (es.technique, h.rule_id)
+                if len(ids) != h.events:
+                    raise RuntimeError(f"event count mismatch for {es.technique} / {h.rule_id}: "
+                                       f"{len(ids)} record ids but the score counted {h.events}")
                 hits_out.append({"rule_id": h.rule_id, "first_ts": h.first_ts, "count": h.events,
                                  "relation": h.relation, "noisy": h.noisy, "noise_hits": h.noise_hits,
                                  "record_ids": ids})

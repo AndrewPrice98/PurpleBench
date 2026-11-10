@@ -46,7 +46,7 @@ def _flag(name: str, default: bool) -> bool:
 
 
 def db_path() -> Path:
-    return Path(os.environ.get("PURPLEBENCH_DB", BACKEND_DIR / "data" / "purplebench.db"))
+    return Path(os.environ.get("PURPLEBENCH_DB", DATA_DIR / "purplebench.db"))
 
 
 def max_upload_bytes() -> int:
