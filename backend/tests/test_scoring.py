@@ -139,7 +139,7 @@ def test_missed_and_telemetry_gap_and_untested():
     r = run([R_EVIL], [ex(events=[evil(1)]), ex("T1047", [proc(1, ts(1))]), u])
     assert r.executions[2].status == UNTESTED and r.executions[2].reason == "recorded dataset contains no execution"
     cov = coverage.compute_coverage(r)
-    assert cov.counts == {"detected": 1, "partial": 0, "missed": 1, "telemetry_gap": 0, "untested": 1}
+    assert cov.counts == {"detected": 1, "partial": 0, "missed": 1, "telemetry_gap": 0, "untested": 1, "did_not_run": 0}
     assert cov.tested == 2 and cov.score == 50.0
 
 

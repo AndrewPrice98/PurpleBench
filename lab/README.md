@@ -24,7 +24,11 @@ downloads attack tooling; only `Invoke-PurpleBenchRun.ps1`, run by you, does.
    snapshot when you are done.**
 
 The runner never downloads anything, never evaluates fetched text, never calls `-GetPrereqs` (which downloads), and
-only talks WinRM to the one target. Tests whose prerequisites are missing simply fail and are reported.
+only talks WinRM to the one target. For each test it records a status in the run file: `ran`, `failed` (the error
+text is kept), `prereqs_missing` (checked first with `-CheckPrereqs`; the wording of that output has not been
+verified against a real install, so check the first run) or `skipped` (the run was aborted). A test that did not run
+is imported as **did not run**, with the reason, and is excluded from the coverage score like an untested
+technique. It is never counted as a miss. The same goes for a test whose event collection failed.
 
 ## Lab setup
 
@@ -36,7 +40,9 @@ Use a machine that holds nothing you care about. Do not join it to a domain or a
    Give the target a static address, for example `192.168.56.20`.
 2. **Windows target.** Windows Server 2022 from Microsoft's Evaluation Center (the 180-day evaluation ISO,
    <https://www.microsoft.com/evalcenter/>). Name the computer `LAB-WS01` (or whatever you list in
-   `lab-targets.json`; the name must match, the runner compares it with the computer's real name).
+   `lab-targets.json`; the name must match, the runner compares it with the computer's real name). Windows
+   reports `COMPUTERNAME` as the 15-character NetBIOS name, so keep the name at 15 characters or fewer and pass
+   the computer name to `-Target`, not an IP address.
 3. **Sysmon.** Install Microsoft Sysinternals Sysmon
    (<https://learn.microsoft.com/sysinternals/downloads/sysmon>) with a documented configuration. This project
    suggests **olafhartong/sysmon-modular** (<https://github.com/olafhartong/sysmon-modular>, MIT licence;
@@ -54,10 +60,14 @@ Use a machine that holds nothing you care about. Do not join it to a domain or a
    events are not overwritten.
 5. **Invoke-AtomicRedTeam, on the target.** Install it **on the VM itself**, by hand, from the official project
    (<https://github.com/redcanaryco/invoke-atomicredteam>, MIT; Atomic tests, MIT, from
-   <https://github.com/redcanaryco/atomic-red-team>). Read its install instructions and use a copy you have
-   inspected, or one you copied into the VM from your host over a shared folder. The runner expects the module
-   to be importable as `Invoke-AtomicRedTeam` and the atomics folder at `C:\AtomicRedTeam\atomics` (change with
-   `-AtomicsPath`). Install prerequisites for the tests you plan to run yourself, while the VM is still isolated;
+   <https://github.com/redcanaryco/atomic-red-team>). Use a copy you have inspected, copied into the VM from your
+   host (for example over a shared folder). The runner works through a **remote** session, and a remote session
+   does not see modules installed in your own user profile. Install **Invoke-AtomicRedTeam and its dependency
+   `powershell-yaml` for all users**: copy each module folder (`Invoke-AtomicRedTeam\<version>` and
+   `powershell-yaml\<version>`) into `C:\Program Files\WindowsPowerShell\Modules\` on the VM, from an elevated
+   prompt. Check from a fresh elevated PowerShell that `Get-Module -ListAvailable Invoke-AtomicRedTeam` lists it;
+   the runner refuses to start otherwise. The atomics folder is expected at `C:\AtomicRedTeam\atomics` (change
+   with `-AtomicsPath`). Install prerequisites for the tests you plan to run yourself, while the VM is still isolated;
    the runner does not fetch any.
    Windows Defender will often quarantine Atomic test files and the tests themselves. Decide deliberately how
    you handle that on the lab VM only (for example an exclusion for `C:\AtomicRedTeam` there). Do not weaken
@@ -66,8 +76,14 @@ Use a machine that holds nothing you care about. Do not join it to a domain or a
    restrict the firewall rule *Windows Remote Management (HTTP-In)* to the host-only subnet
    (`Set-NetFirewallRule -DisplayName 'Windows Remote Management (HTTP-In)' -RemoteAddress 192.168.56.0/24`).
    Create a local lab-only administrator account for the runner and keep its password out of any file.
-   On your operator machine, for a workgroup target add **only** that target to TrustedHosts:
-   `Set-Item WSMan:\localhost\Client\TrustedHosts -Value 192.168.56.20` (never `*`) and use `-Credential`.
+   On your operator machine the target is addressed **by the name you pass to `-Target`** (WinRM matches the
+   TrustedHosts entry against that string, not against the IP). For a workgroup target:
+   1. Pin the name to the lab address in the operator's hosts file (`C:\Windows\System32\drivers\etc\hosts`, as
+      administrator), so name resolution cannot be answered by anything else on the network (LLMNR and NBNS can
+      be spoofed): `192.168.56.20 LAB-WS01`.
+   2. Add only that name to TrustedHosts, without overwriting existing entries:
+      `Set-Item WSMan:\localhost\Client\TrustedHosts -Value 'LAB-WS01' -Concatenate` (never `*`).
+   3. Use `-Credential` (the runner requires it for a real run).
    Prefer WinRM over HTTPS (`-UseSSL`) if you have set up a certificate.
 7. **Set the marker.** This is your deliberate "yes, this machine may be attacked" switch. On the target, in an
    elevated PowerShell:
@@ -88,26 +104,41 @@ Use a machine that holds nothing you care about. Do not join it to a domain or a
    (prints the plan, executes and contacts nothing).
 5. Run for real: `.\Invoke-PurpleBenchRun.ps1 -Target LAB-WS01 -Campaign .\campaign.json -Credential (Get-Credential)`.
    Read the warning, make sure the snapshot exists, type the target name.
-6. Per test the runner records the start time (the target's clock), runs the test, waits `-SettleSeconds`
-   (default 30), collects Sysmon and Security events from 5 s before the start to 120 s after the end, normalizes
-   them, then runs cleanup. The run file `purplebench-run-<target>-<time>.json` is written at the end (it is
-   written even if a later test aborts the run, with the tests completed so far).
+6. Per test the runner records the start time (the target's clock), checks prerequisites, runs the test, waits
+   `-SettleSeconds` (default 120, so the 120 s after the end have really elapsed), collects Sysmon and Security
+   events from 5 s before the start to 120 s after the end (oldest first, capped by `-MaxEventsPerTest`; a
+   capped test is flagged), then runs cleanup and pauses `-PauseAfterCleanupSeconds` (default 10) so cleanup
+   activity does not fall into the next test's window. Before anything runs it also checks that the Sysmon
+   channel exists and that the Security log is readable, and refuses otherwise. A window with no events is
+   normal; any other collection failure is recorded on that test. The run file
+   `purplebench-run-<target>-<time>.json` is created (never overwritten) at the end, and also if a later test
+   aborts the run, with the remaining tests marked `skipped`. A campaign of N tests takes at least
+   N x (120 + 10) seconds plus the test time.
 7. **Revert the VM to `clean-baseline`.** Always.
 8. Import the file (run-file import, `purplebench.runfile.import_run`; the upload route is added with the API).
 
 ## Run file and import
 
-`backend/purplebench/runfile.py` validates the file before storing anything: size cap (64 MB), JSON nesting depth,
-schema, timestamps, GUID and technique id formats, event and field counts, string lengths (a 1 MB command line
-is rejected, not truncated), no NUL bytes. Lab runs are scored with the newest rule set unless one is chosen.
+The run file is `purplebench-run` **version 2**: per execution `technique_id`, `test_guid`, `started_at`,
+`ended_at`, `run_status`, `error`, `collection_error`, `truncated` and `events_xml`. Events are shipped as the
+`Event.ToXml()` text Windows produces and normalised only on import by the project's one event parser (defusedxml,
+DTDs refused), with all timestamps in the invariant culture.
+
+`backend/purplebench/runfile.py` validates the file before storing anything: size cap (32 MB), JSON nesting depth,
+schema (unknown keys are refused), timestamps, GUID and technique id formats, event and field counts, string
+lengths (a 1 MB command line is rejected, not truncated), no NUL or control characters in names. Lab runs are scored with the newest rule set unless one is chosen.
 Two deliberate differences from recorded mode, written into every lab run's notes: no benign baseline is
 collected, so **rule noise is not measured**; and the telemetry profile is the events of the run itself, so a rule
-whose event type never occurred in the lab reads as a telemetry gap.
+whose event type never occurred in the lab reads as a telemetry gap. Because there is no baseline, the collected
+windows also contain the **WinRM harness itself** (for example `wsmprovhost.exe` and the remote commands that
+launch each test); read lab results with that in mind, and expect some rules to fire on the harness.
 
 ## Checks without a lab
 
 - `python -m pytest backend/tests/test_lab_runner_static.py backend/tests/test_runfile.py` (script text safety
   checks; run-file validation and import with synthetic files).
+- `lab/Test-AllowList.ps1` lets the tests call the runner's allow-list function alone (extracted with the parser; the
+  runner is not run) with hostile list entries.
 - `powershell -File lab/Test-RunnerStatic.ps1` parses the script with the PowerShell AST and fails on parse errors,
   forbidden commands (download or dynamic-execution cmdlets), dynamic invocation, or an `Invoke-Command` that is
   not bound to the one session. It never runs the runner. The CI job `lab-script` runs it on `windows-latest`.

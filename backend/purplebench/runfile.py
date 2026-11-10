@@ -5,18 +5,25 @@ fields contain attacker-controlled strings (command lines, file names). It is th
 size, JSON depth, schema, timestamps, string lengths and counts before anything is stored, and nothing
 in it is executed or evaluated except by the Sigma evaluator (which only compares strings).
 
-File format (``format = "purplebench-run"``, ``version = 1``)::
+File format (``format = "purplebench-run"``, ``version = 2``)::
 
-    {"format": "purplebench-run", "version": 1, "mode": "lab", "target": "LAB-WS01",
+    {"format": "purplebench-run", "version": 2, "mode": "lab", "target": "LAB-WS01",
      "started_at": "2026-11-10T09:00:00Z", "campaign": "name" | {"name": "...", "techniques": [...]},
      "executions": [{"technique_id": "T1003.001", "test_guid": "<guid>|null",
                      "started_at": "...", "ended_at": "...",
-                     "events": [{"ts", "channel", "event_id", "host", "record_id", "fields"}]}]}
+                     "run_status": "ran|failed|prereqs_missing|skipped", "error": "...",
+                     "collection_error": "...", "truncated": false,
+                     "events_xml": ["<Event ...>...</Event>", ...]}]}
+
+Events are shipped exactly as Windows renders them (``Event.ToXml()``) and normalised here by
+``telemetry.parse_event_xml`` (defusedxml, DTDs refused), the one event normaliser of the project.
 
 Import scores the run with the chosen rule set (default: the newest) using the same scorer as recorded
-mode. Two differences are deliberate and stored in the run notes: the telemetry profile is built from
-the events of the run itself (what this lab actually collected), and there is no benign baseline, so
-rule noise is not measured for lab runs.
+mode. Executions whose test did not run (failed, prerequisites missing, skipped) or whose event collection
+failed are stored with status ``did_not_run`` and a reason, and are excluded from coverage like untested
+ones: they are never scored "missed". Two differences from recorded mode are stored in the run notes: the
+telemetry profile is built from the events of the run itself (what this lab actually collected), and there
+is no benign baseline, so rule noise is not measured for lab runs.
 """
 
 from __future__ import annotations
@@ -25,30 +32,38 @@ import gzip
 import json
 import re
 import sqlite3
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 from . import config, db, library, rulesets, scoring
 from .coverage import GENERIC_HINT, load_gap_hints
 from .sigma import EventIndex, TelemetryProfile, evaluate
-from .telemetry import TelemetryError, normalize_ts, parse_event_json, parse_ts
+from .telemetry import TelemetryError, normalize_ts, parse_event_xml, parse_ts
 
 FORMAT = "purplebench-run"
-VERSION = 1
+VERSION = 2
 
-MAX_FILE_BYTES = 64 * 1024 * 1024
+MAX_FILE_BYTES = 32 * 1024 * 1024
 MAX_EXECUTIONS = 500
 MAX_EVENTS_PER_EXECUTION = 50_000
 MAX_EVENTS_TOTAL = 200_000
+MAX_EVENT_XML_CHARS = 512_000  # one event's XML as shipped by the runner
 MAX_FIELDS_PER_EVENT = 200
 MAX_FIELD_NAME = 128
 MAX_FIELD_VALUE = 65_536  # a 1 MB command line is refused, not truncated: the evidence would be partial
 MAX_SHORT = 256  # target, channel, host, campaign name, technique id
-MAX_DEPTH = 6  # run file > executions > execution > events > event > fields
+MAX_ERROR = 2000
+MAX_DEPTH = 6  # run file > executions > execution > events_xml > string (+ margin)
 
-_TECH = re.compile(r"^T\d{4}(\.\d{3})?$")
-_HOST = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$")
-_GUID = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+RUN_STATUSES = ("ran", "failed", "prereqs_missing", "skipped")
+_TOP_KEYS = {"format", "version", "mode", "target", "started_at", "campaign", "executions"}
+_EXEC_KEYS = {"technique_id", "test_guid", "started_at", "ended_at", "run_status", "error", "collection_error",
+              "truncated", "events_xml"}
+
+_TECH = re.compile(r"T\d{4}(\.\d{3})?")
+_HOST = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,254}")
+_GUID = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 
 
 class RunFileError(ValueError):
@@ -81,15 +96,28 @@ def _depth_ok(raw: bytes) -> bool:
 
 
 def _str(value: Any, what: str, limit: int = MAX_SHORT, *, allow_empty: bool = False) -> str:
+    """A short header string: no NUL or other control characters (it is echoed in the UI and reports)."""
     if not isinstance(value, str):
         raise RunFileError(f"{what} must be a string")
-    if "\x00" in value:
-        raise RunFileError(f"{what} contains a NUL byte")
+    if any(unicodedata.category(c) == "Cc" for c in value):
+        raise RunFileError(f"{what} contains a control character")
     if len(value) > limit:
         raise RunFileError(f"{what} is longer than {limit} characters")
     if not value and not allow_empty:
         raise RunFileError(f"{what} is empty")
     return value
+
+
+def _message(value: Any, what: str) -> str:
+    """Free text from the runner (error messages): control characters become spaces, length is capped."""
+    if value is None or value == "":
+        return ""
+    if not isinstance(value, str):
+        raise RunFileError(f"{what} must be a string")
+    if len(value) > 10 * MAX_ERROR:
+        raise RunFileError(f"{what} is longer than {10 * MAX_ERROR} characters")
+    clean = "".join(" " if unicodedata.category(c) == "Cc" else c for c in value)
+    return clean[:MAX_ERROR]
 
 
 def _ts(value: Any, what: str) -> str:
@@ -99,34 +127,31 @@ def _ts(value: Any, what: str) -> str:
         raise RunFileError(f"{what}: {exc}") from exc
 
 
-def _event(obj: Any, where: str) -> dict[str, Any]:
-    if not isinstance(obj, dict):
-        raise RunFileError(f"{where}: event is not an object")
-    if not {"ts", "event_id", "fields"} <= obj.keys():
-        raise RunFileError(f"{where}: event needs ts, event_id and fields")
-    fields = obj["fields"]
-    if not isinstance(fields, dict):
-        raise RunFileError(f"{where}: fields is not an object")
-    if len(fields) > MAX_FIELDS_PER_EVENT:
-        raise RunFileError(f"{where}: more than {MAX_FIELDS_PER_EVENT} fields")
-    for k, v in fields.items():
-        _str(k, f"{where}: field name", MAX_FIELD_NAME)
-        if v is not None and not isinstance(v, (str, int, float, bool)):
-            raise RunFileError(f"{where}: field {k!r} is not a scalar")
-        _str("" if v is None else str(v), f"{where}: field {k!r}", MAX_FIELD_VALUE, allow_empty=True)
-    for key in ("channel", "host"):
-        _str(obj.get(key, ""), f"{where}: {key}", MAX_SHORT, allow_empty=True)
-    eid = obj["event_id"]
-    if isinstance(eid, bool) or not isinstance(eid, int) or not 0 <= eid <= 65535:
-        raise RunFileError(f"{where}: event_id must be an integer 0 to 65535")
-    rid = obj.get("record_id", 0)
-    if isinstance(rid, bool) or not isinstance(rid, int) or not 0 <= rid < 2**63:
-        raise RunFileError(f"{where}: record_id must be a non-negative integer")
-    _str(obj["ts"], f"{where}: ts", 64)
+def _event(xml: Any, where: str) -> dict[str, Any]:
+    """Normalise one event shipped as Windows Event XML (the only normaliser is telemetry.parse_event_xml)."""
+    if not isinstance(xml, str):
+        raise RunFileError(f"{where}: event is not a string of event XML")
+    if len(xml) > MAX_EVENT_XML_CHARS:
+        raise RunFileError(f"{where}: event XML is longer than {MAX_EVENT_XML_CHARS} characters")
+    if "\x00" in xml:
+        raise RunFileError(f"{where}: event contains a NUL byte")
     try:
-        return parse_event_json(obj)  # shared normalisation (timestamps, field coercion)
+        ev = parse_event_xml(xml)
     except TelemetryError as exc:
         raise RunFileError(f"{where}: {exc}") from exc
+    if len(ev["fields"]) > MAX_FIELDS_PER_EVENT:
+        raise RunFileError(f"{where}: more than {MAX_FIELDS_PER_EVENT} fields")
+    for k, v in ev["fields"].items():
+        if len(k) > MAX_FIELD_NAME:
+            raise RunFileError(f"{where}: field name is longer than {MAX_FIELD_NAME} characters")
+        if len(v) > MAX_FIELD_VALUE:
+            raise RunFileError(f"{where}: field {k!r} is longer than {MAX_FIELD_VALUE} characters")
+    for key in ("channel", "host"):
+        if len(ev[key]) > MAX_SHORT:
+            raise RunFileError(f"{where}: {key} is longer than {MAX_SHORT} characters")
+    if not 0 <= ev["event_id"] <= 65535 or not 0 <= ev["record_id"] < 2**63:
+        raise RunFileError(f"{where}: event id or record id out of range")
+    return ev
 
 
 def validate(raw: bytes | str | Path) -> dict[str, Any]:
@@ -139,7 +164,7 @@ def validate(raw: bytes | str | Path) -> dict[str, Any]:
         raw = raw.encode("utf-8")
     if len(raw) > MAX_FILE_BYTES:
         raise RunFileError(f"run file is larger than {MAX_FILE_BYTES // (1024 * 1024)} MB")
-    if raw.startswith(b"\xef\xbb\xbf"):  # PowerShell 5.1 writes a BOM with -Encoding UTF8
+    if raw.startswith(b"\xef\xbb\xbf"):  # tolerate a BOM
         raw = raw[3:]
     try:
         text = raw.decode("utf-8")
@@ -153,12 +178,16 @@ def validate(raw: bytes | str | Path) -> dict[str, Any]:
         raise RunFileError("run file is not valid JSON") from exc
     if not isinstance(data, dict):
         raise RunFileError("run file must be a JSON object")
-    if data.get("format") != FORMAT or data.get("version") != VERSION:
+    ver = data.get("version")
+    if data.get("format") != FORMAT or type(ver) is not int or ver != VERSION:
         raise RunFileError(f"not a {FORMAT} version {VERSION} file")
+    unknown = set(data) - _TOP_KEYS
+    if unknown:
+        raise RunFileError(f"unknown top-level key(s): {', '.join(sorted(map(str, unknown)))[:100]}")
     if data.get("mode") != "lab":
         raise RunFileError('run file mode must be "lab"')
     target = _str(data.get("target"), "target")
-    if not _HOST.match(target):
+    if not _HOST.fullmatch(target):
         raise RunFileError("target must be a host name only (letters, digits, dot, dash, underscore)")
     started = _ts(data.get("started_at"), "started_at")
 
@@ -169,7 +198,7 @@ def validate(raw: bytes | str | Path) -> dict[str, Any]:
         if not isinstance(camp_techs, list) or len(camp_techs) > MAX_EXECUTIONS:
             raise RunFileError("campaign techniques must be a short list")
         for t in camp_techs:
-            if not isinstance(t, str) or not _TECH.match(t):
+            if not isinstance(t, str) or not _TECH.fullmatch(t):
                 raise RunFileError("campaign techniques must be ATT&CK ids")
     else:
         camp_name, camp_techs = _str(camp, "campaign"), []
@@ -185,34 +214,48 @@ def validate(raw: bytes | str | Path) -> dict[str, Any]:
         where = f"execution {i + 1}"
         if not isinstance(row, dict):
             raise RunFileError(f"{where} is not an object")
+        extra = set(row) - _EXEC_KEYS
+        if extra:
+            raise RunFileError(f"{where}: unknown key(s): {', '.join(sorted(map(str, extra)))[:100]}")
         tech = _str(row.get("technique_id"), f"{where}: technique_id")
-        if not _TECH.match(tech):
+        if not _TECH.fullmatch(tech):
             raise RunFileError(f"{where}: technique_id is not an ATT&CK id")
         guid = row.get("test_guid")
-        if guid is not None and not (isinstance(guid, str) and _GUID.match(guid)):
+        if guid is not None and not (isinstance(guid, str) and _GUID.fullmatch(guid)):
             raise RunFileError(f"{where}: test_guid is not a GUID")
         t0, t1 = _ts(row.get("started_at"), f"{where}: started_at"), _ts(row.get("ended_at"), f"{where}: ended_at")
         if parse_ts(t1) < parse_ts(t0):
             raise RunFileError(f"{where}: ended_at is before started_at")
-        evs = row.get("events")
+        status = row.get("run_status")
+        if status not in RUN_STATUSES:
+            raise RunFileError(f"{where}: run_status must be one of {', '.join(RUN_STATUSES)}")
+        truncated = row.get("truncated", False)
+        if not isinstance(truncated, bool):
+            raise RunFileError(f"{where}: truncated must be true or false")
+        evs = row.get("events_xml")
         if not isinstance(evs, list):
-            raise RunFileError(f"{where}: events must be a list")
+            raise RunFileError(f"{where}: events_xml must be a list")
         if len(evs) > MAX_EVENTS_PER_EXECUTION:
             raise RunFileError(f"{where}: more than {MAX_EVENTS_PER_EXECUTION} events")
         total += len(evs)
         if total > MAX_EVENTS_TOTAL:
             raise RunFileError(f"more than {MAX_EVENTS_TOTAL} events in the run")
         events = [_event(e, f"{where}, event {j + 1}") for j, e in enumerate(evs)]
-        executions.append({"technique_id": tech, "test_guid": guid.lower() if guid else None,
-                           "started_at": t0, "ended_at": t1, "events": events})
+        executions.append({
+            "technique_id": tech, "test_guid": guid.lower() if guid else None, "started_at": t0, "ended_at": t1,
+            "run_status": status, "error": _message(row.get("error"), f"{where}: error"),
+            "collection_error": _message(row.get("collection_error"), f"{where}: collection_error"),
+            "truncated": truncated, "events": events})
     return {"target": target, "started_at": started, "campaign": {"name": camp_name, "techniques": camp_techs},
             "executions": executions}
 
 
-def _record_ids(rule, index: EventIndex, profile: TelemetryProfile, anchor: str, skew: float,
-                window: float) -> list[int]:
+def _record_refs(rule, index: EventIndex, profile: TelemetryProfile, anchor: str, skew: float,
+                 window: float) -> list[list[Any]]:
+    """The matching events inside the window as [channel, record_id] pairs (record ids repeat across logs)."""
     res = evaluate(rule, index, profile)
-    return [ref.record_id for ref in res.matches if -skew <= scoring._seconds(ref.ts, anchor) <= window]
+    return [[ref.channel, ref.record_id] for ref in res.matches
+            if -skew <= scoring._seconds(ref.ts, anchor) <= window]
 
 
 def events_dir() -> Path:
@@ -220,13 +263,25 @@ def events_dir() -> Path:
     return config.db_path().parent / "lab_events"
 
 
+def _did_not_run_reason(ex: dict[str, Any]) -> str | None:
+    if ex["run_status"] != "ran":
+        label = ex["run_status"].replace("_", " ")
+        return f"the test did not run ({label})" + (f": {ex['error']}" if ex["error"] else "")
+    if ex["collection_error"]:
+        return f"event collection failed, so the test could not be scored: {ex['collection_error']}"
+    return None
+
+
 def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id: int | None = None,
                noise_threshold: int = scoring.DEFAULT_NOISE_THRESHOLD) -> int:
     """Validate ``raw`` and store it as a lab run scored with the rule set. Returns the run id.
 
-    Nothing is stored if validation or scoring fails.
+    Nothing is stored if validation or scoring fails. The connection must have no open transaction (the
+    import does not commit anything the caller has pending).
     """
     run = validate(raw)
+    if conn.in_transaction:
+        raise RuntimeError("import_run needs a connection without an open transaction")
     if ruleset_id is not None:
         rs_row = db.get_ruleset(conn, ruleset_id)
     else:
@@ -239,22 +294,23 @@ def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id:
     rules = [r for r in rulesets.load_all_rules().values() if r.id in wanted]
     lib = {t.attack_id: t for t in library.list_techniques()}
 
-    execs, all_events = [], []
+    execs, profile_events = [], []
     for ex in run["executions"]:
         t = lib.get(ex["technique_id"])
         dur = (parse_ts(ex["ended_at"]) - parse_ts(ex["started_at"])).total_seconds()
+        dnr = _did_not_run_reason(ex)
         execs.append(scoring.Execution(
             technique=ex["technique_id"], name=t.name if t else ex["technique_id"], tactics=t.tactics if t else (),
             events=ex["events"], anchor_ts=ex["started_at"],
-            window_seconds=scoring.DEFAULT_WINDOW_SECONDS + max(0.0, dur),
+            window_seconds=scoring.DEFAULT_WINDOW_SECONDS + max(0.0, dur), did_not_run_reason=dnr,
             atomic_test=t.atomic.name if t and t.atomic else None))
-        all_events.extend(ex["events"])
-    profile = TelemetryProfile.from_events(all_events)
+        if dnr is None:
+            profile_events.extend(ex["events"])
+    profile = TelemetryProfile.from_events(profile_events)
     score = scoring.score_run(rules, execs, [], profile, noise_threshold)
     hints = load_gap_hints()
 
     campaign = next((c for c in db.list_campaigns(conn) if c["name"] == run["campaign"]["name"]), None)
-    conn.commit()
     conn.execute("BEGIN IMMEDIATE")
     written: list[Path] = []
     try:
@@ -267,6 +323,7 @@ def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id:
                   "Lab mode has not yet been run against a real lab by the project author; "
                   "this result is only as good as the lab that produced the file.")
         notes = ("No benign baseline is collected in lab mode, so rule noise was not measured for this run. "
+                 "WinRM harness activity (for example wsmprovhost.exe) can appear in the collected windows. "
                  f"Telemetry profile: the events of this run. Scored with rule set {rs_row['version']}.")
         run_id = db.add_run(conn, cid, rs_row["id"], "lab", source, run["started_at"], notes, commit=False)
         by_rule = {r.id: r for r in rules}
@@ -276,25 +333,28 @@ def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id:
             window = execs[n - 1].window_seconds
             hits = []
             for h in es.hits:
-                ids = _record_ids(by_rule[h.rule_id], index, profile, ex["started_at"], score.skew_seconds, window)
+                refs = _record_refs(by_rule[h.rule_id], index, profile, ex["started_at"], score.skew_seconds, window)
                 hits.append({"rule_id": h.rule_id, "first_ts": h.first_ts, "count": h.events, "relation": h.relation,
-                             "noisy": h.noisy, "noise_hits": h.noise_hits, "record_ids": ids})
+                             "noisy": h.noisy, "noise_hits": h.noise_hits, "record_ids": refs})
             out_dir.mkdir(parents=True, exist_ok=True)
             path = out_dir / f"run{run_id}_{n}.jsonl.gz"
             written.append(path)
             with gzip.open(path, "wt", encoding="utf-8") as fh:
                 for ev in ex["events"]:
                     fh.write(json.dumps(ev, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
+            reason = es.reason
+            if ex["truncated"] and es.status != scoring.DID_NOT_RUN:
+                reason += " Event collection hit its cap for this test, so the events may be incomplete."
             db.add_execution(conn, run_id, {
                 "technique_id": ex["technique_id"], "test_guid": ex["test_guid"], "started_at": ex["started_at"],
                 "ended_at": ex["ended_at"], "status": es.status,
                 "ttd_ms": None if es.ttd_seconds is None else round(es.ttd_seconds * 1000),
-                "events_ref": f"lab_events/run{run_id}_{n}.jsonl.gz", "reason": es.reason, "hits": hits},
+                "events_ref": f"lab_events/run{run_id}_{n}.jsonl.gz", "reason": reason, "hits": hits},
                 commit=False)
             if es.status in ("missed", "telemetry_gap", "partial"):
                 hint = hints.get(es.technique) or GENERIC_HINT
                 db.add_gap(conn, run_id, {
-                    "technique_id": es.technique, "kind": es.status, "notes": es.reason.rstrip(".") + ".",
+                    "technique_id": es.technique, "kind": es.status, "notes": reason.rstrip(".") + ".",
                     "status": "open", "telemetry_needed": hint["telemetry_needed"], "rule_idea": hint["rule_idea"],
                     "closed_in_run": None}, commit=False)
         db.add_rule_noise(conn, run_id, [{"rule_id": r.rule_id, "status": r.status, "hits": r.hits, "noisy": r.noisy}

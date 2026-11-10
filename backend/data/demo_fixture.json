@@ -1374,7 +1374,8 @@
      "partial": 0,
      "missed": 7,
      "telemetry_gap": 1,
-     "untested": 1
+     "untested": 1,
+     "did_not_run": 0
     },
     "tested": 14,
     "score": 42.9,
@@ -1941,7 +1942,8 @@
      "partial": 4,
      "missed": 1,
      "telemetry_gap": 0,
-     "untested": 0
+     "untested": 0,
+     "did_not_run": 0
     },
     "tested": 14,
     "score": 64.3,
@@ -2828,7 +2830,8 @@
      "partial": 2,
      "missed": 1,
      "telemetry_gap": 1,
-     "untested": 1
+     "untested": 1,
+     "did_not_run": 0
     },
     "tested": 14,
     "score": 71.4,
@@ -3699,7 +3702,8 @@
      "partial": 2,
      "missed": 0,
      "telemetry_gap": 0,
-     "untested": 0
+     "untested": 0,
+     "did_not_run": 0
     },
     "tested": 14,
     "score": 85.7,

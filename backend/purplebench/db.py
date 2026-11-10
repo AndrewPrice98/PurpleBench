@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS executions (
     started_at    TEXT,
     ended_at      TEXT,
     status        TEXT NOT NULL
-                  CHECK (status IN ('detected','partial','missed','telemetry_gap','untested')),
+                  CHECK (status IN ('detected','partial','missed','telemetry_gap','untested','did_not_run')),
     ttd_ms        INTEGER,
     events_ref    TEXT NOT NULL DEFAULT '',
     reason        TEXT NOT NULL DEFAULT ''
@@ -309,10 +309,10 @@ def list_rule_noise(conn: sqlite3.Connection, run_id: int) -> list[dict]:
 
 def run_summary(conn: sqlite3.Connection, run_id: int) -> dict:
     """Status counts and the coverage score of a run (detected / tested, percent; untested excluded)."""
-    counts = {s: 0 for s in ("detected", "partial", "missed", "telemetry_gap", "untested")}
+    counts = {s: 0 for s in ("detected", "partial", "missed", "telemetry_gap", "untested", "did_not_run")}
     for status, n in conn.execute("SELECT status, COUNT(*) FROM executions WHERE run_id = ? GROUP BY status", (run_id,)):
         counts[status] = n
-    tested = sum(v for k, v in counts.items() if k != "untested")
+    tested = sum(v for k, v in counts.items() if k not in ("untested", "did_not_run"))
     score = round(100.0 * counts["detected"] / tested, 1) if tested else None
     return {"counts": counts, "tested": tested, "score": score}
 

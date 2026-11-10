@@ -125,3 +125,97 @@ def test_ast_checker_passes_real_script_and_fails_a_bad_one(tmp_path):
     res = subprocess.run([ps, "-NoProfile", "-File", str(checker), "-Path", str(bad)],
                          capture_output=True, text=True, timeout=120)
     assert res.returncode != 0
+
+
+def test_credential_required_for_real_runs_after_whatif():
+    i = CODE.index("if (-not $Credential)")
+    assert CODE.index("if ($WhatIfPreference)") < i < CODE.index("New-PSSession")
+    assert "Credential = $Credential" in CODE
+
+
+def test_refusals_exit_non_zero():
+    fn = CODE[CODE.index("function Stop-Refused"):]
+    assert "exit 1" in fn[:fn.index("}")]
+    assert "throw" not in fn[:fn.index("}")]
+
+
+def test_regexes_anchor_with_end_of_string_not_dollar():
+    for line in re.findall(r"(?:ValidatePattern\('[^\n]*|Pattern = '[^\n]*)", CODE):
+        assert "$'" not in line.replace(r"\z'", ""), line
+        assert r"\z" in line, line
+
+
+def test_campaign_name_control_characters_refused():
+    assert r"\p{Cc}" in CODE
+
+
+def test_run_file_v2_shape_and_per_test_status():
+    for needle in ("version    = 2", "run_status", "events_xml", "collection_error", "truncated",
+                   "'prereqs_missing'", "'skipped'", "-CheckPrereqs", "-ErrorVariable", "ToXml()"):
+        assert needle in CODE, needle
+    assert "-GetPrereqs" not in TEXT
+
+
+def test_collection_distinguishes_empty_from_error():
+    assert "NoMatchingEventsFound" in CODE
+    assert "-Oldest" in CODE and "-ErrorAction Stop" in CODE
+    assert "'Microsoft-Windows-Sysmon/Operational'" in CODE
+    assert CODE.index("$info.Sysmon") < CODE.index("Read-Host")  # pre-flight before the prompt
+
+
+def test_timing_defaults_match_the_documented_window():
+    assert re.search(r"\[int\]\$SettleSeconds = 120", CODE)
+    assert "$PostSeconds = 120" in CODE and "$PauseAfterCleanupSeconds" in CODE
+
+
+def test_every_timestamp_string_is_culture_invariant():
+    assert "[DateTime]::Parse($Text, $inv, $rt)" in CODE
+    for m in re.finditer(r"ToString\('[^']*'[^)]*\)", CODE):
+        assert "yyyy" not in m.group(0) or "$inv" in m.group(0) or "InvariantCulture" in m.group(0), m.group(0)
+        assert m.group(0) != "ToString('o')"
+
+
+def test_out_file_resolved_then_created_exclusively():
+    assert CODE.index("GetUnresolvedProviderPathFromPSPath") < CODE.index("Test-Path -LiteralPath $OutFile")
+    assert "FileMode]::CreateNew" in CODE
+    assert "WriteAllText" not in CODE
+
+
+ALLOW = [
+    ("LAB-WS01", ["LAB-WS01"], "True"),
+    ("lab-ws01", ["LAB-WS01"], "True"),  # host names are case-insensitive
+    ("LAB-WS01", ["LAB-*"], "False"),
+    ("LAB-WS01", ["*"], "False"),
+    ("LAB-WS01", ["LAB-WS0"], "False"),
+    ("LAB", ["LAB-WS01"], "False"),
+    ("LAB-WS01", ["LAB-WS01.evil"], "False"),
+    ("LAB-WS01", [123, None, True, ["LAB-WS01"], {"a": "LAB-WS01"}], "False"),
+    ("LAB-WS01", [""], "False"),
+    ("LAB-WS01", [], "False"),
+]
+
+
+@pytest.mark.skipif(shutil.which("powershell") is None and shutil.which("pwsh") is None, reason="needs PowerShell")
+@pytest.mark.parametrize("name,targets,expected", ALLOW)
+def test_allow_list_function_behaviour(tmp_path, name, targets, expected):
+    import json
+
+    ps = shutil.which("pwsh") or shutil.which("powershell")
+    f = tmp_path / "targets.json"
+    f.write_text(json.dumps({"targets": targets}), encoding="utf-8")
+    res = subprocess.run([ps, "-NoProfile", "-File", str(LAB / "Test-AllowList.ps1"), "-Name", name, "-Path", str(f)],
+                         capture_output=True, text=True, timeout=120)
+    assert res.stdout.strip() == expected, res.stdout + res.stderr
+
+
+@pytest.mark.skipif(shutil.which("powershell") is None and shutil.which("pwsh") is None, reason="needs PowerShell")
+def test_allow_list_missing_file_or_key_is_refused(tmp_path):
+    ps = shutil.which("pwsh") or shutil.which("powershell")
+    for content in (None, "{}", "[]", "null"):
+        f = tmp_path / "t.json"
+        f.unlink(missing_ok=True)
+        if content is not None:
+            f.write_text(content, encoding="utf-8")
+        res = subprocess.run([ps, "-NoProfile", "-File", str(LAB / "Test-AllowList.ps1"), "-Name", "LAB-WS01",
+                              "-Path", str(f)], capture_output=True, text=True, timeout=120)
+        assert res.stdout.strip().startswith("REFUSED"), (content, res.stdout, res.stderr)

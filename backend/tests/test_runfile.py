@@ -5,14 +5,25 @@ import gzip
 import json
 from datetime import timedelta
 from pathlib import Path
+from xml.sax.saxutils import escape, quoteattr
 
 import pytest
 
-from purplebench import db, runfile, scoring
+from purplebench import coverage, db, runfile, scoring
 from purplebench.runfile import RunFileError
-from purplebench.telemetry import normalize_ts, parse_ts
+from purplebench.telemetry import normalize_ts, parse_event_xml, parse_ts
 
 GUID = "00000000-0000-4000-8000-000000000001"
+NS = "http://schemas.microsoft.com/win/2004/08/events/event"
+
+
+def to_xml(ev):
+    """Render a normalised event the way Windows renders it (Event.ToXml())."""
+    data = "".join(f"<Data Name={quoteattr(k)}>{escape(v)}</Data>" for k, v in ev["fields"].items())
+    return (f'<Event xmlns="{NS}"><System><Provider Name="x"/><EventID>{ev["event_id"]}</EventID>'
+            f'<TimeCreated SystemTime={quoteattr(ev["ts"])}/><EventRecordID>{ev["record_id"]}</EventRecordID>'
+            f'<Channel>{escape(ev["channel"])}</Channel><Computer>{escape(ev["host"])}</Computer></System>'
+            f"<EventData>{data}</EventData></Event>")
 
 
 @pytest.fixture(scope="module")
@@ -20,15 +31,17 @@ def recorded():
     return [e for e in scoring.recorded_executions() if e.anchor_ts]
 
 
-def _entry(ex):
+def _entry(ex, **over):
     end = normalize_ts((parse_ts(ex.anchor_ts) + timedelta(seconds=20)).isoformat())
-    return {"technique_id": ex.technique, "test_guid": GUID, "started_at": ex.anchor_ts, "ended_at": end,
-            "events": list(ex.events)}
+    d = {"technique_id": ex.technique, "test_guid": GUID, "started_at": ex.anchor_ts, "ended_at": end,
+         "run_status": "ran", "events_xml": [to_xml(e) for e in ex.events]}
+    d.update(over)
+    return d
 
 
 @pytest.fixture
 def good(recorded):
-    return {"format": "purplebench-run", "version": 1, "mode": "lab", "target": "LAB-WS01",
+    return {"format": "purplebench-run", "version": 2, "mode": "lab", "target": "LAB-WS01",
             "started_at": "2026-11-10T09:00:00Z", "campaign": "Lab smoke test",
             "executions": [_entry(recorded[0])]}
 
@@ -41,16 +54,41 @@ def _counts(conn):
     return [conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("runs", "executions", "campaigns")]
 
 
+def test_xml_round_trip_matches_recorded_event(recorded):
+    ev = recorded[0].events[0]
+    assert parse_event_xml(to_xml(ev)) == ev
+
+
 def test_valid_file_normalises(good):
     out = runfile.validate(_raw(good))
     assert out["target"] == "LAB-WS01"
     assert out["campaign"]["name"] == "Lab smoke test"
     assert out["executions"][0]["events"]
     assert out["executions"][0]["started_at"].endswith("Z")
+    assert out["executions"][0]["run_status"] == "ran"
 
 
 def test_bom_accepted(good):
     runfile.validate(b"\xef\xbb\xbf" + _raw(good))
+
+
+def test_version_1_and_boolean_versions_rejected(good):
+    for v in (1, True, 2.0, "2"):
+        d = copy.deepcopy(good)
+        d["version"] = v
+        with pytest.raises(RunFileError, match="version 2"):
+            runfile.validate(_raw(d))
+
+
+def test_unknown_keys_rejected(good):
+    d = copy.deepcopy(good)
+    d["extra"] = 1
+    with pytest.raises(RunFileError, match="unknown top-level"):
+        runfile.validate(_raw(d))
+    d = copy.deepcopy(good)
+    d["executions"][0]["extra"] = 1
+    with pytest.raises(RunFileError, match="unknown key"):
+        runfile.validate(_raw(d))
 
 
 def test_import_scores_as_lab_run(seeded_db, good, conn):
@@ -64,22 +102,66 @@ def test_import_scores_as_lab_run(seeded_db, good, conn):
     ex = db.list_executions(conn, rid)
     assert len(ex) == 1
     assert ex[0]["test_guid"] == GUID
-    assert ex[0]["status"] in scoring.STATUSES
-    path = runfile.events_dir() / f"run{rid}_1.jsonl.gz"
-    assert path.exists()
+    assert ex[0]["status"] in ("detected", "partial", "missed", "telemetry_gap")
     assert ex[0]["events_ref"] == f"lab_events/run{rid}_1.jsonl.gz"
+    assert (runfile.events_dir() / f"run{rid}_1.jsonl.gz").exists()
 
 
-def test_import_matches_recorded_scoring(seeded_db, good, conn, recorded):
-    """A recorded execution imported as lab data scores like the recorded run with the same rule set."""
+def test_hits_store_channel_and_record_id(seeded_db, good, conn):
     rid = runfile.import_run(conn, _raw(good))
-    got = db.list_executions(conn, rid)[0]
+    ex = db.list_executions(conn, rid)[0]
+    hits = db.list_hits(conn, ex["id"])
+    assert hits, "the recorded technique should fire at least one rule"
+    for h in hits:
+        refs = h["record_ids"] if "record_ids" in h else json.loads(h["record_ids_json"])
+        assert refs and all(isinstance(r, list) and len(r) == 2 and isinstance(r[0], str) for r in refs)
+
+
+@pytest.mark.parametrize("status", ["failed", "prereqs_missing", "skipped"])
+def test_did_not_run_is_never_missed_and_not_in_denominator(seeded_db, good, conn, recorded, status):
+    good["executions"][0].update(run_status=status, error="Access is denied\x01 here", events_xml=[])
+    good["executions"].append(_entry(recorded[1]))
+    rid = runfile.import_run(conn, _raw(good))
+    ex = db.list_executions(conn, rid)
+    assert ex[0]["status"] == "did_not_run"
+    assert "did not run" in ex[0]["reason"] and "Access is denied" in ex[0]["reason"]
+    assert "\x01" not in ex[0]["reason"]
+    assert ex[0]["ttd_ms"] is None
+    assert not [g for g in db.list_gaps(conn, rid) if g["technique_id"] == ex[0]["technique_id"]]
+    summary = db.run_summary(conn, rid)
+    assert summary["counts"]["did_not_run"] == 1
+    assert summary["tested"] == 1  # the second execution only
+
+
+def test_collection_error_is_not_scored_as_missed(seeded_db, good, conn):
+    good["executions"][0].update(collection_error="The RPC server is unavailable", events_xml=[])
+    rid = runfile.import_run(conn, _raw(good))
+    ex = db.list_executions(conn, rid)[0]
+    assert ex["status"] == "did_not_run"
+    assert "collection failed" in ex["reason"]
+
+
+def test_truncated_collection_is_flagged_in_reason(seeded_db, good, conn):
+    good["executions"][0]["truncated"] = True
+    rid = runfile.import_run(conn, _raw(good))
+    ex = db.list_executions(conn, rid)[0]
+    assert "may be incomplete" in ex["reason"]
+
+
+def test_coverage_excludes_did_not_run():
+    ex = [scoring.Execution(technique="T1003.001", name="x", tactics=("credential-access",),
+                            did_not_run_reason="failed", anchor_ts="2026-01-01T00:00:00.000000Z")]
+    r = scoring.score_run([], ex, [], scoring.TelemetryProfile.from_events([]))
+    assert r.executions[0].status == scoring.DID_NOT_RUN
+    cov = coverage.compute_coverage(r)
+    assert cov.tested == 0 and cov.score is None
+
+
+def test_import_uses_newest_ruleset(seeded_db, good, conn, recorded):
+    rid = runfile.import_run(conn, _raw(good))
     newest = max(db.list_rulesets(conn), key=lambda s: s["id"])
     assert db.get_run(conn, rid)["ruleset_id"] == newest["id"]
-    assert got["technique_id"] == recorded[0].technique
-    if got["status"] == "detected":
-        assert db.list_hits(conn, got["id"])
-        assert got["ttd_ms"] is not None
+    assert db.list_executions(conn, rid)[0]["technique_id"] == recorded[0].technique
 
 
 def test_import_into_existing_campaign_by_name(seeded_db, good, conn):
@@ -101,6 +183,15 @@ def test_import_without_ruleset_is_refused(db_file, good, conn):
         runfile.import_run(conn, _raw(good))
 
 
+def test_import_does_not_commit_callers_pending_transaction(seeded_db, good, conn):
+    conn.execute("INSERT INTO campaigns (name, description, techniques_json) VALUES ('pending', '', '[]')")
+    assert conn.in_transaction
+    with pytest.raises(RuntimeError, match="open transaction"):
+        runfile.import_run(conn, _raw(good))
+    conn.rollback()
+    assert not conn.execute("SELECT 1 FROM campaigns WHERE name = 'pending'").fetchone()
+
+
 def test_failure_rolls_back_rows_and_files(seeded_db, good, conn, monkeypatch):
     real = runfile.db.add_rule_noise
 
@@ -118,29 +209,39 @@ def test_failure_rolls_back_rows_and_files(seeded_db, good, conn, monkeypatch):
     runfile.import_run(conn, _raw(good))  # the connection is still usable
 
 
+def _ev(**over):
+    base = {"ts": "2026-01-01T00:00:00Z", "channel": "Security", "event_id": 4688, "host": "h", "record_id": 1,
+            "fields": {"CommandLine": "x"}}
+    base.update(over)
+    return base
+
+
 @pytest.mark.parametrize("mutate,msg", [
     (lambda d: d.update(format="other"), "purplebench-run"),
-    (lambda d: d.update(version=2), "version 1"),
+    (lambda d: d.update(version=3), "version 2"),
     (lambda d: d.update(mode="recorded"), "lab"),
     (lambda d: d.update(target="\\\\evil\\share"), "host name only"),
+    (lambda d: d.update(target="LAB\n"), "control character"),
     (lambda d: d.update(target="a" * 300), "longer"),
     (lambda d: d.update(started_at="yesterday"), "started_at"),
     (lambda d: d.update(campaign=5), "campaign"),
+    (lambda d: d.update(campaign="bad\x1b[31mname"), "control character"),
+    (lambda d: d.update(campaign={"name": "ok", "techniques": ["T1003\n"]}), "ATT&CK"),
     (lambda d: d.update(executions=[]), "non-empty"),
     (lambda d: d.update(executions="x"), "non-empty"),
     (lambda d: d["executions"][0].update(technique_id="T1003.001; DROP TABLE runs"), "ATT&CK id"),
+    (lambda d: d["executions"][0].update(technique_id="T1003.001\n"), "control character"),
     (lambda d: d["executions"][0].update(test_guid="not-a-guid"), "GUID"),
     (lambda d: d["executions"][0].update(ended_at="2000-01-01T00:00:00Z"), "before"),
-    (lambda d: d["executions"][0].update(events="x"), "list"),
-    (lambda d: d["executions"][0]["events"].append(5), "not an object"),
-    (lambda d: d["executions"][0]["events"].append({"ts": "2026-01-01T00:00:00Z"}), "needs ts"),
-    (lambda d: d["executions"][0]["events"].append({"ts": "bad", "event_id": 1, "fields": {}}), "timestamp"),
-    (lambda d: d["executions"][0]["events"].append({"ts": "2026-01-01T00:00:00Z", "event_id": "1", "fields": {}}),
-     "event_id"),
-    (lambda d: d["executions"][0]["events"].append({"ts": "2026-01-01T00:00:00Z", "event_id": 1, "fields": []}),
-     "fields"),
-    (lambda d: d["executions"][0]["events"].append(
-        {"ts": "2026-01-01T00:00:00Z", "event_id": 1, "fields": {"a": {"nested": 1}}}), "scalar"),
+    (lambda d: d["executions"][0].update(run_status="exploded"), "run_status"),
+    (lambda d: d["executions"][0].update(truncated="yes"), "truncated"),
+    (lambda d: d["executions"][0].update(events_xml="x"), "list"),
+    (lambda d: d["executions"][0]["events_xml"].append(5), "not a string"),
+    (lambda d: d["executions"][0]["events_xml"].append("<not-xml"), "unparseable"),
+    (lambda d: d["executions"][0]["events_xml"].append("<!DOCTYPE x [<!ENTITY a 'b'>]><Event/>"), "unparseable"),
+    (lambda d: d["executions"][0]["events_xml"].append("<Event xmlns='x'><Foo/></Event>"), "unparseable|System"),
+    (lambda d: d["executions"][0]["events_xml"].append(
+        to_xml(_ev()).replace("2026-01-01T00:00:00Z", "bad")), "timestamp"),
 ])
 def test_malformed_rejected(good, mutate, msg):
     d = copy.deepcopy(good)
@@ -169,6 +270,10 @@ def test_oversized_file_on_disk_rejected(good, tmp_path, monkeypatch):
         runfile.validate(Path(p))
 
 
+def test_size_cap_is_32_mb():
+    assert runfile.MAX_FILE_BYTES == 32 * 1024 * 1024
+
+
 def test_too_many_events_rejected(good, monkeypatch):
     monkeypatch.setattr(runfile, "MAX_EVENTS_PER_EXECUTION", 3)
     with pytest.raises(RunFileError, match="more than 3 events"):
@@ -189,8 +294,7 @@ def test_too_many_executions_rejected(good, monkeypatch):
 
 def _with_event(good, **fields):
     d = copy.deepcopy(good)
-    d["executions"][0]["events"] = [{"ts": "2026-01-01T00:00:00Z", "channel": "Security", "event_id": 4688,
-                                     "host": "h", "record_id": 1, "fields": fields}]
+    d["executions"][0]["events_xml"] = [to_xml(_ev(fields=fields))]
     return d
 
 
@@ -201,7 +305,8 @@ def test_one_megabyte_command_line_rejected(good):
 
 
 def test_nul_byte_rejected(good):
-    d = _with_event(good, CommandLine="a\u0000b")
+    d = copy.deepcopy(good)
+    d["executions"][0]["events_xml"] = [to_xml(_ev()).replace(">x<", ">a\u0000b<")]
     with pytest.raises(RunFileError, match="NUL"):
         runfile.validate(_raw(d))
 

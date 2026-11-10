@@ -234,7 +234,7 @@ def _progression(full: dict, executions: list) -> list[dict]:
         sets = {"all": [e.technique for e in executions]} | {c["name"]: c["techniques"] for c in CAMPAIGNS}
         for name, techs in sets.items():
             sel = [per_tech[t] for t in techs]
-            tested = sum(1 for e in sel if e.status != "untested")
+            tested = sum(1 for e in sel if e.status not in ("untested", "did_not_run"))
             det = sum(1 for e in sel if e.status == "detected")
             row[name] = {"detected": det, "tested": tested, "score": round(100.0 * det / tested, 1)}
         out.append(row)

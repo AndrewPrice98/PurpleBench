@@ -51,7 +51,10 @@ from .sigma import GAP, MATCH, UNSUPPORTED, EventIndex, Rule, RuleResult, Teleme
 from .telemetry import parse_ts, read_jsonl_gz
 
 DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED = "detected", "partial", "missed", "telemetry_gap", "untested"
-STATUSES = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED)
+# Lab mode: the test did not run (failed, prerequisites missing, skipped). Never scored, never "missed".
+DID_NOT_RUN = "did_not_run"
+STATUSES = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN)
+NOT_TESTED = (UNTESTED, DID_NOT_RUN)  # excluded from coverage denominators
 
 EXACT, PARENT, RELATED, NONE = "exact", "parent", "related", "none"
 
@@ -73,6 +76,7 @@ class Execution:
     anchor_ts: str | None = None  # execution start (normalised timestamp)
     window_seconds: float | None = None  # None: the run-level window_seconds applies
     untested_reason: str | None = None
+    did_not_run_reason: str | None = None  # lab mode: why the test did not run (excluded from coverage)
     atomic_test: str | None = None
 
 
@@ -209,6 +213,9 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
                      skew: float, window: float) -> ExecutionScore:
     base = {"technique": ex.technique, "name": ex.name, "tactics": ex.tactics, "atomic_test": ex.atomic_test,
             "anchor_ts": ex.anchor_ts}
+    if ex.did_not_run_reason:
+        return ExecutionScore(status=DID_NOT_RUN, reason=ex.did_not_run_reason, hits=(), ttd_seconds=None,
+                              out_of_window=0, tagged_rules=0, **base)
     if ex.untested_reason or ex.anchor_ts is None:
         return ExecutionScore(status=UNTESTED, reason=ex.untested_reason or "no execution start time recorded",
                               hits=(), ttd_seconds=None, out_of_window=0, tagged_rules=0, **base)

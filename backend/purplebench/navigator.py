@@ -16,17 +16,17 @@ import re
 from typing import Any
 
 from .coverage import Coverage
-from .scoring import DETECTED, MISSED, PARTIAL, TELEMETRY_GAP, UNTESTED
+from .scoring import DETECTED, MISSED, PARTIAL, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN
 
 LAYER_VERSION = "4.5"
 NAVIGATOR_VERSION = "5.3.2"
 ATTACK_VERSION = "20"
 DOMAIN = "enterprise-attack"
 
-COLORS = {DETECTED: "#3b82f6", PARTIAL: "#a78bfa", MISSED: "#ef4444", TELEMETRY_GAP: "#9ca3af", UNTESTED: "#4b5563"}
+COLORS = {DETECTED: "#3b82f6", PARTIAL: "#a78bfa", MISSED: "#ef4444", TELEMETRY_GAP: "#9ca3af", UNTESTED: "#4b5563", DID_NOT_RUN: "#6b7280"}
 SCORES = {DETECTED: 100, PARTIAL: 50, MISSED: 0, TELEMETRY_GAP: 0}
 LABELS = {DETECTED: "Detected", PARTIAL: "Partial", MISSED: "Missed", TELEMETRY_GAP: "Telemetry gap",
-          UNTESTED: "Untested"}
+          UNTESTED: "Untested", DID_NOT_RUN: "Did not run"}
 
 _TID = re.compile(r"^T\d{4}(\.\d{3})?$")
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -57,7 +57,7 @@ def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: 
         "description": desc,
         "techniques": techniques,
         "legendItems": [{"label": LABELS[s], "color": COLORS[s]}
-                        for s in (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED)],
+                        for s in (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN)],
         "gradient": {"colors": [COLORS[MISSED], COLORS[PARTIAL], COLORS[DETECTED]], "minValue": 0, "maxValue": 100},
     }
 

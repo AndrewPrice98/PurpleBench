@@ -19,9 +19,9 @@ from typing import Any
 import yaml
 
 from . import library
-from .scoring import DETECTED, MISSED, PARTIAL, STATUSES, TELEMETRY_GAP, UNTESTED, ExecutionScore, RunScore
+from .scoring import DETECTED, MISSED, PARTIAL, STATUSES, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN, NOT_TESTED, ExecutionScore, RunScore
 
-_BEST = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, UNTESTED)
+_BEST = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, DID_NOT_RUN, UNTESTED)
 GENERIC_HINT = {
     "telemetry_needed": "No curated hint for this technique: check that process creation with command lines "
                         "(Sysmon 1 / Security 4688) and the events specific to the technique are collected.",
@@ -108,10 +108,10 @@ def compute_coverage(run: RunScore) -> Coverage:
         if not members:
             continue
         counts = _counts([t.status for t in members])
-        tested = sum(counts[s] for s in STATUSES if s != UNTESTED)
+        tested = sum(counts[s] for s in STATUSES if s not in NOT_TESTED)
         tactics.append(TacticCoverage(tac, library.TACTICS[tac], counts, tested, _pct(counts[DETECTED], tested)))
     counts = _counts([t.status for t in techs])
-    tested = sum(counts[s] for s in STATUSES if s != UNTESTED)
+    tested = sum(counts[s] for s in STATUSES if s not in NOT_TESTED)
     return Coverage(
         techniques=tuple(techs), tactics=tuple(tactics), counts=counts, tested=tested,
         score=_pct(counts[DETECTED], tested),
