@@ -8,7 +8,7 @@ Purple-team detection validation for Windows. PurpleBench takes a list of MITRE 
 
 > **Everything in the live demo and in a fresh install is *recorded mode*.** No command is executed and no lab is used. The telemetry is Windows Sysmon events that other people recorded when they ran Atomic Red Team tests (Splunk `attack_data`, Apache-2.0), trimmed to each test's time window, plus a benign baseline. PurpleBench evaluates Sigma rules over those events with its own evaluator and scores the result. A technique is **missed** when no rule in the rule set earned credit on that recording. It says nothing about any product, and it is not a statement about your environment.
 
-Live demo: **https://purplebench.vercel.app/** (placeholder: not deployed yet, so the link may not resolve). The hosted demo is recorded mode only, guests are read-only, and its database lives in `/tmp` and resets on a cold start.
+Live demo: **https://purplebench-demo.vercel.app/**. The hosted demo is recorded mode only, guests are read-only, and its database lives in `/tmp` and resets on a cold start.
 
 ## Why measured detection coverage matters
 
@@ -129,7 +129,7 @@ Names only; see [backend/.env.example](backend/.env.example). Real environment v
 
 ### Deploy your own demo on Vercel
 
-`vercel.json` and `api/index.py` are set up for it (the live URL above is a placeholder; nothing has been deployed). The function bundles the `purplebench` package, `backend/data` and `backend/rules` (about 24 MB with dependencies, against Vercel's 500 MB Python limit). Each function instance builds its own SQLite database in `/tmp` from the demo fixture on first use; data routes answer 503 until it exists. By default visitors are read-only guests. A login exists only if the owner sets `PURPLEBENCH_ADMIN_PASSWORD_HASH` and `PURPLEBENCH_SECRET_KEY`; the demo then shows a notice beside admin controls that changes are visible to other visitors until the demo resets. Vercel rejects request bodies over 4.5 MB, so uploads are capped at 4 MB there.
+`vercel.json` and `api/index.py` are set up for it (the live demo above runs on it). The function bundles the `purplebench` package, `backend/data` and `backend/rules` (about 24 MB with dependencies, against Vercel's 500 MB Python limit). Each function instance builds its own SQLite database in `/tmp` from the demo fixture on first use; data routes answer 503 until it exists. By default visitors are read-only guests. A login exists only if the owner sets `PURPLEBENCH_ADMIN_PASSWORD_HASH` and `PURPLEBENCH_SECRET_KEY`; the demo then shows a notice beside admin controls that changes are visible to other visitors until the demo resets. Vercel rejects request bodies over 4.5 MB, so uploads are capped at 4 MB there.
 
 ## Architecture
 
