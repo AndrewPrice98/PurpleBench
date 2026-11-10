@@ -4,7 +4,7 @@ import {
   STATUS, STATUS_ORDER, closingRules, countEntries, filterExecutions, firstLink, formatClock, formatDate,
   formatDateTime, formatOffset, formatScore, formatTtd, gaugeArc, linePath, linePoints, pickStartHere, scale,
   splitLinks, splitRuleRefs, tacticLabel, tacticsOf, timelineModel, tsMs, eventName, summaryField, attackUrl,
-  gapText, matchPaging, matchTotal, timelineLabel,
+  DEMO_WRITE_NOTICE, showDemoWriteNotice, gapText, matchPaging, matchTotal, timelineLabel,
 } from './lib.js'
 
 test('every status has a label, glyph, tone and help text', () => {
@@ -242,4 +242,12 @@ test('matched-event pager: with no rule selected N is the union, never the sum o
   assert.equal(old.total, null)
   assert.equal(old.range, 'Matches 1\u20131 (end)')
   assert.equal(old.unionNote, null)
+})
+
+test('demo write notice shows only for an admin on the hosted demo', () => {
+  assert.equal(showDemoWriteNotice({ demo: true, guest: false }), true)
+  assert.equal(showDemoWriteNotice({ demo: true, guest: true }), false)
+  assert.equal(showDemoWriteNotice({ demo: false, guest: false }), false)
+  assert.equal(showDemoWriteNotice(null), false)
+  assert.equal(DEMO_WRITE_NOTICE, 'Demo: changes you make are visible to other visitors until the demo resets.')
 })

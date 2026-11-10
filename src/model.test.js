@@ -170,6 +170,8 @@ test('library groups by first tactic in matrix order and filters by text', () =>
 
 test('upload messages and local checks', () => {
   assert.match(uploadMessage({ status: 413, message: 'Run file too large (max 4 MB)' }, 4), /too large \(the limit is 4 MB\)/)
+  assert.match(uploadMessage({ status: 413, message: '413 Request Entity Too Large' }, 4), /hosting platform may have refused/)
+  assert.match(uploadMessage({ status: 0, message: 'x' }, 4), /cut off by the hosting platform/)
   assert.match(uploadMessage({ status: 400, message: 'version must be 2' }), /refused: version must be 2/)
   assert.match(uploadMessage({ status: 403, message: 'x' }), /Only an admin/)
   assert.match(uploadMessage({ status: 415, message: 'x' }), /JSON run file/)

@@ -4,7 +4,7 @@ import { STATUS, countEntries, formatDate, formatScore } from '../lib.js'
 import {
   ErrorState, Icon, Loading, ModeChip, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
-import { NoRunsCTA, UploadRun } from '../components/common.jsx'
+import { DemoWriteNotice, NoRunsCTA, UploadRun } from '../components/common.jsx'
 
 function ScoreBar({ score }) {
   return (
@@ -47,6 +47,7 @@ export default function Runs() {
           </p>
         </div>
       </header>
+      {admin && <DemoWriteNotice />}
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && <NoRunsCTA what="this list" />}

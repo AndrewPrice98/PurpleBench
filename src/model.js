@@ -263,16 +263,19 @@ export function writeErrorMessage(err, { forbidden = 'Only an admin can do that.
 
 // -- uploads ---------------------------------------------------------------------------------------
 
+// The app's own 413 text; a platform-level refusal has other wording (or no JSON body at all).
+const PLATFORM_JSON = /^Run file too large|^Request too large/
+
 /** A clear message for a failed run upload, from the API status and detail. */
 export function uploadMessage(err, maxMb) {
   const detail = err?.message || 'The upload failed.'
   switch (err?.status) {
-    case 413: return `The file is too large${maxMb ? ` (the limit is ${maxMb} MB)` : ''}. ${detail}`
+    case 413: return `The file is too large${maxMb ? ` (the limit is ${maxMb} MB)` : ''}. ${PLATFORM_JSON.test(detail) ? detail : 'The hosting platform may have refused it before PurpleBench saw it.'}`
     case 415: return `The file must be a JSON run file written by the lab runner. ${detail}`
     case 401: return 'Your session has expired. Sign in again and retry.'
     case 403: return 'Only an admin can upload runs. Sign in as the admin.'
     case 400: case 422: return `The run file was refused: ${detail}`
-    case 0: return 'Cannot reach the PurpleBench server. Check your connection and try again.'
+    case 0: return `Cannot reach the PurpleBench server. A file over the limit${maxMb ? ` (${maxMb} MB)` : ''} can be cut off by the hosting platform and look like this; check the size, then your connection, and try again.`
     case 503: return 'The service is temporarily unavailable (the demo may be restarting). Nothing was uploaded; try again in a moment.'
     default: return `The upload failed: ${detail}`
   }

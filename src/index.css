@@ -750,3 +750,10 @@ pre.yaml {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .gauge-value, .trend-line.strict { stroke-dasharray: none; }
 }
+
+.demo-write-notice {
+  display: flex; gap: 8px; align-items: flex-start; margin: 0 0 16px; padding: 10px 14px;
+  border: 1px solid rgba(245, 184, 74, 0.45); background: rgba(245, 184, 74, 0.07);
+  border-radius: 8px; font-size: 0.875rem; color: var(--text);
+}
+.demo-write-notice svg { flex: none; margin-top: 2px; color: var(--accent); }

@@ -8,7 +8,7 @@ import {
 import {
   Empty, ErrorState, ExternalLink, Icon, Loading, ModeChip, TacticTag, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
-import { CopyBlock, DownloadLink, UploadRun } from '../components/common.jsx'
+import { CopyBlock, DemoWriteNotice, DownloadLink, UploadRun } from '../components/common.jsx'
 
 const LAB_README = `${GITHUB_URL}/blob/main/lab/README.md`
 
@@ -32,6 +32,7 @@ export function CampaignList() {
         </div>
         {admin && <Link className="btn primary" to="/campaigns/new"><Icon name="plus" size={16} /> New campaign</Link>}
       </header>
+      {admin && <DemoWriteNotice />}
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.length === 0 && (
@@ -122,6 +123,7 @@ function LabRunner({ campaign }) {
             The runner writes <span className="mono">purplebench-run-&lt;target&gt;-&lt;time&gt;.json</span>. Revert the VM to its
             snapshot, then upload the file here.
           </p>
+          <DemoWriteNotice />
           <UploadRun compact />
         </li>
       </ol>
@@ -281,6 +283,7 @@ export function CampaignNew() {
   return (
     <div className="page">
       {head}
+      <DemoWriteNotice />
       <form className="card campaign-form" onSubmit={submit} aria-labelledby="cf-title" noValidate>
         <h2 id="cf-title" className="sr-only">Campaign details</h2>
         <label className="field" htmlFor={nameId}>Name</label>

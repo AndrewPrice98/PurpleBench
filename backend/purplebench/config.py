@@ -17,6 +17,10 @@ DATA_DIR = BACKEND_DIR / "data"
 RULES_DIR = BACKEND_DIR / "rules"
 DEMO_FIXTURE = DATA_DIR / "demo_fixture.json"
 ENV_FILE = BACKEND_DIR / ".env"
+# Vercel Functions refuse request bodies over 4.5 MB (https://vercel.com/docs/functions/limitations). The cap on
+# the whole request (file plus multipart overhead, see api.MULTIPART_OVERHEAD) must stay under that, so the
+# file limit is 4 MB there.
+VERCEL_BODY_LIMIT_MB = 4
 
 
 def load_env_file(path: Path = ENV_FILE) -> None:
@@ -51,12 +55,16 @@ def db_path() -> Path:
 
 def max_upload_bytes() -> int:
     """Largest accepted run-file upload: 32 MB locally (the run-file format cap), 4 MB on the hosted demo
-    (a serverless function has little memory). ``PURPLEBENCH_MAX_UPLOAD_MB`` overrides either."""
+    (a serverless function has little memory). ``PURPLEBENCH_MAX_UPLOAD_MB`` overrides either, but on Vercel
+    (the ``VERCEL`` variable is set) never above ``VERCEL_BODY_LIMIT_MB``: Vercel refuses larger request bodies
+    (4.5 MB) before the app sees them, with a platform error instead of the app's own 413."""
     default = "4" if demo_mode() else "32"
     try:
         mb = float(os.environ.get("PURPLEBENCH_MAX_UPLOAD_MB") or default)
     except ValueError:
         mb = float(default)
+    if os.environ.get("VERCEL"):
+        mb = min(mb, VERCEL_BODY_LIMIT_MB)
     return max(1, int(mb * 1024 * 1024))
 
 

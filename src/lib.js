@@ -422,6 +422,14 @@ export function matchPaging(events, hits, ruleId, page, perPage) {
   return { total, lowerBound, first, last, hasNext, hasPrev: page > 0, range, unionNote }
 }
 
+/** Shown beside admin controls on the hosted demo, where the database is shared by every visitor. */
+export const DEMO_WRITE_NOTICE = 'Demo: changes you make are visible to other visitors until the demo resets.'
+
+/** True when the signed-in admin is writing to the shared hosted demo (not a guest, not a private install). */
+export function showDemoWriteNotice(session) {
+  return !!(session && session.demo && !session.guest)
+}
+
 /** Fields that best describe an event, most telling first. */
 export const KEY_FIELDS = [
   'CommandLine', 'Image', 'NewProcessName', 'ParentImage', 'ParentProcessName', 'ParentCommandLine',

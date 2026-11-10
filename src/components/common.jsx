@@ -1,7 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api.js'
-import { formatDate } from '../lib.js'
+import { DEMO_WRITE_NOTICE, formatDate, showDemoWriteNotice } from '../lib.js'
 import { GAP_STATES, uploadMessage, uploadProblem } from '../model.js'
 import { Chip, Icon, useSession } from './ui.jsx'
 
@@ -122,6 +122,17 @@ export function UploadRun({ compact = false }) {
   )
 }
 
+/** Persistent notice beside admin controls on the hosted demo, where every visitor shares one database. */
+export function DemoWriteNotice() {
+  const session = useSession()
+  if (!showDemoWriteNotice(session)) return null
+  return (
+    <p className="demo-write-notice" role="note">
+      <Icon name="info" size={16} /> <span>{DEMO_WRITE_NOTICE}</span>
+    </p>
+  )
+}
+
 /**
  * Empty database: what PurpleBench needs and how to get there. Admins get the controls; guests are told
  * that the hosted demo is read-only.
@@ -146,6 +157,7 @@ export function NoRunsCTA({ what = 'this page' }) {
           <li><strong>Run it in a lab</strong> — download the campaign file and run the lab runner against an isolated, snapshotted lab VM.</li>
           <li><strong>Upload the run file</strong> — the results, coverage and gaps appear here.</li>
         </ol>
+        {admin && <DemoWriteNotice />}
         {admin ? <UploadRun compact /> : (
           <p className="muted small">Sign in as the admin to create campaigns and upload runs.</p>
         )}

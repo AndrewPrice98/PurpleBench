@@ -6,7 +6,7 @@ import { GAP_STATES, gapDirty, gapPatch, writeErrorMessage } from '../model.js'
 import {
   Empty, ErrorState, Icon, Loading, RuleText, StatusChip, useAsync, usePageTitle, useSession,
 } from '../components/ui.jsx'
-import { GapStateChip, NoRunsCTA } from '../components/common.jsx'
+import { DemoWriteNotice, GapStateChip, NoRunsCTA } from '../components/common.jsx'
 
 const MAX_NOTES = 2000
 
@@ -150,6 +150,7 @@ export default function Gaps() {
           </p>
         </div>
       </header>
+      {admin && <DemoWriteNotice />}
       {loading && !data && <Loading />}
       {error && <ErrorState error={error} onRetry={reload} />}
       {data && data.runs.length === 0 && <NoRunsCTA what="the gap list" />}
