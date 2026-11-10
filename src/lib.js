@@ -221,12 +221,13 @@ export function splitRuleRefs(text, rules) {
 const KIND_RANK = { missed: 0, telemetry_gap: 1, partial: 2 }
 
 /**
- * The rules that closed a gap: those named after "Closed in run N (...):" in the notes. Falls back
- * to the last rule named in the notes.
+ * The rules that closed a gap: those named after "Closed in run N (...):" in the importer's notes
+ * (`system_notes`; the analyst's own `notes` never name the closing rule). Falls back to the last rule
+ * named in the notes.
  */
 export function closingRules(gap) {
   const rules = gap?.rules || []
-  const notes = gap?.notes || ''
+  const notes = gap?.system_notes || ''
   const at = notes.search(/Closed in run \d+/)
   if (at >= 0) {
     const tail = notes.slice(at)
@@ -251,6 +252,13 @@ export function pickStartHere(gaps, latestRunId) {
   ))
   const gap = sorted[0]
   return { gap, rules: closingRules(gap), fromRun: gap.run_id, toRun: gap.closed_in_run }
+}
+
+/** The gap text to show: the importer's notes followed by the analyst's (the API's `display_notes`). */
+export function gapText(gap) {
+  if (!gap) return ''
+  if (gap.display_notes != null) return gap.display_notes
+  return [gap.system_notes, gap.notes ? `Analyst notes: ${gap.notes}` : ''].filter(Boolean).join(' ')
 }
 
 // -- run results ----------------------------------------------------------------------------------
@@ -339,6 +347,14 @@ export function timelineModel({ startedAt, endedAt, hits = [], skewSeconds = 5 }
   }
 }
 
+/** Text alternative for the TTD timeline: every marker with its rule title and author (DRL 1.1). */
+export function timelineLabel(model) {
+  if (!model || !model.markers.length) return 'Timeline from the execution start. No rule matched.'
+  return `Timeline from the execution start. ${model.markers.map((m, i) => (
+    `${i + 1}: ${m.title || m.id} (${m.author || 'author unknown'}) first matched at ${formatOffset(m.offset)}`
+    + `${m.noisy ? ' (noisy)' : ''}`)).join('; ')}.`
+}
+
 /** Map a domain value onto [x0, x1]. */
 export function scale(value, [d0, d1], [x0, x1]) {
   if (d1 === d0) return x0
@@ -370,6 +386,17 @@ export function eventName(channel, eventId) {
   if (/^security$/i.test(ch)) return `Security ${eventId}${SECURITY_EVENTS[eventId] ? ` · ${SECURITY_EVENTS[eventId]}` : ''}`
   if (/^system$/i.test(ch) && Number(eventId) === 7045) return 'System 7045 · Service installed'
   return `${ch || 'Event'} ${eventId ?? ''}`.trim()
+}
+
+/**
+ * How many events the matched-events view holds: a rule's own match count when one rule is selected (or
+ * only one fired). With several rules and no selection the union is not known (an event can match more
+ * than one rule), so null.
+ */
+export function matchTotal(hits, ruleId = '') {
+  const list = hits || []
+  if (ruleId) return list.find((h) => h.rule?.id === ruleId)?.count ?? null
+  return list.length === 1 ? list[0].count ?? null : null
 }
 
 /** Fields that best describe an event, most telling first. */

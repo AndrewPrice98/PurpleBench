@@ -31,7 +31,7 @@ function Counts({ counts }) {
 
 export default function Runs() {
   usePageTitle('Runs')
-  const { data, loading, error, reload } = useAsync(() => api.runs(), [])
+  const { data, loading, error, reload } = useAsync((signal) => api.runs(signal), [])
   const runs = data ? [...data].reverse() : []
   return (
     <div className="page">

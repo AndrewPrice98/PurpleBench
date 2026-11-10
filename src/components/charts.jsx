@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import {
-  STATUS, formatOffset, formatScore, gaugeArc, linePath, linePoints, scale,
+  STATUS, formatScore, gaugeArc, linePath, linePoints, scale, timelineLabel,
 } from '../lib.js'
 
 /** Width of an element in CSS pixels, kept current with a ResizeObserver. */
@@ -149,10 +149,7 @@ export function TtdTimeline({ model }) {
   const step = niceStep(model.domain[1] - model.domain[0])
   const ticks = []
   for (let v = Math.ceil(model.domain[0] / step) * step; v <= model.domain[1] + 1e-9; v += step) ticks.push(v)
-  const label = model.markers.length
-    ? `Timeline from the execution start. ${model.markers.map((m, i) => (
-      `${i + 1}: ${m.title} first matched at ${formatOffset(m.offset)}${m.noisy ? ' (noisy)' : ''}`)).join('; ')}.`
-    : 'Timeline from the execution start. No rule matched.'
+  const label = timelineLabel(model)
   return (
     <div className="ttd" ref={ref}>
       <svg width={width} height={height} role="img" aria-label={label}>

@@ -4,6 +4,7 @@ import {
   STATUS, STATUS_ORDER, closingRules, countEntries, filterExecutions, firstLink, formatClock, formatDate,
   formatDateTime, formatOffset, formatScore, formatTtd, gaugeArc, linePath, linePoints, pickStartHere, scale,
   splitLinks, splitRuleRefs, tacticLabel, tacticsOf, timelineModel, tsMs, eventName, summaryField, attackUrl,
+  gapText, matchTotal, timelineLabel,
 } from './lib.js'
 
 test('every status has a label, glyph, tone and help text', () => {
@@ -88,16 +89,37 @@ const R7Z = { id: 'r7z', title: '7-Zip Archive Created With Split Volumes Or Max
 const RB64 = { id: 'rb64', title: 'Suspicious Execution of Powershell with Base64', author: 'frack113' }
 const RSYS = { id: 'rsys', title: 'Suspicious Execution of Systeminfo', author: 'frack113' }
 const GAPS = [
-  { id: 1, run_id: 1, technique_id: 'T1059.001', kind: 'missed', status: 'closed', closed_in_run: 3, rules: [], notes: 'Missed. Closed in run 3 (rule set v3): X.' },
-  { id: 11, run_id: 2, technique_id: 'T1082', kind: 'partial', status: 'closed', closed_in_run: 4, rules: [RB64, RSYS], notes: `Partial: noisy rule: ${RB64.title} (5 baseline hits). Closed in run 4 (rule set v4): ${RSYS.title}.` },
-  { id: 13, run_id: 2, technique_id: 'T1560.001', kind: 'missed', status: 'closed', closed_in_run: 4, rules: [R7Z], notes: `Missed. Closed in run 4 (rule set v4): ${R7Z.title}.` },
-  { id: 19, run_id: 4, technique_id: 'T1021.002', kind: 'partial', status: 'open', closed_in_run: null, rules: [], notes: '' },
+  { id: 1, run_id: 1, technique_id: 'T1059.001', kind: 'missed', status: 'closed', closed_in_run: 3, rules: [], system_notes: 'Missed. Closed in run 3 (rule set v3): X.', notes: '' },
+  { id: 11, run_id: 2, technique_id: 'T1082', kind: 'partial', status: 'closed', closed_in_run: 4, rules: [RB64, RSYS], system_notes: `Partial: noisy rule: ${RB64.title} (5 baseline hits). Closed in run 4 (rule set v4): ${RSYS.title}.`, notes: '' },
+  { id: 13, run_id: 2, technique_id: 'T1560.001', kind: 'missed', status: 'closed', closed_in_run: 4, rules: [R7Z], system_notes: `Missed. Closed in run 4 (rule set v4): ${R7Z.title}.`, notes: '' },
+  { id: 19, run_id: 4, technique_id: 'T1021.002', kind: 'partial', status: 'open', closed_in_run: null, rules: [], system_notes: '', notes: '' },
 ]
 
-test('closing rules are the ones named after "Closed in run"', () => {
+test('closing rules are the ones named after "Closed in run" in the system notes', () => {
   assert.deepEqual(closingRules(GAPS[1]).map((r) => r.id), ['rsys'])
-  assert.deepEqual(closingRules({ rules: [RB64, RSYS], notes: 'no marker' }).map((r) => r.id), ['rsys'])
-  assert.deepEqual(closingRules({ rules: [], notes: '' }), [])
+  assert.deepEqual(closingRules({ rules: [RB64, RSYS], system_notes: 'no marker' }).map((r) => r.id), ['rsys'])
+  assert.deepEqual(closingRules({ rules: [], system_notes: '' }), [])
+  // The analyst's notes never decide the closing rule, even when they mention "Closed in run".
+  const analyst = { rules: [RB64, RSYS], system_notes: `Closed in run 4 (rule set v4): ${RSYS.title}.`,
+    notes: `Closed in run 9: ${RB64.title}` }
+  assert.deepEqual(closingRules(analyst).map((r) => r.id), ['rsys'])
+})
+
+test('gap text: display notes, or system then analyst notes', () => {
+  assert.equal(gapText({ display_notes: 'A. Analyst notes: B', system_notes: 'A.', notes: 'B' }), 'A. Analyst notes: B')
+  assert.equal(gapText({ system_notes: 'A.', notes: 'B' }), 'A. Analyst notes: B')
+  assert.equal(gapText({ system_notes: 'A.', notes: '' }), 'A.')
+  assert.equal(gapText(null), '')
+})
+
+test('matched-event totals come from the rule match counts', () => {
+  const hits = [{ rule: { id: 'a' }, count: 3 }, { rule: { id: 'b' }, count: 44 }]
+  assert.equal(matchTotal(hits, 'a'), 3)
+  assert.equal(matchTotal(hits, 'b'), 44)
+  assert.equal(matchTotal(hits, ''), null) // the union of several rules is not known
+  assert.equal(matchTotal([hits[1]], ''), 44)
+  assert.equal(matchTotal(hits, 'zzz'), null)
+  assert.equal(matchTotal([], ''), null)
 })
 
 test('start here: a missed gap closed in the latest run beats partial and older closes', () => {
@@ -162,6 +184,20 @@ test('TTD timeline: offsets from the start, early (skew) marks, first non-noisy 
   assert.ok(late.domain[1] > 40)
   assert.equal(late.windowSeconds, null)
   assert.equal(scale(0, [-5, 10], [0, 300]), 100)
+})
+
+test('TTD timeline text alternative names every rule with its author', () => {
+  const m = timelineModel({
+    startedAt: '2020-01-01T00:00:00Z',
+    hits: [
+      { rule: { id: 'a', title: 'Rule A', author: 'Florian Roth' }, first_ts: '2020-01-01T00:00:01Z', noisy: false },
+      { rule: { id: 'b', title: 'Rule B' }, first_ts: '2020-01-01T00:00:02Z', noisy: true },
+    ],
+  })
+  const label = timelineLabel(m)
+  assert.match(label, /1: Rule A \(Florian Roth\) first matched at \+1\.00 s/)
+  assert.match(label, /2: Rule B \(author unknown\) first matched at \+2\.00 s \(noisy\)/)
+  assert.equal(timelineLabel(null), 'Timeline from the execution start. No rule matched.')
 })
 
 test('event names, summary fields and ATT&CK links', () => {

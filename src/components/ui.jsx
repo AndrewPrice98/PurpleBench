@@ -162,22 +162,28 @@ export function usePageTitle(title) {
   }, [title])
 }
 
-/** Run an async loader whenever deps change. Ignores stale responses. */
+/**
+ * Run an async loader whenever deps change. The loader receives an AbortSignal: requests still in flight
+ * are aborted when the deps change or the component unmounts, and stale responses are ignored.
+ */
 export function useAsync(loader, deps) {
   const [state, setState] = useState({ loading: true, error: null, data: null })
   const [tick, setTick] = useState(0)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const load = useCallback(loader, deps)
   useEffect(() => {
-    let live = true
+    const ctrl = new AbortController()
     setState((s) => ({ ...s, loading: true, error: null }))
-    load()
-      .then((data) => live && setState({ loading: false, error: null, data }))
-      .catch((error) => live && setState({ loading: false, error, data: null }))
-    return () => { live = false }
+    load(ctrl.signal)
+      .then((data) => { if (!ctrl.signal.aborted) setState({ loading: false, error: null, data }) })
+      .catch((error) => {
+        if (!ctrl.signal.aborted && error?.name !== 'AbortError') setState({ loading: false, error, data: null })
+      })
+    return () => ctrl.abort()
   }, [load, tick])
   const reload = useCallback(() => setTick((t) => t + 1), [])
-  return { ...state, reload }
+  const setData = useCallback((fn) => setState((s) => ({ ...s, data: fn(s.data) })), [])
+  return { ...state, reload, setData }
 }
 
 /** Prefers-reduced-motion, live. */

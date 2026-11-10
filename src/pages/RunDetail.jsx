@@ -2,7 +2,7 @@ import { useId } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import {
-  STATUS, STATUS_ORDER, TTD_LABEL, countEntries, filterExecutions, formatDate, formatScore, formatTtd, plural,
+  STATUS, STATUS_ORDER, TTD_LABEL, countEntries, filterExecutions, formatDate, formatScore, formatTtd, gapText, plural,
   tacticLabel, tacticsOf,
 } from '../lib.js'
 import {
@@ -11,13 +11,9 @@ import {
 } from '../components/ui.jsx'
 import ModeNotice from '../components/ModeNotice.jsx'
 
-async function load(runId) {
-  const [run, coverage, rules] = await Promise.all([
-    api.run(runId),
-    api.coverage(runId).catch(() => null),
-    api.ruleCatalog().catch(() => new Map()),
-  ])
-  return { run, coverage, rules }
+async function load(runId, signal) {
+  const [run, rules] = await Promise.all([api.run(runId, signal), api.ruleCatalog().catch(() => new Map())])
+  return { run, rules }
 }
 
 const GAP_STATE = {
@@ -26,7 +22,7 @@ const GAP_STATE = {
   accepted: { tone: 'neutral', glyph: '≡', label: 'Accepted' },
 }
 
-function Filters({ executions, status, tactic, setFilter, clear, shown, tacticNames }) {
+function Filters({ executions, status, tactic, setFilter, clear, shown }) {
   const statusId = useId()
   const tacticId = useId()
   const statusCounts = Object.fromEntries(STATUS_ORDER.map((s) => [s, executions.filter((e) => e.status === s).length]))
@@ -45,7 +41,7 @@ function Filters({ executions, status, tactic, setFilter, clear, shown, tacticNa
         <label htmlFor={tacticId}>Tactic</label>
         <select id={tacticId} value={tactic} onChange={(e) => setFilter('tactic', e.target.value)}>
           <option value="">All tactics</option>
-          {tacticsOf(executions).map((t) => <option key={t} value={t}>{tacticNames.get(t) || tacticLabel(t)}</option>)}
+          {tacticsOf(executions).map((t) => <option key={t} value={t}>{tacticLabel(t)}</option>)}
         </select>
       </span>
       {(status || tactic) && (
@@ -58,28 +54,28 @@ function Filters({ executions, status, tactic, setFilter, clear, shown, tacticNa
   )
 }
 
-function RulesCell({ execution, rulesByExec, catalog, noisy }) {
-  const rules = rulesByExec.get(execution.id)
-  if (rules?.length) {
+/** The rules that matched in this execution, each with its author, from the run detail itself. */
+function RulesCell({ execution, catalog }) {
+  const rules = execution.rules || []
+  if (rules.length) {
     return (
       <ul className="rule-list">
         {rules.map((r) => (
           <li key={r.id}>
             <RuleName rule={catalog.get(r.id) || r} />
-            {noisy.has(r.id) && <span className="noisy-note"> · noisy, no credit</span>}
+            {r.noisy && <span className="noisy-note"> · noisy, no credit</span>}
           </li>
         ))}
       </ul>
     )
   }
-  if (execution.rules_fired) return <span>{plural(execution.rules_fired, 'rule')} fired</span>
   return <span className="muted">None fired</span>
 }
 
 export default function RunDetail() {
   const { runId } = useParams()
   usePageTitle(`Run ${runId}`)
-  const { data, loading, error, reload } = useAsync(() => load(runId), [runId])
+  const { data, loading, error, reload } = useAsync((signal) => load(runId, signal), [runId])
   const [params, setParams] = useSearchParams()
   const status = STATUS[params.get('status')] ? params.get('status') : ''
   const tactic = params.get('tactic') || ''
@@ -103,10 +99,7 @@ export default function RunDetail() {
       </div>
     )
   }
-  const { run, coverage, rules: catalog } = data
-  const rulesByExec = new Map((coverage?.techniques || []).map((t) => [t.execution_id, t.rules]))
-  const tacticNames = new Map((coverage?.tactics || []).map((t) => [t.tactic, t.name]))
-  const noisyIds = new Set(run.noisy_rules.map((n) => n.rule.id))
+  const { run, rules: catalog } = data
   const shown = filterExecutions(run.executions, { status, tactic })
   return (
     <div className="page">
@@ -140,8 +133,7 @@ export default function RunDetail() {
         <div className="card-head padded">
           <h2 id="results-title">Results</h2>
         </div>
-        <Filters executions={run.executions} status={status} tactic={tactic} setFilter={setFilter} clear={clear} shown={shown.length}
-          tacticNames={tacticNames} />
+        <Filters executions={run.executions} status={status} tactic={tactic} setFilter={setFilter} clear={clear} shown={shown.length} />
         {shown.length === 0 ? <Empty>No results match these filters.</Empty> : (
           <table className="table cards results-table">
             <thead>
@@ -163,10 +155,10 @@ export default function RunDetail() {
                     </Link>
                   </th>
                   <td data-label="Tactic">
-                    <span className="tags">{e.technique.tactics.map((t) => <TacticTag key={t} tactic={t} name={tacticNames.get(t)} />)}</span>
+                    <span className="tags">{e.technique.tactics.map((t) => <TacticTag key={t} tactic={t} />)}</span>
                   </td>
                   <td data-label="Status"><StatusChip status={e.status} withHelp /></td>
-                  <td data-label="Rules fired"><RulesCell execution={e} rulesByExec={rulesByExec} catalog={catalog} noisy={noisyIds} /></td>
+                  <td data-label="Rules fired"><RulesCell execution={e} catalog={catalog} /></td>
                   <td data-label={TTD_LABEL} className="nowrap mono">{formatTtd(e.ttd_ms)}</td>
                   <td data-label="Reason" className="reason"><RuleText text={e.reason} rules={catalog} /></td>
                 </tr>
@@ -197,7 +189,7 @@ export default function RunDetail() {
                         {st.label}{g.status === 'closed' && g.closed_in_run ? ` in run ${g.closed_in_run}` : ''}
                       </Chip>
                     </div>
-                    <p className="gap-notes"><RuleText text={g.notes} rules={catalog} /></p>
+                    <p className="gap-notes"><RuleText text={gapText(g)} rules={catalog} /></p>
                   </li>
                 )
               })}

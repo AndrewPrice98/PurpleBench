@@ -1,9 +1,9 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import {
   NOT_TESTED, STATUS, TTD_LABEL, attackUrl, eventName, firstLink, formatClock, formatDateTime, formatOffset,
-  formatTtd, plural, summaryField, KEY_FIELDS, timelineModel, tsMs,
+  formatTtd, matchTotal, plural, summaryField, KEY_FIELDS, timelineModel, tsMs,
 } from '../lib.js'
 import { clampSegments, highlightPlan, highlightSegments, parseDetection } from '../sigma.js'
 import {
@@ -14,70 +14,30 @@ import { TtdTimeline } from '../components/charts.jsx'
 import ModeNotice from '../components/ModeNotice.jsx'
 
 const PAGE = 25
-const SCAN_PAGE = 200
-const SCAN_MAX_PAGES = 60
-const SCAN_MAX_MATCHES = 200
 const CLAMP = 360
 const MATCHES_PER_PAGE = 5
 
-async function load(id) {
+async function load(id, signal) {
   const [execution, rules] = await Promise.all([
-    api.execution(id, { offset: 0, limit: PAGE }),
+    api.execution(id, { offset: 0, limit: PAGE }, signal),
     api.ruleCatalog().catch(() => new Map()),
   ])
   return { execution, rules }
 }
 
-/**
- * The API pages through every event in the window; matches are sparse, so walk the pages and keep
- * the matched events (up to a cap), one request at a time.
- */
-function useMatchedEvents(executionId, enabled) {
-  const [state, setState] = useState({ items: [], scanned: 0, done: false, capped: false, error: null })
-  useEffect(() => {
-    if (!enabled) return undefined
-    const ctrl = new AbortController()
-    let live = true
-    setState({ items: [], scanned: 0, done: false, capped: false, error: null })
-    ;(async () => {
-      const items = []
-      let offset = 0
-      for (let page = 0; page < SCAN_MAX_PAGES; page += 1) {
-        const body = await api.execution(executionId, { offset, limit: SCAN_PAGE }, ctrl.signal)
-        if (!live) return
-        const ev = body.events
-        if (!ev.available) {
-          setState({ items, scanned: offset, done: true, capped: false, error: null })
-          return
-        }
-        items.push(...ev.items.filter((e) => e.matched))
-        offset += ev.items.length
-        const full = items.length >= SCAN_MAX_MATCHES
-        if (!ev.has_more || full) {
-          setState({ items: items.slice(0, SCAN_MAX_MATCHES), scanned: offset, done: true, capped: ev.has_more, error: null })
-          return
-        }
-        setState({ items: [...items], scanned: offset, done: false, capped: false, error: null })
-      }
-      setState({ items, scanned: offset, done: true, capped: true, error: null })
-    })().catch((error) => {
-      if (live && error?.name !== 'AbortError') setState((s) => ({ ...s, done: true, error }))
-    })
-    return () => { live = false; ctrl.abort() }
-  }, [executionId, enabled])
-  return state
-}
-
 /** Parsed detection blocks for the rules that fired, by rule id (for highlighting). */
 function useDetections(hits) {
   const ids = hits.map((h) => h.rule.id).join(',')
-  const { data } = useAsync(async () => {
+  const { data } = useAsync(async (signal) => {
     const out = new Map()
     await Promise.all(hits.map(async (h) => {
       try {
-        const rule = await api.rule(h.rule.id)
+        const rule = await api.rule(h.rule.id, signal)
         out.set(h.rule.id, parseDetection(rule.yaml))
-      } catch { /* no highlighting for this rule */ }
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err
+        /* otherwise: no highlighting for this rule */
+      }
     }))
     return out
   }, [ids])
@@ -296,29 +256,28 @@ function defaultRuleFilter(hits) {
 }
 
 function MatchedEvents({ ex, detections, catalog, order }) {
-  const scan = useMatchedEvents(ex.id, ex.hits.length > 0 && ex.events.available)
   const [page, setPage] = useState(0)
   const [ruleFilter, setRuleFilter] = useState(() => defaultRuleFilter(ex.hits))
   const filterId = useId()
+  // One request per page: the server filters to matched events (and to one rule) before paging.
+  const { data, loading, error, reload } = useAsync((signal) => api.execution(ex.id, {
+    offset: page * MATCHES_PER_PAGE, limit: MATCHES_PER_PAGE, matched: true, rule: ruleFilter,
+  }, signal), [ex.id, page, ruleFilter])
+  const events = data?.events
+  const items = events?.items || []
+  const total = matchTotal(ex.hits, ruleFilter)
   const hitsById = new Map(ex.hits.map((h) => [h.rule.id, h.rule]))
-  const items = ruleFilter ? scan.items.filter((ev) => ev.matched_rules.includes(ruleFilter)) : scan.items
-  const pages = Math.max(1, Math.ceil(items.length / MATCHES_PER_PAGE))
-  const current = items.slice(page * MATCHES_PER_PAGE, (page + 1) * MATCHES_PER_PAGE)
-  useEffect(() => { if (page >= pages) setPage(pages - 1) }, [page, pages])
   const ruleOptions = [...ex.hits].sort((a, b) => (order.get(a.rule.id) ?? 99) - (order.get(b.rule.id) ?? 99))
+  const first = page * MATCHES_PER_PAGE + 1
+  const last = page * MATCHES_PER_PAGE + items.length
+  const selected = ruleFilter ? ex.hits.find((h) => h.rule.id === ruleFilter) : null
   return (
     <section className="matched" aria-labelledby="matched-title">
       <h3 id="matched-title">Matching events</h3>
       <p className="small muted">
-        Marked values match a literal in the rule&apos;s detection. The marking is a reading aid; the evaluator
-        decided the match.
+        Highlights text from the rule&apos;s conditions; it does not show which condition matched. Only events
+        the evaluator matched are marked.
       </p>
-      <p className="small" role="status">
-        {scan.error ? null : !scan.done
-          ? <><span className="spinner inline" aria-hidden="true" /> Scanning the window: {scan.scanned.toLocaleString()} events read, {plural(scan.items.length, 'match', 'matches')} so far…</>
-          : `${plural(scan.items.length, 'matching event')} in ${plural(scan.scanned, 'event')} read${scan.capped ? ' (showing the first matches only)' : ''}.`}
-      </p>
-      {scan.error && <ErrorState error={scan.error} />}
       {ex.hits.length > 1 && (
         <div className="filters inline-filters">
           <label htmlFor={filterId}>Show matches of</label>
@@ -326,25 +285,37 @@ function MatchedEvents({ ex, detections, catalog, order }) {
             <option value="">All rules that fired</option>
             {ruleOptions.map((h) => (
               <option key={h.rule.id} value={h.rule.id}>
-                {order.get(h.rule.id) ? `${order.get(h.rule.id)}. ` : ''}{h.rule.title}{h.noisy ? ' (noisy)' : ''}
+                {order.get(h.rule.id) ? `${order.get(h.rule.id)}. ` : ''}{h.rule.title} ({h.rule.author || 'author unknown'})
+                {' · '}{plural(h.count, 'event')}{h.noisy ? ' (noisy)' : ''}
               </option>
             ))}
           </select>
-          {scan.done && ruleFilter && <span className="small muted">{plural(items.length, 'event')}</span>}
         </div>
       )}
-      {scan.done && items.length === 0 && !scan.error && <Empty>No matching events found in the events read.</Empty>}
-      {current.map((ev) => (
-        <EventCard key={`${ev.channel}-${ev.record_id}-${ev.ts}`} ev={ev} start={ex.started_at} detections={detections}
-          hitsById={hitsById} catalog={catalog} />
-      ))}
-      {items.length > MATCHES_PER_PAGE && (
+      <p className="small" role="status">
+        {total != null
+          ? `${plural(total, 'matching event')}${selected ? ` for ${selected.rule.title} (${selected.rule.author || 'author unknown'})` : ''}.`
+          : `Events that any of the ${ex.hits.length} rules matched; each rule's count is in the list above.`}
+      </p>
+      {error && <ErrorState error={error} onRetry={reload} />}
+      {loading && !data && <Loading label="Loading matching events…" />}
+      {events && !events.available && <Empty>{events.note || 'The events for this execution are not available.'}</Empty>}
+      {events?.available && items.length === 0 && !loading && <Empty>No matching events on this page.</Empty>}
+      <div className={loading && data ? 'busy' : ''}>
+        {items.map((ev) => (
+          <EventCard key={`${ev.channel}-${ev.record_id}-${ev.ts}`} ev={ev} start={ex.started_at} detections={detections}
+            hitsById={hitsById} catalog={catalog} />
+        ))}
+      </div>
+      {events?.available && (page > 0 || events.has_more) && (
         <div className="pager">
-          <button type="button" className="btn secondary small" aria-disabled={page === 0}
-            onClick={() => page > 0 && setPage(page - 1)}>Previous</button>
-          <span>Matches {page * MATCHES_PER_PAGE + 1}–{Math.min(items.length, (page + 1) * MATCHES_PER_PAGE)} of {items.length}</span>
-          <button type="button" className="btn secondary small" aria-disabled={page >= pages - 1}
-            onClick={() => page < pages - 1 && setPage(page + 1)}>Next</button>
+          <button type="button" className="btn secondary small" aria-disabled={page === 0 || loading}
+            onClick={() => page > 0 && !loading && setPage(page - 1)}>Previous</button>
+          <span>
+            Matches {items.length ? first : 0}–{last}{total != null ? ` of ${total}` : (events.has_more ? '' : ' (end)')}
+          </span>
+          <button type="button" className="btn secondary small" aria-disabled={!events.has_more || loading}
+            onClick={() => events.has_more && !loading && setPage(page + 1)}>Next</button>
         </div>
       )}
     </section>
@@ -389,7 +360,7 @@ function EventRow({ ev, start, detections }) {
 function AllEvents({ ex, detections }) {
   const [offset, setOffset] = useState(0)
   const { data, loading, error, reload } = useAsync(
-    () => (offset === 0 ? Promise.resolve(ex) : api.execution(ex.id, { offset, limit: PAGE })), [ex, offset])
+    (signal) => (offset === 0 ? Promise.resolve(ex) : api.execution(ex.id, { offset, limit: PAGE }, signal)), [ex, offset])
   const events = data?.events
   return (
     <section className="all-events" aria-labelledby="all-title">
@@ -472,7 +443,7 @@ function DetectionPane({ ex, catalog }) {
 
 export default function ExecutionDetail() {
   const { executionId } = useParams()
-  const { data, loading, error, reload } = useAsync(() => load(executionId), [executionId])
+  const { data, loading, error, reload } = useAsync((signal) => load(executionId, signal), [executionId])
   const ex = data?.execution
   usePageTitle(ex ? `${ex.technique.id} in run ${ex.run.id}` : 'Execution')
   if (loading && !data) return <div className="page"><Loading /></div>

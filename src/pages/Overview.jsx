@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import {
-  GAP_KIND, STATUS, countEntries, formatDate, formatScore, pickStartHere, plural, tacticLabel,
+  GAP_KIND, STATUS, countEntries, formatDate, formatScore, gapText, pickStartHere, plural, tacticLabel,
 } from '../lib.js'
 import {
   Empty, ErrorState, Icon, Loading, ModeChip, NoisyChip, RuleName, RuleText, StatusChip, useAsync, usePageTitle,
@@ -11,30 +11,31 @@ import ModeNotice from '../components/ModeNotice.jsx'
 
 const GAP_STATUS = { missed: 'missed', partial: 'partial', telemetry_gap: 'telemetry_gap' }
 
-async function loadStartHere(closedGaps, latestRunId) {
+async function loadStartHere(closedGaps, latestRunId, signal) {
   const pick = pickStartHere(closedGaps, latestRunId)
   if (!pick) return null
   try {
     const [fromRun, toRun, fromRules] = await Promise.all([
-      api.run(pick.fromRun), api.run(pick.toRun), api.rules({ run: pick.fromRun })])
+      api.run(pick.fromRun, signal), api.run(pick.toRun, signal), api.rules({ run: pick.fromRun }, signal)])
     const find = (run) => run.executions.find((e) => e.technique.id === pick.gap.technique_id) || null
     const enabledBefore = new Set(fromRules.rules.filter((r) => r.in_ruleset).map((r) => r.id))
     return {
       ...pick, fromRun, toRun, fromExec: find(fromRun), toExec: find(toRun),
       added: pick.rules.length > 0 && pick.rules.every((r) => !enabledBefore.has(r.id)),
     }
-  } catch {
+  } catch (err) {
+    if (err?.name === 'AbortError') throw err
     return { ...pick, fromRun: null, toRun: null }
   }
 }
 
-async function load() {
-  const overview = await api.overview()
+async function load(signal) {
+  const overview = await api.overview(signal)
   if (!overview.latest) return { overview }
   const latestId = overview.latest.run.id
   const [coverage, closed, rules] = await Promise.all([
-    api.coverage(latestId), api.gaps({ status: 'closed', limit: 1000 }), api.ruleCatalog()])
-  const startHere = await loadStartHere(closed.gaps, latestId)
+    api.coverage(latestId, signal), api.gaps({ status: 'closed', limit: 1000 }, signal), api.ruleCatalog()])
+  const startHere = await loadStartHere(closed.gaps, latestId, signal)
   return { overview, coverage, rules, startHere }
 }
 
@@ -185,7 +186,7 @@ function TopGaps({ gaps, coverage, rules }) {
                   ? <Link to={`/executions/${execOf.get(g.technique_id)}`} className="gap-tech">{g.technique_id} {g.technique.name}</Link>
                   : <span className="gap-tech">{g.technique_id} {g.technique.name}</span>}
               </div>
-              <p className="gap-notes"><RuleText text={g.notes} rules={rules} /></p>
+              <p className="gap-notes"><RuleText text={gapText(g)} rules={rules} /></p>
               {g.rule_idea && <p className="gap-idea"><strong>Rule idea:</strong> {g.rule_idea}</p>}
             </li>
           ))}

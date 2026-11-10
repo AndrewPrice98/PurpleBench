@@ -54,10 +54,20 @@ export function qs(params) {
 }
 
 const enc = encodeURIComponent
+const withSignal = (signal, options = {}) => (signal ? { ...options, signal } : options)
 
 // The bundled rule catalog (titles and authors) changes only with a deployment: fetched once.
 let rulesPromise = null
+// Rule details (YAML included) that have loaded; in-flight requests stay per caller so they can be aborted.
 const ruleDetails = new Map()
+
+/** Same-origin download URLs (the session cookie goes with them). */
+export const downloads = {
+  navigator: (runId) => `/api/coverage/navigator.json${qs({ run: runId })}`,
+  reportMd: (runId) => `/api/runs/${enc(runId)}/report.md`,
+  reportHtml: (runId) => `/api/runs/${enc(runId)}/report.html`,
+  campaign: (id) => `/api/campaigns/${enc(id)}/export.json`,
+}
 
 export const api = {
   health: () => request('/health'),
@@ -65,13 +75,28 @@ export const api = {
   login: (username, password) => request('/auth/login', send('POST', { username, password })),
   logout: () => request('/auth/logout', { method: 'POST' }),
 
-  overview: () => request('/overview'),
-  runs: () => request('/runs'),
-  run: (id) => request(`/runs/${enc(id)}`),
-  coverage: (runId) => request(`/coverage${qs({ run: runId })}`),
-  gaps: (params = {}) => request(`/gaps${qs(params)}`),
-  execution: (id, { offset = 0, limit = 50 } = {}, signal) => (
-    request(`/executions/${enc(id)}${qs({ offset, limit })}`, signal ? { signal } : {})),
+  overview: (signal) => request('/overview', withSignal(signal)),
+  runs: (signal) => request('/runs', withSignal(signal)),
+  run: (id, signal) => request(`/runs/${enc(id)}`, withSignal(signal)),
+  coverage: (runId, signal) => request(`/coverage${qs({ run: runId })}`, withSignal(signal)),
+  gaps: (params = {}, signal) => request(`/gaps${qs(params)}`, withSignal(signal)),
+  patchGap: (id, body) => request(`/gaps/${enc(id)}`, send('PATCH', body)),
+  library: (signal) => request('/library', withSignal(signal)),
+  campaigns: (signal) => request('/campaigns', withSignal(signal)),
+  campaign: (id, signal) => request(`/campaigns/${enc(id)}`, withSignal(signal)),
+  createCampaign: (body) => request('/campaigns', send('POST', body)),
+  /** Upload a lab run file (multipart field "file"). */
+  uploadRun(file) {
+    const form = new FormData()
+    form.append('file', file, file.name || 'run.json')
+    return request('/runs', { method: 'POST', body: form })
+  },
+  /**
+   * One page of an execution's events. `matched` keeps only events a rule matched and `rule` only those
+   * one rule matched; both filters apply on the server before paging.
+   */
+  execution: (id, { offset = 0, limit = 50, matched = false, rule = '' } = {}, signal) => (
+    request(`/executions/${enc(id)}${qs({ offset, limit, matched: matched ? 'true' : '', rule })}`, withSignal(signal))),
 
   /** Map of rule id -> rule object (with author) for every bundled rule. */
   ruleCatalog() {
@@ -82,14 +107,13 @@ export const api = {
     }
     return rulesPromise
   },
-  /** Rules with, for a run, whether its rule set enables each one. */
-  rules: (params = {}) => request(`/rules${qs(params)}`),
-  /** Rule detail (YAML text included); cached for the session. */
-  rule(id) {
-    if (!ruleDetails.has(id)) {
-      const p = request(`/rules/${enc(id)}`).catch((err) => { ruleDetails.delete(id); throw err })
-      ruleDetails.set(id, p)
-    }
-    return ruleDetails.get(id)
+  /** Rules with, for a run, hits, noise and whether its rule set enables each one. */
+  rules: (params = {}, signal) => request(`/rules${qs(params)}`, withSignal(signal)),
+  /** Rule detail (YAML text included); kept for the session once loaded. */
+  async rule(id, signal) {
+    if (ruleDetails.has(id)) return ruleDetails.get(id)
+    const body = await request(`/rules/${enc(id)}`, withSignal(signal))
+    ruleDetails.set(id, body)
+    return body
   },
 }
