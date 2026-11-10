@@ -64,7 +64,7 @@ def test_results_and_scope_content(seeded):
 
 def test_change_vs_previous_run_of_same_campaign(seeded):
     page = _html(seeded, 3)
-    assert "Compared with run 1 of the same campaign" in page
+    assert re.search(r"Compared with run 1 \(rule set v1, [^)]*\) of the same campaign", page)
     assert "points)" in page
     # a campaign's first run falls back to an earlier run of another campaign, score only
     assert "No earlier run of this campaign" in _html(seeded, 2)
@@ -133,3 +133,79 @@ def test_deterministic(seeded):
 def test_unknown_run(seeded):
     with pytest.raises(KeyError):
         _md(seeded, 99)
+
+
+# -- fix round 1 -----------------------------------------------------------------------------------
+
+def test_authors_shown_for_fired_rules_and_in_appendix(seeded):
+    from purplebench import rulesets
+    attr = rulesets.rule_attribution()
+    sigma = next(a for a in attr.values() if a["origin"] == "sigmahq" and a["author"])
+    assert sigma["file"].startswith("rules/sigmahq/") and sigma["url"].startswith("https://github.com/SigmaHQ/sigma/blob/")
+    assert all(a["author"] for a in attr.values())  # DRL: every bundled rule keeps its author
+    page = _html(seeded, 3)
+    results = page.split("4. Results")[1].split("5. Coverage change")[0]
+    assert "(author: " in results and "(author: unknown)" not in results
+    appendix = page.split("Appendix A.")[1]
+    assert "<th>Author</th>" in appendix and "<th>Rule file</th>" in appendix
+    assert "https://github.com/SigmaHQ/sigma/blob/552f3fee" in appendix and "rules/custom/" in appendix
+    assert sigma["author"].split(",")[0] in appendix
+    assert "https://github.com/SigmaHQ/Detection-Rule-License" in appendix.split("Appendix B.")[1]
+
+
+@pytest.mark.parametrize("run_id", [1, 2, 3, 4])
+def test_numbers_reconcile_with_scoring_and_coverage(seeded, run_id):
+    from purplebench import coverage as cv
+    score, _ = reports._run_score(seeded, run_id)
+    cov = cv.compute_coverage(score)
+    summary = db.run_summary(seeded, run_id)
+    # executions are one per technique in the demo, so the stored summary and the shared coverage agree
+    assert cov.score == summary["score"] and cov.tested == summary["tested"]
+    page = _html(seeded, run_id)
+    assert f"Coverage score (detected / tested): {cov.score:.1f}%" in page
+    assert f"Techniques tested: {cov.tested}; detected {cov.counts['detected']}, partial {cov.counts['partial']}" in page
+    for t in cov.tactics:
+        assert f"<td>{t.name}</td>" in page
+        assert f"<td>{t.tested}</td><td>{t.counts['detected']}</td><td>{t.score:.1f}%</td>" in page
+
+
+def test_markdown_neutralises_autolinks_mentions_emoji(seeded):
+    seeded.execute("UPDATE campaigns SET name=? WHERE id=1",
+                   ("https://x.y www.x.y a@b.co @user :smile: 1. first 2) second",))
+    seeded.commit()
+    title = _md(seeded, 1).splitlines()[0]
+    assert "://" not in title and "www." not in title.lower()
+    assert "@" not in title and ":smile:" not in title
+    assert "https&#58;//x" in title and "www&#46;x" in title and "a&#64;b" in title and "&#58;smile&#58;" in title
+    # trusted attribution URLs stay readable
+    assert "https://github.com/SigmaHQ/Detection-Rule-License" in _md(seeded, 1)
+    # leading ordered-list markers are escaped
+    seeded.execute("UPDATE runs SET notes=? WHERE id=1", ("1. first",))
+    seeded.commit()
+    assert "Run notes&#58; 1. first" not in _md(seeded, 1)
+    assert reports._md_text("1. first") == r"1\. first" and reports._md_text("2) x") == r"2\) x"
+
+
+def test_control_and_bidi_characters_stripped(seeded):
+    seeded.execute("UPDATE campaigns SET name=? WHERE id=1", ("evil‮TXT​name",))
+    seeded.commit()
+    for out in (_md(seeded, 1), _html(seeded, 1)):
+        assert "‮" not in out and "​" not in out and "" not in out
+        assert "evilTXTname" in out
+    assert reports._md_text(None) == "" and reports._plain(None) == ""
+
+
+@pytest.mark.parametrize("source,expected", [
+    ("Lab run on <script>x</script> from file", "(not recorded)"),
+    ("Lab run on ", "(not recorded)"),
+    ("garbage", "(not recorded)"),
+    ("", "(not recorded)"),
+    ("Lab run on LAB-WS01.corp from file", "LAB-WS01.corp"),
+])
+def test_lab_source_parsing(seeded, source, expected):
+    seeded.execute("UPDATE runs SET mode='lab', source=? WHERE id=1", (source,))
+    seeded.commit()
+    page = _html(seeded, 1)
+    assert f"Target host: {expected}" in page
+    assert "<script>" not in page
+    assert "not yet run against a real lab" in page

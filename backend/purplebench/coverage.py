@@ -78,7 +78,7 @@ class Coverage:
         }
 
 
-def _best(execs: list[ExecutionScore]) -> ExecutionScore:
+def best_execution(execs: list[ExecutionScore]) -> ExecutionScore:
     def key(e: ExecutionScore) -> tuple[int, float]:
         return _BEST.index(e.status), e.ttd_seconds if e.ttd_seconds is not None else 1e9
     return min(execs, key=key)
@@ -94,7 +94,7 @@ def compute_coverage(run: RunScore) -> Coverage:
         by_tech.setdefault(e.technique, []).append(e)
     techs = []
     for tid, execs in by_tech.items():
-        b = _best(execs)
+        b = best_execution(execs)
         techs.append(TechniqueCoverage(
             technique=tid, name=b.name, tactics=b.tactics, status=b.status, reason=b.reason, executions=len(execs),
             ttd_seconds=b.ttd_seconds, rules=tuple(h.rule_id for h in b.hits),

@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from . import config
@@ -176,3 +177,27 @@ def rules_hash(rules: list[Rule]) -> str:
         items.append({"id": r.id, "file": Path(r.path).name, "sha256": hashlib.sha256(data).hexdigest()})
     blob = json.dumps(items, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(blob).hexdigest()
+
+
+DRL_URL = "https://github.com/SigmaHQ/Detection-Rule-License"
+
+
+@lru_cache(maxsize=2)
+def _rule_attribution(root: str) -> dict[str, dict[str, str]]:
+    sources = {}
+    src = Path(root) / "sigmahq" / "SOURCES.json"
+    if src.exists():
+        sources = {s["file"]: s["url"] for s in json.loads(src.read_text(encoding="utf-8"))["rules"]}
+    out: dict[str, dict[str, str]] = {}
+    for origin in ORIGINS:
+        for r in load_rules(Path(root) / origin):
+            name = Path(r.path).name
+            out[r.id] = {"author": r.author or "", "license": r.license or "", "file": f"rules/{origin}/{name}",
+                         "origin": origin, "url": sources.get(name, "")}
+    return out
+
+
+def rule_attribution(rules_dir: Path | str | None = None) -> dict[str, dict[str, str]]:
+    """Author, licence, repository file path and (SigmaHQ) pinned upstream URL of every bundled rule,
+    keyed by rule id. Read from the rule YAML and ``rules/sigmahq/SOURCES.json``; empty string if absent."""
+    return _rule_attribution(str(Path(rules_dir) if rules_dir else config.RULES_DIR))
