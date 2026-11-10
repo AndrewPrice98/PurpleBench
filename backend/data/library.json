@@ -40,7 +40,7 @@
    "execution_kind": "atomic test",
    "link": "command-matched",
    "name": "PowerShell",
-   "note": "Task 1 listed 'Powershell Invoke-DownloadCradle' (a manual test with no command); the recording contains the download-cradle test above instead, matched by its command text.",
+   "note": "The Atomic test 'Powershell Invoke-DownloadCradle' is a manual test with no command; the recording contains the download-cradle test above instead, matched by its command text.",
    "tactics": [
     "execution"
    ],
@@ -805,7 +805,7 @@
    "execution_kind": "atomic test",
    "link": "named",
    "name": "SMB/Windows Admin Shares",
-   "note": "Task 1 listed 'Map admin share'; the shipped Sysmon file holds only 10 events and its description names that test, but it contains no 'net use' command. It does contain 'Copy and Execute File with PsExec' (also named in the description), so that test is used.",
+   "note": "The Atomic test 'Map admin share' is not what was recorded: the shipped Sysmon file holds only 10 events and its description names that test, but it contains no 'net use' command. It does contain 'Copy and Execute File with PsExec' (also named in the description), so that test is used.",
    "tactics": [
     "lateral-movement"
    ],

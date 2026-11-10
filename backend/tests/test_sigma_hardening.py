@@ -1,4 +1,4 @@
-"""Fix round 1 of the Sigma evaluator review: envelope-aware gap analysis, malformed rules,
+"""Sigma evaluator hardening: envelope-aware gap analysis, malformed rules,
 regex time limits, linear wildcard matching, required profile."""
 import importlib.util
 import logging
@@ -220,7 +220,7 @@ def test_stale_top_level_evaluator_stub_is_gone():
     assert importlib.util.find_spec("purplebench.evaluator") is None
 
 
-# -------------------------------------------------------------------------------------------- fix round 2
+# -------------------------------------------------------------------------------------------- per-rule regex budget
 
 def test_regex_time_is_bounded_per_rule(monkeypatch, caplog):
     monkeypatch.setattr(P, "check_regex", lambda pattern: None)

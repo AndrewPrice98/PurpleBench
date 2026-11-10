@@ -1,4 +1,4 @@
-"""Logsource -> (channel, event id) mapping and field mapping (Review Focus 2)."""
+"""Logsource -> (channel, event id) mapping and field mapping."""
 import pytest
 from sigma_helpers import evaluate_on, event, proc
 

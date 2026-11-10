@@ -180,4 +180,4 @@ def test_full_rule_set_over_all_recorded_events_is_fast():
     results = sigma.evaluate_all(rules, events, sigma.recorded_profile())
     elapsed = time.perf_counter() - t
     assert len(events) > 80_000 and len(results) == len(rules)
-    assert elapsed < 30, elapsed  # about 1 s on the development machine; the plan's budget is 10 s
+    assert elapsed < 30, elapsed  # about 1 s on the development machine; the budget is 10 s

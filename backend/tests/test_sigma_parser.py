@@ -1,5 +1,5 @@
 """Sigma parser: round trips, modifiers, condition grammar, wildcard escaping, regex guard and
-unsupported features (Review Focus 1)."""
+unsupported features."""
 from pathlib import Path
 
 import pytest

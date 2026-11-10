@@ -94,7 +94,7 @@ def test_vercel_config_bundles_what_the_function_reads_and_stays_small():
     # Vercel's Python limit is 500 MB uncompressed; the application files are a few MB (see DECISIONS.md).
     size = sum(f.stat().st_size for d in ("backend/purplebench", "backend/data", "backend/rules")
                for f in (root / d).rglob("*") if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".db")
-    assert size < 20 * 1024 * 1024, f"application files grew to {size} bytes; review the bundle budget"
+    assert size < 20 * 1024 * 1024, f"application files grew to {size} bytes; revisit the bundle budget"
     ignore = (root / ".vercelignore").read_text(encoding="utf-8").splitlines()
     for needed in ("backend/data", "backend/rules", "backend/purplebench"):
         assert needed not in ignore  # runtime data must not be excluded

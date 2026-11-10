@@ -96,7 +96,7 @@ def S(attack_id, dataset_id, name, tactics, atomic, anchor, *, link, basis, fold
 SPECS: list[dict[str, Any]] = [
     S("T1059.001", "T1059.001", "PowerShell", ["execution"], "Run Bloodhound from Memory using Download Cradle",
       r"Remote download of SharpHound\.ps1 into memory", link="command-matched", basis="atomic command",
-      note="Task 1 listed 'Powershell Invoke-DownloadCradle' (a manual test with no command); the recording "
+      note="The Atomic test 'Powershell Invoke-DownloadCradle' is a manual test with no command; the recording "
            "contains the download-cradle test above instead, matched by its command text."),
     S("T1047", "T1047", "Windows Management Instrumentation", ["execution"], "WMI Execute Local Process",
       r"wmic\s+process call create notepad\.exe", link="named", basis="atomic command"),
@@ -150,8 +150,8 @@ SPECS: list[dict[str, Any]] = [
       basis="atomic command"),
     S("T1021.002", "T1021.002", "SMB/Windows Admin Shares", ["lateral-movement"], "Copy and Execute File with PsExec",
       r"PsExec\.exe\s+\\\\localhost\s+-accepteula\s+-c\s", link="named", basis="atomic command",
-      note="Task 1 listed 'Map admin share'; the shipped Sysmon file holds only 10 events and its description "
-           "names that test, but it contains no 'net use' command. It does contain 'Copy and Execute File with "
+      note="The Atomic test 'Map admin share' is not what was recorded: the shipped Sysmon file holds only 10 "
+           "events and its description names that test, but it contains no 'net use' command. It does contain 'Copy and Execute File with "
            "PsExec' (also named in the description), so that test is used."),
     S("T1550.002", "T1550.002", "Pass the Hash", ["lateral-movement"], None, r"mimikatz\.exe", link="recorded",
       basis="dataset description",

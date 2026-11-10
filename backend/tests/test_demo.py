@@ -153,10 +153,10 @@ def test_a_noisy_rule_is_visible_and_earns_no_credit(seeded):
     assert ex2["status"] == "partial" and "T1218.005" in ex2["reason"] and "earned no credit" in ex2["reason"]
     assert [(h["relation"], h["noisy"]) for h in hits2 if h["title"] == ENC] == [("exact", True)]
     assert [h["relation"] for h in hits2 if not h["noisy"]] == ["related"]
-    # T1082 in run 2: only the noisy rule fired
+    # T1082 in run 2: only the noisy rule, tagged for another technique, fired -> no credit at all
     ex82 = run2["T1082"]
-    assert ex82["status"] == "partial" and ex82["reason"].startswith("noisy rule")
-    assert all(h["noisy"] for h in db.list_hits(seeded, ex82["id"]))
+    assert ex82["status"] == "missed" and "noisy rule(s) for other techniques" in ex82["reason"]
+    assert all(h["noisy"] and h["relation"] == "related" for h in db.list_hits(seeded, ex82["id"]))
     # run 4: still enabled and still flagged noisy, but the tuned custom rule carries the detection
     ex4 = next(e for e in db.list_executions(seeded, 4) if e["technique_id"] == "T1059.001")
     hits = {h["title"]: h for h in db.list_hits(seeded, ex4["id"])}

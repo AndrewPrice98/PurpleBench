@@ -51,7 +51,7 @@ def test_atomic_metadata_is_complete():
     assert n_atomic >= 20
 
 
-def test_known_guids_match_task1_selection():
+def test_known_guids_match_the_selected_tests():
     expected = {
         "T1685.005": ("Clear Logs", "e6abb60e-26b8-41da-8aae-0c35174b0967"),
         "T1490": ("Windows - Delete Volume Shadow Copies", "43819286-91a9-4369-90ed-d31fb4da2c01"),

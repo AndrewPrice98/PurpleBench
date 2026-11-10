@@ -1,4 +1,4 @@
-"""Sigma evaluator: statuses, telemetry gaps (Review Focus 2), determinism."""
+"""Sigma evaluator: statuses, telemetry gaps, determinism."""
 import random
 
 from sigma_helpers import evaluate_on, event, proc

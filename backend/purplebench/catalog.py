@@ -16,7 +16,7 @@ from typing import Any
 
 from . import library
 
-MAX_TOTAL_BYTES = 30 * 1024 * 1024  # plan budget for committed telemetry
+MAX_TOTAL_BYTES = 30 * 1024 * 1024  # size budget for committed telemetry
 MIN_TECHNIQUES, MAX_TECHNIQUES, MIN_TACTICS = 20, 30, 8
 EVENT_KEYS = {"ts", "channel", "event_id", "host", "record_id", "fields"}
 
