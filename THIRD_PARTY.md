@@ -6,13 +6,13 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 
 - Source: https://github.com/redcanaryco/atomic-red-team (`atomics/<ID>/<ID>.yaml`), checked at commit `a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6`.
 - Licence: MIT, Copyright (c) 2018 Red Canary, Inc. https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt
-- Use: test names, GUIDs and descriptions only. The web app does not run test commands.
+- Use: test names, GUIDs, descriptions and command text, stored as read-only display data in `backend/data/library.json` (licence copy: `backend/data/ATOMIC_RED_TEAM_LICENSE.txt`). The web app does not run test commands.
 
 ## Splunk attack_data (recorded telemetry)
 
 - Source: https://github.com/splunk/attack_data, `datasets/attack_techniques/<ID>/...`, checked at commit `c8af10d015d392fca97f9eb65181e9f06bc18e40`.
 - Licence: Apache License 2.0. https://raw.githubusercontent.com/splunk/attack_data/master/LICENSE
-- Use: trimmed subsets of selected Windows Sysmon and Security event logs (the events in each test window plus a benign baseline). When subsets are committed, the Apache-2.0 text, the original dataset path and a note that the files were trimmed accompany them. Dataset authors are named in each upstream `.yml` manifest.
+- Use: trimmed, normalised subsets of selected Windows Sysmon event logs (the events in each test window plus a benign lead-in baseline), committed under `backend/data/telemetry/`. The Apache-2.0 text (`LICENSE-Apache-2.0.txt`), a trimming notice (`NOTICE.md`) and, per file in `manifest.json`, the original dataset path, URL, commit, author and window derivation accompany them. Dataset authors are named in each upstream `.yml` manifest and copied into the manifest.
 - Fallback (not used): OTRF Security-Datasets, https://github.com/OTRF/Security-Datasets, MIT `LICENSE` file but a conflicting "GPL-3.0" line in its README, so it is not committed unless clarified.
 
 ## SigmaHQ rules

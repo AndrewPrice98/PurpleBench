@@ -24,7 +24,7 @@ jobs:
       - name: Tests
         working-directory: backend
         run: python -m pytest -q
-      # python -m purplebench catalog --check is added by a later task (placeholder; not yet implemented).
+      # Validates data/telemetry/manifest.json (hashes, counts, windows) and the technique library.
       - name: Technique catalog is current
         working-directory: backend
         run: python -m purplebench catalog --check
