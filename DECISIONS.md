@@ -142,6 +142,15 @@ Built by `backend/scripts/build_datasets.py` from files fetched by `backend/scri
 - **Rule-set versions.** `load_rules(directory, include=[...])` selects rules by id or file stem, so Task 5 can define rule-set versions v1-v4 as lists.
 - **Known limits of the recorded data for rules.** T1558.003 has no execution in its dataset (no rule can be credited); T1550.002 shows only an interactive tool accessing LSASS (credited to T1003.001 rules, not pass-the-hash); `proc_creation_win_powershell_encode` and `proc_access_win_lsass_memdump` also fire on the benign baseline (noisy, as Task 4 expects to report).
 
+## Task 4: scoring, coverage and gaps
+
+- **Technique credit.** Rule tags are mapped to v20 ids by the alias table. A non-noisy rule tagged with exactly the tested id gives `detected`. `partial` otherwise, with the reason: "parent-technique rule" (only the parent of a tested sub-technique, e.g. T1569 for T1569.002), "detected via related technique <id>" (rules for other techniques, including a more specific sub-technique of a tested parent), or "noisy rule" (only rules over the noise threshold, with their baseline hit counts). `missed` means no rule in the set fired; `telemetry_gap` means nothing fired and every evaluable rule tagged for the technique is a telemetry gap against the whole recorded profile. T1558.003 is `untested` ("recorded dataset contains no execution") and excluded from every denominator.
+- **Time window and TTD.** Execution start is the manifest's first anchor event, not the window start. A match counts only in [start - 5 s, start + 120 s]; TTD is the first such match minus the start, clamped at 0, so skew gives 0 and lead-in or late matches neither earn credit nor distort TTD. Skew, window and noise threshold (default 0 baseline hits) are parameters of `score_run`.
+- **Scores.** Overall and per-tactic score = detected / tested; techniques are best-of their executions; multi-tactic techniques count in each tactic and once overall. `partial_score` (partial at half weight) is reported separately.
+- **Navigator.** Layer 4.5 (`navigator` 5.3.2, ATT&CK 20); detected 100 / partial 50 / missed and gap 0; untested has no score. `tactic` is omitted so multi-tactic techniques show in all their tactics. `validate_layer` implements the documented required and optional fields used.
+- **Gap hints.** `backend/data/gap_hints.yml`, keyed by v20 id, "telemetry needed" and "rule idea" for each of the 26 techniques; a test requires full coverage of the library. Hints are starting points, not tested rules.
+- **Caveat.** TTD in recorded mode is about 0 s because the anchor is the command's own process-creation event, which process-creation rules match directly. It is not SIEM detection latency.
+
 ## Scaffold notes
 
 - The CI workflow keeps STIGWatch's job layout (backend, frontend, audit, secrets). The "Technique catalog is current" step calls `python -m purplebench catalog --check`, implemented in Task 2.

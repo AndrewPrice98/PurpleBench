@@ -1,0 +1,83 @@
+# Curated gap hints, keyed by ATT&CK Enterprise v20 technique id.
+# Used for the gap record of a missed or telemetry-gap execution.
+#   telemetry_needed: what the telemetry must contain for a detection to be possible.
+#   rule_idea:        what a rule for the technique looks at (a starting point, not a finished rule).
+# Written for Windows hosts with Sysmon and the Security log.
+T1059.001:
+  telemetry_needed: Sysmon event 1 (or Security 4688 with command-line auditing) and PowerShell Script Block Logging (event 4104) so encoded and in-memory scripts are visible.
+  rule_idea: Match powershell.exe or pwsh.exe command lines with download cradles (Net.WebClient, DownloadString, Invoke-WebRequest) combined with IEX or -EncodedCommand.
+T1047:
+  telemetry_needed: Sysmon event 1 with parent image and command line; WMI-Activity operational log (event 5857/5861) for permanent subscriptions.
+  rule_idea: Match wmic.exe "process call create" and WmiPrvSE.exe spawning cmd.exe or powershell.exe.
+T1569.002:
+  telemetry_needed: System log event 7045 (service installed) and Security 4697; Sysmon event 1 for services.exe children and sc.exe.
+  rule_idea: Match a new service whose image path is a command interpreter, a user-writable path or a random name such as PSEXESVC, and services.exe spawning cmd.exe.
+T1053.005:
+  telemetry_needed: Sysmon event 1 for schtasks.exe; Security 4698 (task created) with object access auditing; Task Scheduler operational log.
+  rule_idea: Match schtasks.exe /create with a task action that runs a script interpreter or a binary from a user-writable path.
+T1547.001:
+  telemetry_needed: Sysmon event 13 (registry value set) on the Run and RunOnce keys, Sysmon event 11 for the Startup folders.
+  rule_idea: Match registry value writes under CurrentVersion\Run* by reg.exe, powershell.exe or a non-installer process, and executable files written into the Startup folder.
+T1543.003:
+  telemetry_needed: System log event 7045 and Security 4697, Sysmon event 13 on HKLM\SYSTEM\CurrentControlSet\Services\*\ImagePath.
+  rule_idea: Match sc.exe create/config or New-Service with an image path in a user-writable directory or running a shell.
+T1136.001:
+  telemetry_needed: Security events 4720 (user created) and 4732 (added to a group); Sysmon event 1 for net.exe and PowerShell.
+  rule_idea: Match 4720 outside change windows, net user /add, and the New-LocalUser cmdlet in script block logs.
+T1548.002:
+  telemetry_needed: Sysmon event 13 on the shell\open\command keys under HKCU\Software\Classes and Sysmon event 1 with integrity level for auto-elevating binaries.
+  rule_idea: Match eventvwr.exe, fodhelper.exe or computerdefaults.exe spawning a shell, and writes to HKCU\Software\Classes\*\shell\open\command.
+T1685:
+  telemetry_needed: Sysmon event 1 for sc.exe, powershell.exe and reg.exe; Sysmon event 13 on Defender policy keys; Microsoft-Windows-Windows Defender/Operational events 5001, 5007, 5010.
+  rule_idea: Match Set-MpPreference -Disable*, sc stop/config WinDefend, and writes to Policies\Microsoft\Windows Defender.
+T1685.005:
+  telemetry_needed: Security 1102 and System 104 (log cleared), Sysmon event 1 for wevtutil.exe and PowerShell Clear-EventLog.
+  rule_idea: Match wevtutil cl, Clear-EventLog, and event IDs 1102 / 104 from any source.
+T1218.011:
+  telemetry_needed: Sysmon event 1 with command line and parent image, Sysmon event 3 for rundll32.exe network connections, Sysmon event 7 for unusual DLL loads.
+  rule_idea: Match rundll32.exe with javascript:, vbscript:, mshtml,RunHTMLApplication or a DLL with a non-.dll extension, and rundll32.exe making outbound connections.
+T1218.005:
+  telemetry_needed: Sysmon event 1 with command line and parent image; Sysmon event 3 for mshta.exe network connections.
+  rule_idea: Match mshta.exe with vbscript:, javascript:, or a remote URL argument, and mshta.exe spawning cmd.exe or powershell.exe.
+T1218.010:
+  telemetry_needed: Sysmon event 1 with command line, Sysmon event 3 (regsvr32.exe network connections), Sysmon event 7 for scrobj.dll loads.
+  rule_idea: Match regsvr32.exe with /i:, a URL, or scrobj.dll in the command line, and regsvr32.exe making outbound connections.
+T1027:
+  telemetry_needed: Sysmon event 1 command lines and PowerShell Script Block Logging (event 4104), which logs the decoded script.
+  rule_idea: Match -EncodedCommand / -enc with long Base64 payloads, FromBase64String, and decoded content containing known tool strings.
+T1003.001:
+  telemetry_needed: Sysmon event 10 (process access) targeting lsass.exe with GrantedAccess, Sysmon event 11 for dump files, Sysmon event 1 for procdump/comsvcs.
+  rule_idea: Match process access to lsass.exe with 0x1010/0x1410/0x1FFFFF from non-system paths, procdump -ma lsass, and comsvcs.dll MiniDump.
+T1003.002:
+  telemetry_needed: Sysmon event 1 for reg.exe, Sysmon event 11 for hive copies, Security 4656/4663 on the SAM key with registry auditing.
+  rule_idea: Match reg.exe save/export of HKLM\SAM, SYSTEM or SECURITY, and shadow-copy based copies of the config\SAM file.
+T1558.003:
+  telemetry_needed: Security event 4769 on the domain controller with ticket encryption type 0x17 (RC4) and a non-machine service name; a dataset that actually contains the Kerberoasting activity.
+  rule_idea: Match 4769 with TicketEncryptionType 0x17 for user-account service names, and many distinct SPN requests from one account in a short time (an aggregation, outside the supported Sigma subset).
+T1082:
+  telemetry_needed: Sysmon event 1 or Security 4688 with command-line auditing.
+  rule_idea: Match systeminfo.exe, and clusters of discovery commands (hostname, ver, wmic os) from one parent process.
+T1033:
+  telemetry_needed: Sysmon event 1 or Security 4688 with command-line auditing.
+  rule_idea: Match whoami.exe with /all, /priv or output redirection, and quser / query user from unusual parents.
+T1018:
+  telemetry_needed: Sysmon event 1 (net view, nltest, ping, arp) and Sysmon event 3 for scanning bursts.
+  rule_idea: Match net view, nltest /dclist, and ping or arp sweeps by a script interpreter.
+T1069.001:
+  telemetry_needed: Sysmon event 1 or Security 4688 with command lines; Security 4798 (local group membership enumerated) where audited.
+  rule_idea: Match net localgroup administrators, wmic group, and Get-LocalGroupMember in script block logs.
+T1021.002:
+  telemetry_needed: Security 5140/5145 (share access) and 4624 logon type 3 on the destination; Sysmon event 3 for port 445; Sysmon event 1 for net use.
+  rule_idea: Match access to ADMIN$ or C$ followed by a service install (7045) or file creation under Windows\System32 from the same source.
+T1550.002:
+  telemetry_needed: Security 4624 logon type 9 or type 3 with NTLM and Sysmon event 10 for credential-tool process access; ideally Security events from the destination host.
+  rule_idea: Match 4624 type 9 with logon process seclogo and an empty or mismatched key length, and NTLM network logons from a workstation to many hosts.
+T1560.001:
+  telemetry_needed: Sysmon event 1 with command line for archiving tools (7z, rar, tar) and Sysmon event 11 for the archive file.
+  rule_idea: Match 7z.exe/rar.exe with password (-p), split volume or maximum compression switches, and archives created in staging directories.
+T1105:
+  telemetry_needed: Sysmon event 1 command lines for certutil, bitsadmin, curl and PowerShell, Sysmon event 3 and 22 (network and DNS) for the process.
+  rule_idea: Match certutil -urlcache -split -f, bitsadmin /transfer, and curl or PowerShell downloads writing executables to user-writable paths.
+T1490:
+  telemetry_needed: Sysmon event 1 command lines for vssadmin, wmic, bcdedit and PowerShell; Sysmon event 23 or Security 4688.
+  rule_idea: Match vssadmin delete shadows, wmic shadowcopy delete, bcdedit recoveryenabled no, and Get-WmiObject Win32_Shadowcopy with Delete.
