@@ -9,18 +9,22 @@ modifiers appendix, version 2.1.0):
 
 - string values are compared case-insensitively unless ``|cased`` is given;
 - ``*`` matches any run of characters and ``?`` one character; ``\\`` escapes ``*``, ``?`` and ``\\``,
-  and a backslash before any other character is a literal backslash;
+  and a backslash before any other character is a literal backslash. Wildcard values are matched
+  by a linear glob matcher, never by a backtracking regular expression;
 - a list of values is OR, ``|all`` makes it AND; maps are AND, lists of maps are OR;
 - ``|windash`` lets each of ``-``, ``/``, en dash, em dash and horizontal bar stand for any of them;
-- ``|re`` is a Python regular expression searched anywhere in the value, case-sensitive unless
-  ``|re|i``; ``|re|m`` and ``|re|s`` set multi-line and dot-all. Patterns are guarded (see
-  :func:`check_regex`);
+- ``|re`` is a regular expression (third-party ``regex`` module) searched anywhere in the value,
+  case-sensitive unless ``|re|i``; ``|re|m`` and ``|re|s`` set multi-line and dot-all. Patterns
+  pass a static check (:func:`check_regex`) and every match runs under a time limit
+  (:func:`regex_predicate`);
 - ``null`` matches an absent or empty field; ``|exists`` tests presence only;
 - integers compare numerically when the event value is an integer.
 """
 
 from __future__ import annotations
 
+import contextvars
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -28,21 +32,25 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import regex
 import yaml
 
 from . import mapping
 
+log = logging.getLogger(__name__)
+
 MAX_RULE_BYTES = 256 * 1024
 MAX_REGEX_LENGTH = 1024          # characters in one |re pattern
+MAX_CONDITION_DEPTH = 64         # nesting of parentheses and "not" in a condition
 MAX_REGEX_INPUT = 32_768         # characters of a field value a |re pattern is applied to
 SUPPORTED_MODIFIERS = frozenset({"contains", "startswith", "endswith", "all", "cased", "exists", "windash", "re"})
-REGEX_FLAGS = {"i": re.IGNORECASE, "m": re.MULTILINE, "s": re.DOTALL}
+REGEX_TIMEOUT_S = 0.05           # time limit for one |re match (seconds)
+REGEX_FLAGS = {"i": regex.IGNORECASE, "m": regex.MULTILINE, "s": regex.DOTALL}
 KNOWN_UNSUPPORTED_MODIFIERS = frozenset({
     "base64", "base64offset", "utf16", "utf16le", "utf16be", "wide", "cidr", "expand", "fieldref",
     "lt", "lte", "gt", "gte", "neq", "minute", "hour", "day", "week", "month", "year",
 })
 WINDASH_CHARS = "-/\u2013\u2014\u2015"  # hyphen, slash, en dash, em dash, horizontal bar
-_WINDASH_CLASS = "[" + re.escape(WINDASH_CHARS) + "]"
 _MATCH_TYPES = ("contains", "startswith", "endswith", "re", "exists")
 
 # Rule metadata kept on load (the licence and author fields are kept verbatim, DRL 1.1).
@@ -96,10 +104,102 @@ def wildcard_tokens(value: str) -> list[tuple[str, str]]:
     return out
 
 
-def _lit_regex(text: str, windash: bool) -> str:
-    if not windash:
-        return re.escape(text)
-    return "".join(_WINDASH_CLASS if ch in WINDASH_CHARS else re.escape(ch) for ch in text)
+# Glob matching. Each pattern item is a lower-cased (or, with |cased, exact) character, ANY_CHAR for
+# "?", or DASH for a windash position. Segments between "*" are found leftmost-first, so matching is
+# linear in the value length for a given pattern (no regular expression, no backtracking).
+ANY_CHAR = object()
+DASH = frozenset(WINDASH_CHARS)
+Segment = tuple
+
+
+def _seg_match(seg: Segment, text: str, p: int) -> bool:
+    for i, item in enumerate(seg):
+        if item is ANY_CHAR:
+            continue
+        c = text[p + i]
+        if item is DASH:
+            if c not in DASH:
+                return False
+        elif c != item:
+            return False
+    return True
+
+
+class _Glob:
+    """Sigma wildcard value (``*``/``?``, optional windash) matched without a regular expression."""
+
+    def __init__(self, tokens: list[tuple[str, str]], mode: str, cased: bool, windash: bool) -> None:
+        segs: list[list[Any]] = [[]]
+        for kind, text in tokens:
+            if kind == "any":
+                segs.append([])
+            elif kind == "one":
+                segs[-1].append(ANY_CHAR)
+            else:
+                for ch in text:
+                    if windash and ch in WINDASH_CHARS:
+                        segs[-1].append(DASH)
+                    else:
+                        segs[-1].append(ch if cased else ch.lower())
+        if mode in ("contains", "endswith"):
+            segs.insert(0, [])
+        if mode in ("contains", "startswith"):
+            segs.append([])
+        self.segs = [tuple(x) for x in segs]
+        self.cased = cased
+        # For each segment, its longest run of plain characters (searched with str.find).
+        self.anchors = [self._anchor(x) for x in self.segs]
+
+    @staticmethod
+    def _anchor(seg: Segment) -> tuple[int, str]:
+        best = (0, "")
+        run_start, run = 0, []
+        for i, item in enumerate((*seg, ANY_CHAR)):
+            if isinstance(item, str):
+                if not run:
+                    run_start = i
+                run.append(item)
+            else:
+                if len(run) > len(best[1]):
+                    best = (run_start, "".join(run))
+                run = []
+        return best
+
+    def _find(self, k: int, text: str, start: int, limit: int) -> int:
+        """Leftmost position >= start where segment k matches and ends by ``limit``; -1 if none."""
+        seg = self.segs[k]
+        last = limit - len(seg)
+        off, lit = self.anchors[k]
+        if lit:
+            pos = text.find(lit, start + off)
+            while pos != -1 and pos - off <= last:
+                if _seg_match(seg, text, pos - off):
+                    return pos - off
+                pos = text.find(lit, pos + 1)
+            return -1
+        for p in range(start, last + 1):
+            if _seg_match(seg, text, p):
+                return p
+        return -1
+
+    def __call__(self, value: str) -> bool:
+        text = value if self.cased else value.lower()
+        segs, n = self.segs, len(text)
+        if len(segs) == 1:
+            return len(segs[0]) == n and _seg_match(segs[0], text, 0)
+        first, last = segs[0], segs[-1]
+        if len(first) + len(last) > n or not _seg_match(first, text, 0):
+            return False
+        end = n - len(last)
+        if not _seg_match(last, text, end):
+            return False
+        pos = len(first)
+        for k in range(1, len(segs) - 1):
+            p = self._find(k, text, pos, end)
+            if p < 0:
+                return False
+            pos = p + len(segs[k])
+        return True
 
 
 def string_predicate(value: str, mode: str, *, cased: bool = False, windash: bool = False) -> Pred:
@@ -117,30 +217,19 @@ def string_predicate(value: str, mode: str, *, cased: bool = False, windash: boo
         if mode == "startswith":
             return (lambda v: v.startswith(needle)) if cased else (lambda v: v.lower().startswith(needle))
         return (lambda v: v.endswith(needle)) if cased else (lambda v: v.lower().endswith(needle))
-    parts = []
-    for kind, text in tokens:
-        parts.append(".*" if kind == "any" else "." if kind == "one" else _lit_regex(text, windash))
-    body = "".join(parts)
-    if mode in ("contains", "endswith"):
-        body = ".*" + body
-    if mode in ("contains", "startswith"):
-        body = body + ".*"
-    rx = re.compile(body, re.DOTALL | (0 if cased else re.IGNORECASE))
-    return lambda v: rx.fullmatch(v) is not None
+    return _Glob(tokens, mode, cased, windash)
 
 
 _BACKREF = re.compile(r"\\[1-9]|\(\?P=")
 
 
 def check_regex(pattern: str) -> None:
-    """Reject ``|re`` patterns that risk catastrophic backtracking (raises :class:`Unsupported`).
+    """Cheap static first line of defence for ``|re`` patterns (raises :class:`Unsupported`).
 
-    Python's ``re`` has no match timeout, so the guard is static: a length cap, no backreferences,
-    and no group repeated without bound (``*``, ``+``, ``{n,}``) whose body itself contains a
-    quantifier or an alternation (``(a+)+``, ``(a|aa)*``, ``(\\w+\\s?)*``: the shapes behind
-    exponential backtracking). Bounded repetition such as ``(\\d{1,3}\\.){3}`` is allowed. Values
-    longer than :data:`MAX_REGEX_INPUT` characters are matched on their first
-    :data:`MAX_REGEX_INPUT` characters (Windows caps a command line at 32,767).
+    Rejects patterns over :data:`MAX_REGEX_LENGTH` characters, backreferences, and a group repeated
+    without bound (``*``, ``+``, ``{n,}``) whose body itself contains a quantifier or an alternation
+    (``(a+)+``, ``(a|aa)*``). This does not catch every slow pattern, so every match also runs under
+    a time limit (:data:`REGEX_TIMEOUT_S`, see :func:`regex_predicate`).
     """
     if len(pattern) > MAX_REGEX_LENGTH:
         raise Unsupported(f"|re pattern longer than {MAX_REGEX_LENGTH} characters (regex guard)")
@@ -172,30 +261,67 @@ def check_regex(pattern: str) -> None:
             stack.append(False)
         elif c == ")":
             risky = stack.pop() if stack else False
-            rest = pattern[i + 1:]
+            rest = pattern[i + 1:i + 32]
             m = re.match(r"[*+]|\{\d+,\}", rest)
             bounded = re.match(r"\?|\{\d*(,\d*)?\}", rest)
             if m and risky:
-                raise Unsupported(f"|re pattern has a nested quantifier near {pattern[max(0, i - 20):i + 1 + len(m.group(0))]!r} (regex guard)")
+                near = pattern[max(0, i - 20):i + 1 + len(m.group(0))]
+                raise Unsupported(f"|re pattern has a nested quantifier near {near!r} (regex guard)")
             if stack and (risky or m or bounded):
                 stack[-1] = True
-        elif c in "*+|" or (c == "{" and re.match(r"\{\d*(,\d*)?\}", pattern[i:])):
+        elif c in "*+|" or (c == "{" and re.match(r"\{\d*(,\d*)?\}", pattern[i:i + 32])):
             if stack:
                 stack[-1] = True
         i += 1
     try:
-        re.compile(pattern)
-    except re.error as exc:
-        raise Unsupported(f"|re pattern does not compile: {exc}") from None
+        regex.compile(pattern, regex.VERSION0)
+    except (regex.error, OverflowError, RecursionError, ValueError) as exc:
+        raise Unsupported(f"|re pattern does not compile: {type(exc).__name__}: {exc}") from None
+
+
+class RegexTimeouts:
+    """Counts ``|re`` matches abandoned at the time limit during one evaluation."""
+
+    def __init__(self) -> None:
+        self.count = 0
+
+
+_TIMEOUTS: contextvars.ContextVar[RegexTimeouts | None] = contextvars.ContextVar("sigma_regex_timeouts", default=None)
+
+
+def start_regex_timeout_count() -> tuple[RegexTimeouts, contextvars.Token]:
+    """Count regex timeouts for the current evaluation; pass the token to :func:`stop_regex_timeout_count`."""
+    counter = RegexTimeouts()
+    return counter, _TIMEOUTS.set(counter)
+
+
+def stop_regex_timeout_count(token: contextvars.Token) -> None:
+    _TIMEOUTS.reset(token)
 
 
 def regex_predicate(pattern: str, flags: str) -> Pred:
+    """``|re`` predicate using the third-party ``regex`` module with a per-match time limit.
+
+    A match that runs longer than :data:`REGEX_TIMEOUT_S` counts as a non-match for that event; it is
+    counted (``RuleResult.regex_timeouts`` and the result detail) and logged.
+    """
     check_regex(pattern)
-    f = 0
+    f = regex.VERSION0
     for ch in flags:
         f |= REGEX_FLAGS[ch]
-    rx = re.compile(pattern, f)
-    return lambda v: rx.search(v[:MAX_REGEX_INPUT]) is not None
+    rx = regex.compile(pattern, f)
+
+    def pred(v: str) -> bool:
+        try:
+            return rx.search(v[:MAX_REGEX_INPUT], timeout=REGEX_TIMEOUT_S) is not None
+        except TimeoutError:
+            counter = _TIMEOUTS.get()
+            if counter is not None:
+                counter.count += 1
+            log.warning("|re pattern %r timed out after %.0f ms; treated as no match for this event",
+                        pattern[:80], REGEX_TIMEOUT_S * 1000)
+            return False
+    return pred
 
 
 def _int_predicate(n: int) -> Pred:
@@ -225,6 +351,7 @@ class FieldTest:
     preds: tuple[Pred, ...] = field(default=(), compare=False, repr=False)
     match_all: bool = False
     exists: bool = True
+    raw: tuple[Any, ...] = field(default=(), compare=False, repr=False)  # the rule's values, for messages
 
     def test(self, value: str | None) -> bool:
         if self.kind == "exists":
@@ -333,7 +460,7 @@ def compile_field(key: Any, value: Any, where: str) -> FieldTest:
     if match_all and len(values) < 2:
         raise Unsupported(f"{w}: 'all' on a single value is invalid per the specification")
     preds = tuple(_value_pred(v, match_type, flags, cased, windash, w) for v in values)
-    return FieldTest(key, fname, mods, "values", preds, match_all=match_all)
+    return FieldTest(key, fname, mods, "values", preds, match_all=match_all, raw=tuple(values))
 
 
 def compile_search(name: str, body: Any) -> SearchId:
@@ -389,6 +516,12 @@ class _ConditionParser:
         self.toks = _tokenize(text)
         self.i = 0
         self.names = names
+        self.depth = 0
+
+    def _enter(self) -> None:
+        self.depth += 1
+        if self.depth > MAX_CONDITION_DEPTH:
+            raise Unsupported(f"condition nests deeper than {MAX_CONDITION_DEPTH} levels")
 
     def peek(self) -> str | None:
         return self.toks[self.i] if self.i < len(self.toks) else None
@@ -426,16 +559,21 @@ class _ConditionParser:
         t = self.peek()
         if t is not None and t.lower() == "not":
             self.take()
-            return ("not", self.not_expr())
+            self._enter()
+            node = ("not", self.not_expr())
+            self.depth -= 1
+            return node
         return self.atom()
 
     def atom(self) -> Node:
         t = self.take()
         low = t.lower()
         if t == "(":
+            self._enter()
             node = self.expr()
             if self.take() != ")":
                 raise Unsupported("condition has unbalanced parentheses")
+            self.depth -= 1
             return node
         if t == ")":
             raise Unsupported("condition has unbalanced parentheses")
@@ -612,7 +750,21 @@ def _str_tuple(v: Any) -> tuple[str, ...]:
 
 
 def parse_rule(doc: Any, path: str | None = None) -> Rule:
-    """Build a :class:`Rule` from a parsed YAML document."""
+    """Build a :class:`Rule` from a parsed YAML document. Never raises for rule content."""
+    try:
+        return _parse_rule(doc, path)
+    except Exception as exc:  # noqa: BLE001 - any malformed rule becomes "unsupported", never a crash
+        return _failed(path, exc)
+
+
+def _failed(path: str | None, exc: BaseException) -> Rule:
+    name = Path(path).name if path else ""
+    return Rule(id=Path(path).stem if path else "", title=name, level=None, tags=(), techniques=(),
+                logsource={}, status="unsupported", reason=f"rule could not be parsed: {type(exc).__name__}",
+                path=path, origin=Path(path).parent.name if path else None)
+
+
+def _parse_rule(doc: Any, path: str | None) -> Rule:
     origin = Path(path).parent.name if path else None
     if not isinstance(doc, dict):
         return Rule(id=Path(path).stem if path else "", title=Path(path).name if path else "", level=None, tags=(),
@@ -647,6 +799,8 @@ def parse_rule(doc: Any, path: str | None = None) -> Rule:
         detection = compile_detection(doc["detection"])
     except Unsupported as exc:
         return Rule(**base, status="unsupported", reason=exc.reason)
+    except (re.error, regex.error, OverflowError, RecursionError) as exc:
+        return Rule(**base, status="unsupported", reason=f"rule could not be parsed: {type(exc).__name__}")
     return Rule(**base, status="ok", reason=None, detection=detection, sources=sources)
 
 
@@ -663,6 +817,8 @@ def parse_rule_text(text: str, path: str | None = None) -> Rule:
         docs = [d for d in yaml.safe_load_all(text) if d is not None]
     except yaml.YAMLError as exc:
         return _unsupported(path, f"YAML does not parse: {type(exc).__name__}")
+    except Exception as exc:  # noqa: BLE001 - e.g. RecursionError on deeply nested YAML
+        return _failed(path, exc)
     if not docs:
         return _unsupported(path, "empty rule file")
     if len(docs) > 1:
@@ -680,7 +836,10 @@ def load_rule(path: Path | str) -> Rule:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
         return _unsupported(p.as_posix(), "rule file is not UTF-8")
-    return parse_rule_text(text, p.as_posix())
+    try:
+        return parse_rule_text(text, p.as_posix())
+    except Exception as exc:  # noqa: BLE001 - last line of defence: one bad file never aborts a rule folder
+        return _failed(p.as_posix(), exc)
 
 
 def load_rules(directory: Path | str, include: list[str] | None = None) -> list[Rule]:

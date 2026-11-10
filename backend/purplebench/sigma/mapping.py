@@ -242,6 +242,10 @@ def resolve_logsource(logsource: Any) -> list[Source]:
     """
     if not isinstance(logsource, dict):
         raise LogsourceError("logsource is not a map")
+    for key in ("product", "category", "service"):
+        value = logsource.get(key)
+        if value is not None and not isinstance(value, str):
+            raise LogsourceError(f"logsource {key} must be a string, not a {type(value).__name__}")
     product = logsource.get("product")
     category = logsource.get("category")
     service = logsource.get("service")

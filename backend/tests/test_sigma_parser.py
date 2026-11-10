@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 import yaml
-from sigma_helpers import proc
+from sigma_helpers import evaluate_on, proc
 
 from purplebench import sigma
 from purplebench.sigma import parser as P
@@ -21,7 +21,7 @@ def rule(detection: dict, logsource: dict | None = None, **extra) -> sigma.Rule:
 def fires(detection: dict, *events) -> bool:
     r = rule(detection)
     assert r.status == "ok", r.reason
-    return sigma.evaluate(r, list(events)).status == sigma.MATCH
+    return evaluate_on(r, list(events)).status == sigma.MATCH
 
 
 def match_value(key: str, value, field_value: str | None) -> bool:
@@ -312,7 +312,7 @@ def test_unsupported_feature_reported(detection, reason):
     assert r.status == "unsupported"
     assert reason in r.reason
     # never silently evaluated as a non-match
-    res = sigma.evaluate(r, [proc(Image="x", CommandLine="IEX evil")])
+    res = evaluate_on(r, [proc(Image="x", CommandLine="IEX evil")])
     assert res.status == sigma.UNSUPPORTED and res.detail == r.reason and res.matched_events == ()
 
 
@@ -332,7 +332,7 @@ def test_unsupported_feature_reported(detection, reason):
 def test_unsupported_rule_kinds_reported(doc, reason):
     r = sigma.parse_rule(doc)
     assert r.status == "unsupported" and reason in r.reason
-    assert sigma.evaluate(r, [proc()]).status == sigma.UNSUPPORTED
+    assert evaluate_on(r, [proc()]).status == sigma.UNSUPPORTED
 
 
 def test_unsupported_yaml_shapes(tmp_path):

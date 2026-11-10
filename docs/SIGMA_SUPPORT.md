@@ -117,34 +117,55 @@ evaluator checks the telemetry profile: which channels and event ids occur, and 
 names each one carries.
 
 - The channel does not occur: gap (`channel 'Security' is not in the telemetry (needed for Security event 4688)`).
-- The event id does not occur: gap (`no Sysmon event 8 in the telemetry`).
-- A field the rule uses never occurs there: the condition is evaluated three-valued, with every
-  search identifier that needs the absent field set to false and every other one unknown. If the
-  result is definitely false, the source is a gap (`Sysmon event 1 never has field(s) ParentUser`).
+- The candidate event ids are the source's own (a category) or every event id the profile has for
+  the channel (a service). `EventID` and `Channel` tests are decided literally for each candidate,
+  with every other field unknown; a candidate that makes the condition definitely false is not
+  relevant to the rule and is skipped. If no candidate is relevant, the source is a gap
+  (`no Security event 4769 in the telemetry`, `no Sysmon event 8 in the telemetry`).
+- A field the rule uses never occurs in a candidate: the condition is evaluated three-valued, with
+  every search identifier that needs the absent field set to false and every other one unknown. If
+  the result is definitely false, the candidate is a gap (`Sysmon event 1 never has field(s) ParentUser`).
   A missing field that only appears in a filter (`selection and not filter`) does not make a gap.
+  For a service source, other event ids that lack the fields are not listed when at least one
+  event id can be evaluated.
 
 A rule is a `telemetry_gap` only when **none** of its sources can be evaluated. Otherwise it is
 evaluated on the sources that can be, and the result's `gaps` list (and detail) names the others.
 
-The profile is built from the events passed in, unless one is given. To judge an execution window
-against everything a mode can record, pass the corpus profile (`recorded_profile()` covers all
-committed recorded telemetry). In recorded mode only the Sysmon channel exists, so every Security,
+The profile is a required argument of `evaluate(rule, events, profile)` and `evaluate_all`. To judge
+an execution window against everything a mode can record, pass the corpus profile
+(`recorded_profile()` covers all committed recorded telemetry); passing `EventIndex(events).profile`
+judges against exactly those events. In recorded mode only the Sysmon channel exists, so every Security,
 System and PowerShell rule is a telemetry gap there (a documented limitation of the recorded data).
 
-## Regex guard
+## Regular expressions and wildcards
 
-Python's `re` has no match timeout, so `|re` patterns are checked when the rule loads, and a pattern
-that fails the check makes the rule `unsupported` with the reason:
+`|re` patterns run on the third-party `regex` module with a **50 ms time limit per match**. A match
+that runs out of time counts as no match for that event; the result reports the number of timed-out
+matches (`regex_timeouts`, and in the detail) and a warning is logged. Before that, a cheap static
+check rejects some patterns when the rule loads (the rule becomes `unsupported` with the reason):
 
-- longer than 1,024 characters: rejected;
-- backreferences (`\1`, `(?P=name)`): rejected;
+- longer than 1,024 characters;
+- backreferences (`\1`, `(?P=name)`);
 - a group repeated without bound (`*`, `+`, `{n,}`) whose body contains a quantifier or an
-  alternation, such as `(a+)+`, `(a|aa)*` or `(\w+\s?)*`: rejected (the shapes behind catastrophic
-  backtracking). Bounded repetition such as `(\d{1,3}\.){3}` is allowed;
-- a pattern Python cannot compile: rejected.
+  alternation, such as `(a+)+` or `(a|aa)*`. Bounded repetition such as `(\d{1,3}\.){3}` passes;
+- a pattern that does not compile (including repeat counts that are too large).
 
-At match time a `|re` pattern sees at most the first 32,768 characters of a value (Windows limits a
-command line to 32,767). Other modifiers see the whole value.
+The static check does not catch every slow pattern (for example `(\w+\s?){1,25}!`); the time limit
+does. A `|re` pattern sees at most the first 32,768 characters of a value (Windows limits a command
+line to 32,767).
+
+Wildcard values (`*`, `?`, with or without `windash`) are not turned into regular expressions. They
+are matched by a linear glob matcher: the pieces between `*` are found left to right with plain
+string search, so the time grows with the length of the value, never exponentially.
+
+## Malformed rules
+
+Loading never raises for rule content. Logsource values must be strings, a condition may nest at
+most 64 levels of parentheses and `not`, and any error while parsing (including deeply nested YAML)
+makes the rule `unsupported` with `rule could not be parsed: <ExceptionType>`. If a rule fails while
+being evaluated, `evaluate_all` reports it as `unsupported` (`rule could not be evaluated:
+<ExceptionType>`) and evaluates the others.
 
 ## Not supported (reported as `unsupported`, with the reason)
 
@@ -163,6 +184,7 @@ command line to 32,767). Other modifiers see the whole value.
 | Sigma 1.x multi-document collections (`action: global`) | `multi-document YAML (Sigma 1.x rule collection) is not supported` |
 | Logsources outside the mapping (other products, ETW-only categories such as `file_access`) | `logsource product 'linux' is not mapped (only 'windows' is)` |
 | Rules that are invalid per the specification (`null` inside a value list, `all` on one value, undefined identifiers, a pattern matching nothing) | `undefined search identifier 'x'` |
+| Conditions nested more than 64 levels; logsource values that are not strings | `condition nests deeper than 64 levels` |
 | Files over 256 KiB, non-UTF-8, YAML that does not parse (YAML is read with `safe_load`) | `YAML does not parse: ScannerError` |
 
 ## Differences from pySigma worth knowing

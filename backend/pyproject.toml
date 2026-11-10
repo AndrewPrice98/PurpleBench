@@ -10,6 +10,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "pyjwt>=2.8",
     "defusedxml>=0.7",
+    "regex>=2024.0",
 ]
 
 [project.optional-dependencies]

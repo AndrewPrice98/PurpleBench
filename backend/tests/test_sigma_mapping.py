@@ -1,6 +1,6 @@
 """Logsource -> (channel, event id) mapping and field mapping (Review Focus 2)."""
 import pytest
-from sigma_helpers import event, proc
+from sigma_helpers import evaluate_on, event, proc
 
 from purplebench import sigma
 from purplebench.sigma import mapping as M
@@ -84,7 +84,7 @@ def test_security_4688_field_mapping(field, value):
     src = M.resolve_logsource(PC)[1]
     assert M.read_field(src, ev, field) == value
     # and a rule written against the Sysmon field name matches the 4688 event
-    res = sigma.evaluate(rule({"sel": {field: value}, "condition": "sel"}), [ev])
+    res = evaluate_on(rule({"sel": {field: value}, "condition": "sel"}), [ev])
     assert res.status == sigma.MATCH, res.detail
 
 
@@ -116,11 +116,11 @@ def test_envelope_fields():
     assert M.read_field(src, ev, "Computer") == "host1"
     r = rule({"sel": {"EventID": 1, "Image|endswith": "notepad.exe"}, "condition": "sel"},
              {"product": "windows", "service": "sysmon"})
-    assert sigma.evaluate(r, [ev, event(3, rid=8, Image="x")]).matched_events == (7,)
+    assert evaluate_on(r, [ev, event(3, rid=8, Image="x")]).matched_events == (7,)
 
 
 def test_category_restricts_event_ids():
     r = rule({"sel": {"Image|endswith": "notepad.exe"}, "condition": "sel"})
     other = event(5, rid=2, Image="C:\\Windows\\System32\\notepad.exe")  # process termination, same field
-    res = sigma.evaluate(r, [proc(rid=1), other])
+    res = evaluate_on(r, [proc(rid=1), other])
     assert res.matched_events == (1,)

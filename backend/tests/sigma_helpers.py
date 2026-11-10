@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from purplebench import sigma
 from purplebench.sigma import mapping
 
 # The EventData names a Sysmon 13 process-creation event carries (as in the recorded telemetry).
@@ -26,3 +27,11 @@ def proc(rid: int = 1, ts: str = "2021-01-01T00:00:00.000000Z", **fields: Any) -
                  "IntegrityLevel": "Medium", "ProcessId": "100", "ParentProcessId": "50"})
     base.update(fields)
     return event(1, rid, ts, **base)
+
+
+def evaluate_on(rule, events):
+    """Evaluate against the profile of exactly these events (stated explicitly: evaluate() has no default)."""
+    if isinstance(events, sigma.EventIndex):
+        return sigma.evaluate(rule, events, events.profile)
+    events = list(events)
+    return sigma.evaluate(rule, events, sigma.TelemetryProfile.from_events(events))
