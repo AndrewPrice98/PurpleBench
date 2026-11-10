@@ -1,0 +1,39 @@
+title: 7-Zip Archive Created With Split Volumes Or Maximum Compression
+id: 6339ddf7-e217-4bce-b3a5-0698bc4a4eaf
+status: experimental
+description: |
+    Detects 7-Zip adding files to an archive while splitting it into volumes (-v) or using maximum
+    compression (-mx9), a pattern of data staged for exfiltration. The bundled SigmaHQ 7-Zip rule
+    only covers password-protected archives.
+references:
+    - https://github.com/splunk/attack_data/tree/master/datasets/attack_techniques/T1560.001
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.collection
+    - attack.t1560.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Description|contains: '7-Zip'
+        - Image|endswith:
+              - '\7z.exe'
+              - '\7za.exe'
+              - '\7zr.exe'
+        - OriginalFileName:
+              - '7z.exe'
+              - '7za.exe'
+              - '7zr.exe'
+    selection_action:
+        CommandLine|re: '\s[au]\s'
+    selection_flags:
+        CommandLine|windash|contains:
+            - ' -v'
+            - ' -mx9'
+    condition: all of selection_*
+falsepositives:
+    - Backup jobs that split large archives
+level: medium
+license: DRL-1.1

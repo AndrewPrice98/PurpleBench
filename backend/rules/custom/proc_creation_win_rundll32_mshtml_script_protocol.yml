@@ -1,0 +1,32 @@
+title: Rundll32 Runs Inline Script Through Mshtml RunHTMLApplication
+id: 14187fb3-74db-4976-b032-a4a177aa578f
+status: experimental
+description: |
+    Detects rundll32.exe calling mshtml's RunHTMLApplication with a javascript:, vbscript: or about:
+    URL on the command line. The comparable SigmaHQ rule carries no ATT&CK tag, so it cannot be
+    credited to a technique; this rule is tagged.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.011/T1218.011.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.stealth
+    - attack.t1218.011
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith: '\rundll32.exe'
+        - OriginalFileName: 'RUNDLL32.EXE'
+    selection_cmd:
+        CommandLine|contains|all:
+            - 'mshtml'
+            - 'RunHTMLApplication'
+    selection_protocol:
+        CommandLine|re|i: '(javascript|vbscript|about):'
+    condition: all of selection_*
+falsepositives:
+    - Unknown
+level: high
+license: DRL-1.1

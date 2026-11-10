@@ -1,0 +1,32 @@
+title: Service Created With PowerShell New-Service
+id: 3fcbdd8a-468d-46b8-b6b4-3fe6a262972f
+status: experimental
+description: Detects New-Service with a binary path on a PowerShell command line.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1543.003/T1543.003.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.persistence
+    - attack.privilege-escalation
+    - attack.t1543.003
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith:
+              - '\powershell.exe'
+              - '\pwsh.exe'
+        - OriginalFileName:
+              - 'PowerShell.EXE'
+              - 'pwsh.dll'
+    selection_cmd:
+        CommandLine|contains|all:
+            - 'New-Service'
+            - '-BinaryPathName'
+    condition: all of selection_*
+falsepositives:
+    - Software installers written in PowerShell
+level: medium
+license: DRL-1.1

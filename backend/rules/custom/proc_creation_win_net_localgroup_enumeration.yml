@@ -1,0 +1,38 @@
+title: Local Group Enumeration With Net.exe
+id: 466cc903-dc93-4a6c-994a-9e51377e4167
+status: experimental
+description: |
+    Detects net.exe or net1.exe listing local groups or the members of a local group
+    ("net localgroup", "net localgroup <name>"). Adding or removing members is excluded, which is
+    account manipulation rather than discovery. Closes a gap in the bundled SigmaHQ rule set, whose
+    group-recon rule only fires for named privileged groups preceded by a space, so it misses
+    "net localgroup" on its own and quoted names such as "Administrators".
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1069.001/T1069.001.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.discovery
+    - attack.t1069.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith:
+              - '\net.exe'
+              - '\net1.exe'
+        - OriginalFileName:
+              - 'net.exe'
+              - 'net1.exe'
+    selection_cmd:
+        CommandLine|contains: ' localgroup'
+    filter_change:
+        CommandLine|windash|contains:
+            - ' /add'
+            - ' /delete'
+    condition: all of selection_* and not filter_change
+falsepositives:
+    - Administrators and inventory scripts reviewing group membership
+level: low
+license: DRL-1.1

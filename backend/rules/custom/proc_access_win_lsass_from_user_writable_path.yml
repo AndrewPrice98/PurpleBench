@@ -1,0 +1,29 @@
+title: LSASS Opened By A Process Running From A User-Writable Folder
+id: 146bcd53-9281-45dd-b973-3e8390027f91
+status: experimental
+description: |
+    Detects a handle to lsass.exe requested by a program started from a user profile, a temporary
+    folder or ProgramData. Credential dumping tools are usually dropped and run from such folders.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.credential-access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        SourceImage|contains:
+            - '\Users\'
+            - '\Temp\'
+            - '\ProgramData\'
+            - '\AtomicRedTeam\'
+    condition: selection
+falsepositives:
+    - Per-user installed security or backup software
+level: high
+license: DRL-1.1

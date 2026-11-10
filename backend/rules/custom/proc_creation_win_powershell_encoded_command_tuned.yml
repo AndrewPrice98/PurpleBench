@@ -1,0 +1,45 @@
+title: PowerShell Encoded Command Outside The Remote Management Harness
+id: a9f13099-6459-428b-99f5-c12ebb4b9734
+status: experimental
+description: |
+    Detects powershell.exe started with an encoded command. A tuned version of the generic encoded
+    command rule: the two invocation shapes used by the lab's remote management harness
+    ("-NonInteractive -ExecutionPolicy Unrestricted -EncodedCommand" and
+    "-noninteractive -encodedcommand") are filtered out, because they fire on every recording and on
+    the benign baseline.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1027/T1027.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.stealth
+    - attack.t1027
+    - attack.execution
+    - attack.t1059.001
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith:
+              - '\powershell.exe'
+              - '\pwsh.exe'
+        - OriginalFileName:
+              - 'PowerShell.EXE'
+              - 'pwsh.dll'
+    selection_flag:
+        CommandLine|windash|contains:
+            - ' -e '
+            - ' -en '
+            - ' -enc '
+            - ' -enco'
+            - ' -ec '
+    filter_harness_winrm:
+        CommandLine|contains: '-NonInteractive -ExecutionPolicy Unrestricted -EncodedCommand'
+    filter_harness_session:
+        CommandLine|contains: '-noninteractive -encodedcommand'
+    condition: all of selection_* and not 1 of filter_harness_*
+falsepositives:
+    - Management agents that pass scripts as encoded commands
+level: medium
+license: DRL-1.1

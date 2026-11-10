@@ -1,0 +1,29 @@
+title: UAC Bypass Via Shell Open Command Hijack
+id: 5aae86d9-df8a-4529-a7db-a1e18a21e69a
+status: experimental
+description: |
+    Detects a value written under the per-user shell\open\command key of mscfile, ms-settings or
+    Folder, the hijack used by the eventvwr.exe, fodhelper.exe and sdclt.exe UAC bypasses. Sysmon
+    reports the default value as "...\command\(Default)", so a key-path "endswith" match misses it;
+    this rule matches the key path anywhere in TargetObject.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1548.002/T1548.002.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.privilege-escalation
+    - attack.t1548.002
+logsource:
+    category: registry_set
+    product: windows
+detection:
+    selection:
+        TargetObject|contains:
+            - '\mscfile\shell\open\command'
+            - '\ms-settings\shell\open\command'
+            - '\Folder\shell\open\command'
+    condition: selection
+falsepositives:
+    - Software that registers its own handler for these classes (rare)
+level: high
+license: DRL-1.1

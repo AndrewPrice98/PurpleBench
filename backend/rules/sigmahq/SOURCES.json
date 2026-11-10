@@ -1,0 +1,417 @@
+{
+ "source": "SigmaHQ/sigma",
+ "repo": "https://github.com/SigmaHQ/sigma",
+ "release": "r2026-07-01",
+ "commit": "552f3fee420ef232a8e5790c4fae591847e32347",
+ "license": "Detection Rule License (DRL) 1.1",
+ "license_url": "https://github.com/SigmaHQ/Detection-Rule-License",
+ "note": "Files are byte-for-byte copies of the upstream rules at the commit above (sha256 of the upstream file).",
+ "rules": [
+  {
+   "file": "file_event_win_lsass_default_dump_file_names.yml",
+   "upstream_path": "rules/windows/file/file_event/file_event_win_lsass_default_dump_file_names.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_lsass_default_dump_file_names.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_lsass_default_dump_file_names.yml",
+   "sha256": "d93454fad0d02f3ba05215b5682e65a6fefcd28b37a546419e47693d28477df5"
+  },
+  {
+   "file": "file_event_win_startup_folder_file_write.yml",
+   "upstream_path": "rules/windows/file/file_event/file_event_win_startup_folder_file_write.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_startup_folder_file_write.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_startup_folder_file_write.yml",
+   "sha256": "651a2ccddb72c7e95453a2e35d3c3c15a58d3fcb610cd085fa9b539ae1408e9b"
+  },
+  {
+   "file": "file_event_win_sysinternals_psexec_service.yml",
+   "upstream_path": "rules/windows/file/file_event/file_event_win_sysinternals_psexec_service.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_sysinternals_psexec_service.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/file/file_event/file_event_win_sysinternals_psexec_service.yml",
+   "sha256": "1ec5a841d0d7b26fcd9403c660fc74b3833b2606b60b7af9d0b9b7c93aab03b6"
+  },
+  {
+   "file": "net_connection_win_rundll32_net_connections.yml",
+   "upstream_path": "rules/windows/network_connection/net_connection_win_rundll32_net_connections.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/network_connection/net_connection_win_rundll32_net_connections.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/network_connection/net_connection_win_rundll32_net_connections.yml",
+   "sha256": "eb22c396d43e207c3bcd5e97425d30ba4b31111127bce2e85863a1fb53c3d2d2"
+  },
+  {
+   "file": "posh_ps_localuser.yml",
+   "upstream_path": "rules/windows/powershell/powershell_script/posh_ps_localuser.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/powershell/powershell_script/posh_ps_localuser.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/powershell/powershell_script/posh_ps_localuser.yml",
+   "sha256": "813cb90c7b2a544c424bbce9705723bcc6aa0d6ced2d0f49854ca83ebc9f5c75"
+  },
+  {
+   "file": "posh_ps_susp_download.yml",
+   "upstream_path": "rules/windows/powershell/powershell_script/posh_ps_susp_download.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/powershell/powershell_script/posh_ps_susp_download.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/powershell/powershell_script/posh_ps_susp_download.yml",
+   "sha256": "3f76608f5104f323a0c50b1d5fb22434c3ae6252742059676d8777917dcef98e"
+  },
+  {
+   "file": "proc_access_win_lsass_memdump.yml",
+   "upstream_path": "rules/windows/process_access/proc_access_win_lsass_memdump.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_access/proc_access_win_lsass_memdump.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_access/proc_access_win_lsass_memdump.yml",
+   "sha256": "6a4c3d27947f011dadc67c78a8547be67a04d5fdb8f8add537b4d9603d00e65a"
+  },
+  {
+   "file": "proc_creation_win_7zip_password_compression.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_7zip_password_compression.yml",
+   "sha256": "877998e61870667b675653f3b74cbaabc7b0120c71fb80e26f7b27b198ff64c0"
+  },
+  {
+   "file": "proc_creation_win_certutil_download.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_certutil_download.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_certutil_download.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_certutil_download.yml",
+   "sha256": "1262c65c22592b28f2c63906462f07f9c0d95e8fa065405505d18979a5f278af"
+  },
+  {
+   "file": "proc_creation_win_esentutl_sensitive_file_copy.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_esentutl_sensitive_file_copy.yml",
+   "sha256": "a713616da638570e6e01497af0d0cb501b4429aca2ecdaa2baa63bf21f5a137d"
+  },
+  {
+   "file": "proc_creation_win_eventvwr_susp_child_process.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_eventvwr_susp_child_process.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_eventvwr_susp_child_process.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_eventvwr_susp_child_process.yml",
+   "sha256": "6038dcc5714a06bba519c49406edd7d78173ed7cf300cf07aeba59bc099d622f"
+  },
+  {
+   "file": "proc_creation_win_mshta_javascript.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_mshta_javascript.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_mshta_javascript.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_mshta_javascript.yml",
+   "sha256": "ec912420cfc61a7251c61eb010a02d4e289b73168ec2d4f9b7d8ee1bc75294ce"
+  },
+  {
+   "file": "proc_creation_win_mshta_susp_child_processes.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_mshta_susp_child_processes.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_mshta_susp_child_processes.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_mshta_susp_child_processes.yml",
+   "sha256": "8a32fc6f6030da48f4e22446d7446ffb85b7801158ec204e4659a657ecc44380"
+  },
+  {
+   "file": "proc_creation_win_net_groups_and_accounts_recon.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_groups_and_accounts_recon.yml",
+   "sha256": "9d72f8de7778f0505a080d9ca09b08743b86d8df573d505f580977b4ef8bb3fb"
+  },
+  {
+   "file": "proc_creation_win_net_user_add.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_user_add.yml",
+   "sha256": "6e9c5d7ef5eaab2ecc8064d6f4176b22d9cd31676ad190ce554414212b7a4206"
+  },
+  {
+   "file": "proc_creation_win_net_view_share_and_sessions_enum.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_net_view_share_and_sessions_enum.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_view_share_and_sessions_enum.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_net_view_share_and_sessions_enum.yml",
+   "sha256": "46d7533fce00b99829f510a7b9f464315b6b1bf1316c951e016cf8cd54200a1f"
+  },
+  {
+   "file": "proc_creation_win_nltest_recon.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_nltest_recon.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_nltest_recon.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_nltest_recon.yml",
+   "sha256": "a40330e4f631169523a802f3c943110077553471a6a717d3e2c3263adcd43059"
+  },
+  {
+   "file": "proc_creation_win_powershell_base64_frombase64string.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_base64_frombase64string.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_base64_frombase64string.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_base64_frombase64string.yml",
+   "sha256": "b1945e32d381f1293be6d91e44e4472c9a208f7da9338b3cebda2901176a31a9"
+  },
+  {
+   "file": "proc_creation_win_powershell_base64_iex.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_base64_iex.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_base64_iex.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_base64_iex.yml",
+   "sha256": "7d2d5e96ae03d6a5798f5bc3fa80190849826288a2f32ced56cea7cb31ea62fe"
+  },
+  {
+   "file": "proc_creation_win_powershell_defender_disable_feature.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_defender_disable_feature.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_defender_disable_feature.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_defender_disable_feature.yml",
+   "sha256": "80b8041fa2117d205c851721f03e1f744b1dba94ff9e3d7b11dbdb850530076f"
+  },
+  {
+   "file": "proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+   "sha256": "02441fc165285c1cad57396befd36e0f7e5ea17e824c94f3fbfc48d96dc788ee"
+  },
+  {
+   "file": "proc_creation_win_powershell_encode.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_encode.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_encode.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_encode.yml",
+   "sha256": "321cd98268d4365c1ee3182f0fb2c17b50feaf7419582fb2b253955750d540e1"
+  },
+  {
+   "file": "proc_creation_win_powershell_frombase64string.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_frombase64string.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_frombase64string.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_frombase64string.yml",
+   "sha256": "66a4fcf31220cd42a87b6d713a2e23ee0ebc7b05e3ea0ffbf5b1de766a92e16b"
+  },
+  {
+   "file": "proc_creation_win_powershell_shadowcopy_deletion.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_shadowcopy_deletion.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_shadowcopy_deletion.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_shadowcopy_deletion.yml",
+   "sha256": "85426145241b250156fe483562f7b13e32f14ece9aef92e84545d1a163480c64"
+  },
+  {
+   "file": "proc_creation_win_powershell_susp_download_patterns.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_powershell_susp_download_patterns.yml",
+   "sha256": "4b8a1d1c7bca807dea94df192f709138b17ca4e8d8b0c02eb2c0eafa9da3b446"
+  },
+  {
+   "file": "proc_creation_win_reg_add_run_key.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_reg_add_run_key.yml",
+   "sha256": "e9f0394f510875a5e5015feee60b00a4119dfb018284104985a582d15f86e689"
+  },
+  {
+   "file": "proc_creation_win_reg_dumping_sensitive_hives.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_reg_dumping_sensitive_hives.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_reg_dumping_sensitive_hives.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_reg_dumping_sensitive_hives.yml",
+   "sha256": "4a02952fc56acdd448e416ac0e8d0ff57a9c4193a21b860e256a0c150fea3cd7"
+  },
+  {
+   "file": "proc_creation_win_regsvr32_flags_anomaly.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_regsvr32_flags_anomaly.yml",
+   "sha256": "e4b145388b2a3a82f22f41ddd6bb507c93ee75e8c4f1d977797af1ff7b970f8c"
+  },
+  {
+   "file": "proc_creation_win_regsvr32_network_pattern.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_regsvr32_network_pattern.yml",
+   "sha256": "d7fca474580984f4e629177ae65531c3814371a1eca43c33bd542567bcba2550"
+  },
+  {
+   "file": "proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+   "sha256": "9859aead00dd5cb94933434be60a0727f436fcc6886bf00fde69440f5a3e483f"
+  },
+  {
+   "file": "proc_creation_win_rundll32_uncommon_dll_extension.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_rundll32_uncommon_dll_extension.yml",
+   "sha256": "f4b6687f3e7d0a16bb8a40abd89a8e1079fe06214c802abce4247d9cea031416"
+  },
+  {
+   "file": "proc_creation_win_sc_create_service.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_sc_create_service.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_create_service.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_create_service.yml",
+   "sha256": "59b24c516a54ae18a6ea8e47f710e608f069b7fb422659f83b8a1f40ff5bfdac"
+  },
+  {
+   "file": "proc_creation_win_sc_service_path_modification.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_sc_service_path_modification.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_service_path_modification.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_service_path_modification.yml",
+   "sha256": "bc5e360369900dfea758f5e7ee55d8a9ab839c152e3214b0e93954708ef2d4b9"
+  },
+  {
+   "file": "proc_creation_win_sc_stop_service.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_sc_stop_service.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_stop_service.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sc_stop_service.yml",
+   "sha256": "092eae0cfe74d9bec42a0f646deea0ce19fc8d0403cca44b3c000d5fb63e6829"
+  },
+  {
+   "file": "proc_creation_win_schtasks_creation.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_schtasks_creation.yml",
+   "sha256": "2f8ca8539179e6851171dd23f0d2e5a690e59b30d949aa6e29d04e7b33f82227"
+  },
+  {
+   "file": "proc_creation_win_susp_eventlog_clear.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_susp_eventlog_clear.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_eventlog_clear.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_eventlog_clear.yml",
+   "sha256": "8e7219c92a73b60128a7192521879f97407d37c12a1c567a6975247340cb5624"
+  },
+  {
+   "file": "proc_creation_win_susp_service_creation.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_susp_service_creation.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_service_creation.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_service_creation.yml",
+   "sha256": "f467775a33c5b1a4342955f50329d099cbee55cf864b9cc7a08c97893cfd8b64"
+  },
+  {
+   "file": "proc_creation_win_susp_shadow_copies_deletion.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_susp_shadow_copies_deletion.yml",
+   "sha256": "7eaeb361923239bbce4c3786d69fbde1dd97330894634215f3050f05a6effd3a"
+  },
+  {
+   "file": "proc_creation_win_sysinternals_procdump_lsass.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_sysinternals_procdump_lsass.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sysinternals_procdump_lsass.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sysinternals_procdump_lsass.yml",
+   "sha256": "f75c2b4c77d1eda036e2b287816b7048b70544199fc0ef2a0418619586bc6d10"
+  },
+  {
+   "file": "proc_creation_win_sysinternals_psexec_execution.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_sysinternals_psexec_execution.yml",
+   "sha256": "93321d8710f0ba6b66c32e7f72598e2037d2c4e51ad56f206d6621e94c53635c"
+  },
+  {
+   "file": "proc_creation_win_systeminfo_execution.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_systeminfo_execution.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_systeminfo_execution.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_systeminfo_execution.yml",
+   "sha256": "932bbd8e70ad177d6de617aee50942dec1264453e89dcd3ca84aca65c771920f"
+  },
+  {
+   "file": "proc_creation_win_uac_bypass_fodhelper.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_uac_bypass_fodhelper.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_uac_bypass_fodhelper.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_uac_bypass_fodhelper.yml",
+   "sha256": "c07647abb2f6ecf3cb5a4f24f4d56c203c2ab0410cde2e010fea87e1db7f85ed"
+  },
+  {
+   "file": "proc_creation_win_whoami_output.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_whoami_output.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_whoami_output.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_whoami_output.yml",
+   "sha256": "b1c66c34acc77754685d25cb8456095947ebdebaeca01ac303507c826222e174"
+  },
+  {
+   "file": "proc_creation_win_wmic_process_creation.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_process_creation.yml",
+   "sha256": "0f73159c2959355741f6170f489a4effc9a60579638c7e7d5e79bdaf124ae739"
+  },
+  {
+   "file": "proc_creation_win_wmic_recon_group.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_wmic_recon_group.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_recon_group.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_recon_group.yml",
+   "sha256": "a57e3608848147ce1606b59cd56970cd65f087034c49beec4235fb254fb0665f"
+  },
+  {
+   "file": "proc_creation_win_wmic_recon_hotfix.yml",
+   "upstream_path": "rules/windows/process_creation/proc_creation_win_wmic_recon_hotfix.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_recon_hotfix.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/process_creation/proc_creation_win_wmic_recon_hotfix.yml",
+   "sha256": "5b4fe968c052dc9a3ccf0197044b371990e0c36ce27fea1b3f3a07fd9ecfac82"
+  },
+  {
+   "file": "registry_set_asep_reg_keys_modification_currentversion.yml",
+   "upstream_path": "rules/windows/registry/registry_set/registry_set_asep_reg_keys_modification_currentversion.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_asep_reg_keys_modification_currentversion.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_asep_reg_keys_modification_currentversion.yml",
+   "sha256": "78684f006cf1dbfea9962f0fd64dd3b1e32e8b09029719fb882392fb89ab49d7"
+  },
+  {
+   "file": "registry_set_uac_bypass_eventvwr.yml",
+   "upstream_path": "rules/windows/registry/registry_set/registry_set_uac_bypass_eventvwr.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_uac_bypass_eventvwr.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_uac_bypass_eventvwr.yml",
+   "sha256": "779d72db3880e0df2948eb43aff2c560524856d7feb03268e5ba96813af4ea50"
+  },
+  {
+   "file": "registry_set_uac_disable.yml",
+   "upstream_path": "rules/windows/registry/registry_set/registry_set_uac_disable.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_uac_disable.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/registry/registry_set/registry_set_uac_disable.yml",
+   "sha256": "3d044602915006dc44633b5fe12c98fbfa9f93a0c8a73ae3a4091e24dea9bc4c"
+  },
+  {
+   "file": "win_security_audit_log_cleared.yml",
+   "upstream_path": "rules/windows/builtin/security/win_security_audit_log_cleared.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_audit_log_cleared.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_audit_log_cleared.yml",
+   "sha256": "ac270c491cfcd9f5ed3b69f3d7cd73b7e87166d761ca0b5ded4238e5117476b9"
+  },
+  {
+   "file": "win_security_kerberoasting_activity.yml",
+   "upstream_path": "rules/windows/builtin/security/win_security_kerberoasting_activity.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_kerberoasting_activity.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_kerberoasting_activity.yml",
+   "sha256": "cec0c81991d59e93a2acefefbea2fd3a0efec40e9c93acaa882c17b6dbbf641b"
+  },
+  {
+   "file": "win_security_pass_the_hash_2.yml",
+   "upstream_path": "rules/windows/builtin/security/account_management/win_security_pass_the_hash_2.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/account_management/win_security_pass_the_hash_2.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/account_management/win_security_pass_the_hash_2.yml",
+   "sha256": "81e9c4aabcbbe001c879e06b5990737616772404174fb2138ff616cddf0a4443"
+  },
+  {
+   "file": "win_security_susp_lsass_dump_generic.yml",
+   "upstream_path": "rules/windows/builtin/security/win_security_susp_lsass_dump_generic.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_susp_lsass_dump_generic.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_susp_lsass_dump_generic.yml",
+   "sha256": "05c15d01b675c2ed99d493e34e60b7f0b26a5fc747dade7ac2e60274fad8980d"
+  },
+  {
+   "file": "win_security_susp_scheduled_task_creation.yml",
+   "upstream_path": "rules/windows/builtin/security/win_security_susp_scheduled_task_creation.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_susp_scheduled_task_creation.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_susp_scheduled_task_creation.yml",
+   "sha256": "0351c4d3781057a81e1312fb947d27d18685b4683e6a4ff473e23b5a0df34888"
+  },
+  {
+   "file": "win_security_user_creation.yml",
+   "upstream_path": "rules/windows/builtin/security/win_security_user_creation.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_user_creation.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/security/win_security_user_creation.yml",
+   "sha256": "07e4a4b8899f265946a0f17b524526e3350fb64e0a6751975272df84ef96df85"
+  },
+  {
+   "file": "win_system_eventlog_cleared.yml",
+   "upstream_path": "rules/windows/builtin/system/microsoft_windows_eventlog/win_system_eventlog_cleared.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/microsoft_windows_eventlog/win_system_eventlog_cleared.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/microsoft_windows_eventlog/win_system_eventlog_cleared.yml",
+   "sha256": "24ff21426b048e88368570356729a3ec7c2d62b71d116bfcbc0721c1191909e9"
+  },
+  {
+   "file": "win_system_service_install_susp.yml",
+   "upstream_path": "rules/windows/builtin/system/service_control_manager/win_system_service_install_susp.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/service_control_manager/win_system_service_install_susp.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/service_control_manager/win_system_service_install_susp.yml",
+   "sha256": "c4b04eaee895b9ff9f4eac96ecdec9782ac88f06967a1a7cf8da86c97ab09313"
+  },
+  {
+   "file": "win_system_service_install_sysinternals_psexec.yml",
+   "upstream_path": "rules/windows/builtin/system/service_control_manager/win_system_service_install_sysinternals_psexec.yml",
+   "url": "https://github.com/SigmaHQ/sigma/blob/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/service_control_manager/win_system_service_install_sysinternals_psexec.yml",
+   "raw_url": "https://raw.githubusercontent.com/SigmaHQ/sigma/552f3fee420ef232a8e5790c4fae591847e32347/rules/windows/builtin/system/service_control_manager/win_system_service_install_sysinternals_psexec.yml",
+   "sha256": "aa4917e80e3568079a2ab65a9700bb541e44cc94f920c6906ccbc1a2e339c476"
+  }
+ ]
+}

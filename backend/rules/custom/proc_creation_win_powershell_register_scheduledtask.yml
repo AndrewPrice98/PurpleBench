@@ -1,0 +1,35 @@
+title: Scheduled Task Registered With PowerShell Cmdlets
+id: d5f22328-8ef9-4106-b453-c703f42dc983
+status: experimental
+description: |
+    Detects a PowerShell command line that builds a scheduled task action and registers the task.
+    SigmaHQ covers these cmdlets with a script block (event 4104) rule; this process-creation
+    version works where script block logging is not collected.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1053.005/T1053.005.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.execution
+    - attack.persistence
+    - attack.t1053.005
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection_img:
+        - Image|endswith:
+              - '\powershell.exe'
+              - '\pwsh.exe'
+        - OriginalFileName:
+              - 'PowerShell.EXE'
+              - 'pwsh.dll'
+    selection_cmd:
+        CommandLine|contains|all:
+            - 'New-ScheduledTaskAction'
+            - 'Register-ScheduledTask'
+    condition: all of selection_*
+falsepositives:
+    - Administration scripts that create scheduled tasks
+level: medium
+license: DRL-1.1

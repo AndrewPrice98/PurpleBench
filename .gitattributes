@@ -1,0 +1,4 @@
+# Bundled third-party Sigma rules are kept byte-for-byte as published upstream (their sha256 is
+# checked against backend/rules/sigmahq/SOURCES.json), so no end-of-line conversion is applied.
+backend/rules/sigmahq/*.yml -text
+backend/rules/sigmahq/LICENSE.Detection.Rules.md -text

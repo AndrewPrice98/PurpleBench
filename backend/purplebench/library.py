@@ -124,6 +124,11 @@ def get_technique(attack_id: str, path: Path | str | None = None) -> Technique |
     return None
 
 
+def technique_aliases(path: Path | str | None = None) -> dict[str, str]:
+    """Pre-v19 technique ids that the library renumbers, mapped to the v20 id (``T1562.001`` -> ``T1685``)."""
+    return {t.dataset_id: t.attack_id for t in list_techniques(path) if t.dataset_id != t.attack_id}
+
+
 def covered_tactics(path: Path | str | None = None) -> list[str]:
     """Tactics (v20 ids) that at least one technique in the library belongs to, in ATT&CK order."""
     have = {x for t in list_techniques(path) for x in t.tactics}

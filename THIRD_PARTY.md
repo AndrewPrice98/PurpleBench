@@ -18,10 +18,11 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 
 ## SigmaHQ rules
 
-- Source: https://github.com/SigmaHQ/sigma (release `r2026-07-01`).
+- Source: https://github.com/SigmaHQ/sigma, release `r2026-07-01`, commit `552f3fee420ef232a8e5790c4fae591847e32347`. 58 rules are bundled unmodified in `backend/rules/sigmahq/` (per-file upstream path, link and sha256 in `SOURCES.json`; notice in `NOTICE.md`; DRL 1.1 text in `LICENSE.Detection.Rules.md`).
 - Licence: Detection Rule License (DRL) 1.1. https://github.com/SigmaHQ/Detection-Rule-License (`LICENSE.Detection.Rules.md`).
 - Obligations met: each bundled rule keeps its `author`, `id` and `license` fields unchanged; the rule author is shown on results and exports; a link to the rule set and to the DRL is provided; SigmaHQ is credited here and in the README.
 - Rules are provided "AS IS", without warranty.
+- PurpleBench's own rules (`backend/rules/custom/`, author Andrew T. Price II) are also licensed under DRL 1.1.
 
 ## Specifications and formats
 

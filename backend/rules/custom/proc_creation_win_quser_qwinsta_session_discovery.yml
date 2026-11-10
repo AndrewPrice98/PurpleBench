@@ -1,0 +1,27 @@
+title: Logged-On User Discovery With Quser Or Qwinsta
+id: a86050af-7b68-4a3b-a2d2-affe1bd8bd94
+status: experimental
+description: Detects quser.exe or qwinsta.exe listing the sessions and users logged on to a host.
+references:
+    - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1033/T1033.md
+author: Andrew T. Price II
+date: 2026-11-10
+tags:
+    - attack.discovery
+    - attack.t1033
+logsource:
+    category: process_creation
+    product: windows
+detection:
+    selection:
+        - Image|endswith:
+              - '\quser.exe'
+              - '\qwinsta.exe'
+        - OriginalFileName:
+              - 'quser.exe'
+              - 'qwinsta.exe'
+    condition: selection
+falsepositives:
+    - Help-desk and remote-desktop administration
+level: low
+license: DRL-1.1
