@@ -27,7 +27,13 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 ## Specifications and formats
 
 - Sigma Rules Specification 2.1.0, https://github.com/SigmaHQ/sigma-specification (public domain). Implemented independently; no code is copied.
-- MITRE ATT&CK Enterprise v20 (data release 20.1), https://github.com/mitre-attack/attack-stix-data. ATT&CK is (c) The MITRE Corporation; use is subject to the ATT&CK Terms of Use at https://attack.mitre.org/resources/legal-and-branding/terms-of-use/ (not fetched in this task; confirm before publishing the catalog).
+- MITRE ATT&CK Enterprise v20 (data release 20.1), https://github.com/mitre-attack/attack-stix-data. Used under the ATT&CK Terms of Use, https://attack.mitre.org/resources/legal-and-branding/terms-of-use/ (fetched 2026-11-10), which grant a royalty-free licence and require this notice to be reproduced:
+
+  > © 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.
+  >
+  > MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.
+
+  The notice appears in this file, the README, the UI footer and report page, report Appendix B, and the description of every exported Navigator layer. IDs, names and tactics come from `backend/data/library.json`.
 - ATT&CK Navigator layer format 4.5, https://github.com/mitre-attack/attack-navigator (Apache-2.0).
 
 ## Development tools (not shipped)

@@ -83,7 +83,7 @@ From the specification's taxonomy appendix:
 |---|---|
 | `category: process_creation` | Sysmon 1, **and** Security 4688 (with the field map below) |
 | `category: network_connection` / `image_load` / `create_remote_thread` / `process_access` / `file_event` / `dns_query` | Sysmon 3 / 7 / 8 / 10 / 11 / 22 |
-| `category: registry_event` / `registry_add` / `registry_delete` / `registry_set` / `registry_rename` | Sysmon 12, 13, 14 / 12 / 12 / 13 / 14 |
+| `category: registry_event` / `registry_add` / `registry_delete` / `registry_set` / `registry_rename` | Sysmon 12, 13, 14 / 12 / 12 / 13 / 14. `registry_add` and `registry_delete` are not told apart: both map to event 12 without checking `EventType`. No bundled rule uses either, so no result is affected |
 | `category: pipe_created`, `wmi_event`, `create_stream_hash`, `file_delete`, `file_delete_detected`, `driver_load`, `process_termination`, `raw_access_thread`, `process_tampering`, `clipboard_capture`, `file_change`, `sysmon_status`, `sysmon_error`, `file_block_*`, `file_executable_detected` | The Sysmon event ids the taxonomy gives (17/18, 19-21, 15, 23, 26, 6, 5, 9, 25, 24, 2, 4/16, 255, 27/28, 29) |
 | `category: ps_script` / `ps_module` | `Microsoft-Windows-PowerShell/Operational` and `PowerShellCore/Operational`, 4104 / 4103 |
 | `category: ps_classic_start` / `ps_classic_provider_start` / `ps_classic_script` | `Windows PowerShell` 400 / 600 / 800 |

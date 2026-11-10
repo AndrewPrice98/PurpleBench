@@ -24,7 +24,7 @@ PurpleBench does the small, honest version of that check: it names the rule set,
 1. **Pick a campaign**: a list of techniques (two demo campaigns are included). Admins can create more.
 2. **Run**: each run scores one rule set version over the recorded telemetry of every technique in the campaign. The four demo runs show coverage rising as rules are added (v1 to v4).
 3. **Read the result** per technique: `detected`, `partial`, `missed`, `telemetry_gap`, `untested` or `did_not_run`, with the rules that fired and their authors, time to detect, and the matching events with the matched text highlighted.
-4. **Close gaps**: each missed, partial or telemetry-gap technique becomes a gap with a hint (the telemetry or rule that would close it). A gap closes when a later run of the same campaign detects the technique. Admins can record notes and accept a gap.
+4. **Close gaps**: each missed, partial or telemetry-gap technique becomes a gap with a hint (the telemetry or rule that would close it). In the recorded demo, a gap closes when a later run of the same campaign detects the technique. That closing is done by the demo builder only: importing a lab run opens gaps for that run but does not close earlier ones. Admins can record notes, accept a gap and re-open it by hand.
 5. **Export**: HTML and Markdown reports and an ATT&CK Navigator layer (format 4.5) per run.
 6. **Optional, lab mode**: run the campaign's Atomic tests yourself on a disposable lab VM with the PowerShell runner and upload the run file (see [Lab mode and safety](#lab-mode-and-safety)).
 
@@ -43,13 +43,14 @@ Details: [docs/SIGMA_SUPPORT.md](docs/SIGMA_SUPPORT.md) (the supported subset, h
 ## Scoring definitions
 
 - **detected**: a rule tagged with exactly the tested ATT&CK technique fired on its telemetry and is not noisy.
-- **partial**: only a related rule fired (a rule for the parent technique, or for another technique), or the exact rule was noisy.
-- **missed**: no rule fired.
+- **partial**: no rule earned `detected` credit, but a clean rule for the parent technique or for a related technique fired, or the only rule that fired for the exact technique (or its parent) was noisy.
+- **missed**: no rule earned credit. A noisy rule tagged only for some other technique does not count: it is named in the result's reason but earns nothing.
 - **telemetry_gap**: the rules for the technique cannot see this telemetry (missing channel, event id or field). Not a rule failure.
 - **untested**: the technique has no usable recorded telemetry in the data set. **T1558.003 (Kerberoasting) is untested**: the trimmed Splunk file has no Kerberoasting events.
 - **did_not_run**: a lab test that did not execute. Excluded from the score.
-- **Noisy rule**: a rule that also fires on the benign baseline. It earns no credit.
+- **Noisy rule**: a rule that also fires on the benign baseline. It never earns `detected`. It can leave a technique `partial` only when it is tagged with exactly that technique or its parent.
 - **Coverage score** = detected / tested, where tested excludes `untested` and `did_not_run`. The "partial as half" figure counts each `partial` as 0.5.
+- **A best case, not a generalisation.** The 12 custom rules were written for gaps on these same recordings, so the v4 result (22 of 25 techniques, 88%) is a best case on telemetry the rules were tuned against. It shows what this rule set achieves on known recordings, not how it would do on unseen attacks or in another environment.
 - **ATT&CK v20.** Technique and tactic IDs are ATT&CK Enterprise v20. v19 split the Defense Evasion tactic into **Stealth** and **Defense Impairment**, and renumbered some techniques (for example T1562.001 is now **T1685**, and T1070.001 is **T1685.005**); the catalog keeps a `dataset_id` alias for the original Splunk folder names.
 
 ## Lab mode and safety
@@ -74,7 +75,7 @@ It never downloads anything, never evaluates fetched text and talks WinRM to one
 | Test metadata | [redcanaryco/atomic-red-team](https://github.com/redcanaryco/atomic-red-team) | MIT | Test names, GUIDs and command text, shown for reference only |
 | Rules | [SigmaHQ/sigma](https://github.com/SigmaHQ/sigma) release `r2026-07-01` | [Detection Rule License 1.1](https://github.com/SigmaHQ/Detection-Rule-License) | 58 rules, unmodified, author shown on every match |
 | Custom rules | this repository, by Andrew T. Price II | DRL 1.1 | 12 rules |
-| ATT&CK and Navigator layer | [MITRE ATT&CK](https://attack.mitre.org/) v20, Navigator layer format 4.5 | MITRE terms of use | IDs, names and the exported layer |
+| ATT&CK and Navigator layer | [MITRE ATT&CK](https://attack.mitre.org/) v20, Navigator layer format 4.5 | ATT&CK Terms of Use (notice below) | IDs, names and the exported layer |
 
 **OTRF Security-Datasets are not used.** Their repository's `LICENSE` file is MIT but its README also carries a "GPL-3.0" licence line, and that conflict is unresolved, so none of their data is committed. Splunk `attack_data` has an unambiguous Apache-2.0 licence and covers every selected technique.
 
@@ -82,20 +83,22 @@ Full evidence, URLs and commits: [THIRD_PARTY.md](THIRD_PARTY.md) and [DECISIONS
 
 ## Quick start
 
-Python 3.12 or newer and Node 20.19 or newer.
+Python 3.12 or newer and Node 20.19+ or 22.12+ (`package.json` `engines`).
 
 ```bash
 cd backend
 python -m venv .venv
-.venv/Scripts/pip install -r requirements-dev.txt     # Linux/macOS: .venv/bin/pip
-.venv/Scripts/python -m purplebench demo --serve      # loads the recorded demo, serves http://127.0.0.1:8000 (guest, read-only)
+source .venv/bin/activate                             # Linux/macOS
+.venv\Scripts\activate                                # Windows (PowerShell: .venv\Scripts\Activate.ps1)
+pip install -r requirements-dev.txt
+python -m purplebench demo --serve                    # loads the recorded demo, serves http://127.0.0.1:8000 (guest, read-only)
 
 # in a second terminal, from the repository root
 npm ci
 npm run dev                                           # http://localhost:5173, proxies /api to port 8000
 ```
 
-Other commands (from `backend/`):
+Other commands (from `backend/`, with the virtual environment active; otherwise call `.venv/bin/python` or `.venv\Scripts\python`):
 
 ```bash
 python -m purplebench create-admin      # set the admin login (writes backend/.env); needed to create campaigns or upload runs
@@ -108,7 +111,7 @@ python -m pytest -q -rs
 
 ### Environment variables
 
-Names only; see [backend/.env.example](backend/.env.example). Real environment variables win over `backend/.env`.
+Names only; see [backend/.env.example](backend/.env.example). Real environment variables win over `backend/.env`. A blank value counts as unset.
 
 | Variable | Purpose |
 |---|---|
@@ -171,9 +174,9 @@ To report a vulnerability, open a private security advisory on the repository.
 
 Counts from the last full run on Windows with PowerShell available:
 
-- **Backend: 673 pytest tests passed** (0 skipped locally). The tests that run PowerShell are skipped where neither `powershell` nor `pwsh` is on the PATH, and CI runs pytest with `-rs` so any skip is named in the log.
-- **Frontend: 46 `node --test` unit tests passed**, plus a production build.
-- **PowerShell static safety check**: the runner passes; a self-test of 195 cases (the unchanged runner, 140 appended bypass attempts, 15 inside the remote script blocks, 38 weakened gates, and a fixture file) proves the checker fails on each.
+- **Backend: 693 pytest tests passed** (0 skipped locally). The tests that run PowerShell are skipped where neither `powershell` nor `pwsh` is on the PATH, and CI runs pytest with `-rs` so any skip is named in the log.
+- **Frontend: 47 `node --test` unit tests passed**, plus a production build.
+- **PowerShell static safety check**: the runner passes; a self-test of 209 cases (the unchanged runner, 154 appended bypass attempts, 15 inside the remote script blocks, 38 weakened gates, and a fixture file) proves the checker fails on each.
 - **Browser smoke test** (`e2e/smoke.mjs`, Playwright with Chrome): guest read-only plus one page per area. Run locally; it runs in CI as a non-blocking job.
 - Data checks: `catalog --check`, `docs --check`, `demo --check`.
 
@@ -189,4 +192,10 @@ Counts from the last full run on Windows with PowerShell available:
 
 ## Licence
 
-The code is MIT (see [LICENSE](LICENSE)). Third-party content keeps its own licences: Atomic Red Team (MIT), Splunk attack_data (Apache-2.0), SigmaHQ rules (Detection Rule License 1.1), the Sigma specification (public domain), ATT&CK (MITRE terms of use) and the `regex` module (Apache-2.0 and CNRI Python). See [THIRD_PARTY.md](THIRD_PARTY.md).
+The code is MIT (see [LICENSE](LICENSE)). Third-party content keeps its own licences: Atomic Red Team (MIT), Splunk attack_data (Apache-2.0), SigmaHQ rules (Detection Rule License 1.1), the Sigma specification (public domain), ATT&CK (see below) and the `regex` module (Apache-2.0 and CNRI Python). See [THIRD_PARTY.md](THIRD_PARTY.md).
+
+MITRE ATT&CK is used under the [ATT&CK Terms of Use](https://attack.mitre.org/resources/legal-and-branding/terms-of-use/), which require this notice:
+
+> © 2026 The MITRE Corporation. This work is reproduced and distributed with the permission of The MITRE Corporation.
+>
+> MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.

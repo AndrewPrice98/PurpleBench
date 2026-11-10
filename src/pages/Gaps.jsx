@@ -145,8 +145,9 @@ export default function Gaps() {
           <h1 tabIndex={-1}>Detection gaps</h1>
           <p className="lede">
             Every technique a run missed, could only partly detect, or could not match for lack of telemetry, with
-            the telemetry and rule idea that would close it. A gap closes when a later run of the same campaign
-            detects the technique.
+            the telemetry and rule idea that would close it. In the recorded demo, a gap closes when a later run of the same
+            campaign detects the technique; lab runs you upload open gaps but do not close earlier ones, so mark those
+            accepted or re-open them by hand.
           </p>
         </div>
       </header>
