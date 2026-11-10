@@ -6,7 +6,7 @@ Purple-team detection validation for Windows. PurpleBench takes a list of MITRE 
 
 ## Recorded mode: read this first
 
-> **Everything in the live demo and in a fresh install is *recorded mode*.** No command is executed and no lab is used. The telemetry is Windows Sysmon events that other people recorded when they ran Atomic Red Team tests (Splunk `attack_data`, Apache-2.0), trimmed to each test's time window, plus a benign baseline. PurpleBench evaluates Sigma rules over those events with its own evaluator and scores the result. A technique is **missed** when no rule in the rule set fired on that recording. It says nothing about any product, and it is not a statement about your environment.
+> **Everything in the live demo and in a fresh install is *recorded mode*.** No command is executed and no lab is used. The telemetry is Windows Sysmon events that other people recorded when they ran Atomic Red Team tests (Splunk `attack_data`, Apache-2.0), trimmed to each test's time window, plus a benign baseline. PurpleBench evaluates Sigma rules over those events with its own evaluator and scores the result. A technique is **missed** when no rule in the rule set earned credit on that recording. It says nothing about any product, and it is not a statement about your environment.
 
 Live demo: **https://purplebench.vercel.app/** (placeholder: not deployed yet, so the link may not resolve). The hosted demo is recorded mode only, guests are read-only, and its database lives in `/tmp` and resets on a cold start.
 

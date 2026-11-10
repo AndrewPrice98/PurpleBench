@@ -59,7 +59,7 @@ function StartHere({ story, rules }) {
       </h2>
       <p className="lede">
         In run {gap.run_id}{fromRun ? ` (${fromRun.campaign_name}, rule set ${fromRun.ruleset_version})` : ''}{' '}
-        {gap.kind === 'missed' ? 'no rule in the rule set fired on this recording' : `the result was ${GAP_KIND[gap.kind]?.toLowerCase()}`}.{' '}
+        {gap.kind === 'missed' ? 'no rule in the rule set earned credit on this recording' : `the result was ${GAP_KIND[gap.kind]?.toLowerCase()}`}.{' '}
         {closers.length > 0 && (
           <>
             {story.added ? `Rule set ${toRun?.ruleset_version || ''} added ` : 'Then '}

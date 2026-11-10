@@ -140,9 +140,12 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     _migrate(conn)
     conn.executescript(SCHEMA)
     # Older imports stored a project-level statement in every lab run's source; it is shown at display time now.
-    conn.execute("UPDATE runs SET source = REPLACE(source, ?, ?) WHERE source LIKE ?",
-                 (_STALE_LAB_SENTENCE, "This result", f"%{_STALE_LAB_SENTENCE}%"))
-    conn.commit()
+    # Read first so an up-to-date database is never written to on connect.
+    stale = f"%{_STALE_LAB_SENTENCE}%"
+    if conn.execute("SELECT 1 FROM runs WHERE source LIKE ? LIMIT 1", (stale,)).fetchone():
+        conn.execute("UPDATE runs SET source = REPLACE(source, ?, ?) WHERE source LIKE ?",
+                     (_STALE_LAB_SENTENCE, "This result", stale))
+        conn.commit()
     # Only ever raise the version, and only write when it is lower (no write on every connection).
     if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")

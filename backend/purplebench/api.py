@@ -4,7 +4,7 @@ Conventions follow CMMC Ready: lifespan seeding once, security headers and CSP o
 pure-ASGI body limit (Content-Length precheck plus a byte counter), allow-listed filters, junk numeric ids are
 404, attachments carry safe filenames, and a last-resort 500 handler never leaks internals.
 
-Honesty: every run states its mode. "Missed" means no rule in the rule set fired on the telemetry; it never
+Honesty: every run states its mode. "Missed" means no rule in the rule set earned credit on the telemetry; it never
 describes a product. Every rule shown carries its author (SigmaHQ Detection Rule License 1.1).
 """
 
@@ -75,7 +75,7 @@ app = FastAPI(
     version=__version__,
     docs_url=None, redoc_url=None, openapi_url=None,  # served writer-only at /api/openapi.json below
     description="Purple-team detection validation: Atomic Red Team tests against Sigma rules. "
-                "'Missed' means no rule in the rule set fired on this telemetry; it says nothing about any product.",
+                "'Missed' means no rule in the rule set earned credit on this telemetry; it says nothing about any product.",
 )
 
 SECURITY_HEADERS = {
@@ -877,7 +877,7 @@ def coverage_navigator(conn: Conn, run: Annotated[str | None, Query(max_length=9
     layer = navigator.build_layer(
         cov_mod.compute_coverage(score), name=name,
         description=f"{MODE_NOTES[r['mode']]} Rule set {r['ruleset_version']}. 'Missed' means no rule in this "
-                    "rule set fired on this telemetry.")
+                    "rule set earned credit on this telemetry.")
     problems = navigator.validate_layer(layer)
     if problems:
         log.error("Navigator layer for run %s failed validation: %s", r["id"], problems[:5])

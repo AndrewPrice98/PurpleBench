@@ -44,7 +44,7 @@ def test_html_is_self_contained_and_script_free(seeded):
 
 def test_honesty_and_attribution_present(seeded):
     page = _html(seeded, 3)
-    for text in ("no rule in this rule set fired on this telemetry", "Recorded mode", "Sysmon events only",
+    for text in ("no rule in this rule set earned credit on this telemetry", "Recorded mode", "Sysmon events only",
                  "best case on known telemetry", "Event-time to first match", "Splunk attack_data",
                  "Apache-2.0", "Detection Rule License (DRL) 1.1", "Atomic Red Team", "MIT",
                  "github.com/splunk/attack_data", "Custom (PurpleBench)", "SigmaHQ"):

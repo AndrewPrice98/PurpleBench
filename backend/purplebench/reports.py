@@ -47,7 +47,7 @@ def L(label: str, *values: Any) -> Parts:
     return Parts((Trusted(label), *values))
 
 
-MISSED_MEANING = T('"Missed" means that no rule in this rule set fired on this telemetry. It says nothing about '
+MISSED_MEANING = T('"Missed" means that no rule in this rule set earned credit on this telemetry. It says nothing about '
                    "any product's coverage.")
 RECORDED_NOTE = T("Recorded mode: nothing was executed and no lab was used. Each technique was scored by running the "
                   "rule set over a trimmed Sysmon recording from the dataset named below.")

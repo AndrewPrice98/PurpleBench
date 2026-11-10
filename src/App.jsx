@@ -101,7 +101,7 @@ function Footer() {
           <ExternalLink href={THIRD_PARTY_URL}>Sources and licences</ExternalLink>
         </p>
         <p className="footer-meta">
-          PurpleBench v{version} · &quot;Missed&quot; means no rule in this rule set fired on this telemetry ·{' '}
+          PurpleBench v{version} · &quot;Missed&quot; means no rule in this rule set earned credit on this telemetry ·{' '}
           <ExternalLink href={GITHUB_URL}>Source on GitHub</ExternalLink>
         </p>
       </div>

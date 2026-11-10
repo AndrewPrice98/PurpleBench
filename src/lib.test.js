@@ -11,7 +11,7 @@ test('every status has a label, glyph, tone and help text', () => {
   for (const s of STATUS_ORDER) {
     assert.ok(STATUS[s].label && STATUS[s].glyph && STATUS[s].tone && STATUS[s].help, s)
   }
-  assert.match(STATUS.missed.help, /no rule in this rule set fired on this telemetry/i)
+  assert.match(STATUS.missed.help, /no rule in this rule set earned credit on this telemetry/i)
 })
 
 test('tactic labels', () => {

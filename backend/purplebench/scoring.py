@@ -17,9 +17,9 @@ library alias table when a rule is loaded, so ``attack.t1562.001`` already reads
     too), or *noisy rule* (only rules over the noise threshold fired, tagged with the exact technique or its parent).
     A noisy rule tagged only for some other technique earns no credit; it is named in the ``missed`` reason.
 ``missed``
-    nothing fired in the window although the rules tagged for the technique could have matched
-    (or no rule is tagged for it at all). "Missed" only ever means "no rule in this rule set fired on
-    this telemetry".
+    no rule earned credit in the window (nothing fired, or only noisy rules tagged for other
+    techniques) although the rules tagged for the technique could have matched (or no rule is tagged
+    for it at all). "Missed" only ever means "no rule in this rule set earned credit on this telemetry".
 ``telemetry_gap``
     nothing fired and every evaluable rule tagged for the technique is a ``telemetry_gap`` (its channel,
     event id or fields never occur in the recorded telemetry). The rule may be fine; the telemetry

@@ -66,7 +66,7 @@ def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: 
         techniques.append(entry)
     desc = description or ("Detection coverage of a Sigma rule set over recorded Sysmon telemetry (mostly Atomic Red "
                            "Team tests from Splunk attack_data). "
-                           "'Missed' means no rule in this rule set fired on this telemetry.")
+                           "'Missed' means no rule in this rule set earned credit on this telemetry.")
     desc = f"{desc} {ATTACK_NOTICE}"
     return {
         "name": name,

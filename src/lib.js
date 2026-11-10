@@ -13,7 +13,7 @@ export const ATTACK_COPYRIGHT =
 export const ATTACK_TRADEMARK = 'MITRE ATT&CK and ATT&CK are registered trademarks of The MITRE Corporation.'
 
 export const MISSED_MEANING =
-  '"Missed" means no rule in this rule set fired on this telemetry. It says nothing about any security product.'
+  '"Missed" means no rule in this rule set earned credit on this telemetry. It says nothing about any security product.'
 export const BEST_CASE =
   'Scores are a best case: each rule set is evaluated on telemetry known to contain the technique, inside the test window.'
 export const TTD_LABEL = 'Event-time to first match'
@@ -27,11 +27,11 @@ export const STATUS = {
   },
   partial: {
     label: 'Partial', glyph: '◐', tone: 'partial',
-    help: 'Only rules for a parent or related technique, or only noisy rules, fired. No full credit.',
+    help: 'Only rules for a parent or related technique fired, or only noisy rules for this technique or its parent. No full credit.',
   },
   missed: {
     label: 'Missed', glyph: '✕', tone: 'missed',
-    help: 'No rule in this rule set fired on this telemetry. It says nothing about any security product.',
+    help: 'No rule in this rule set earned credit on this telemetry (a noisy rule for another technique may still have fired). It says nothing about any security product.',
   },
   telemetry_gap: {
     label: 'Telemetry gap', glyph: '⌀', tone: 'gap',
