@@ -36,6 +36,11 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
   The notice appears in this file, the README, the UI footer and report page, report Appendix B, and the description of every exported Navigator layer. IDs, names and tactics come from `backend/data/library.json`.
 - ATT&CK Navigator layer format 4.5, https://github.com/mitre-attack/attack-navigator (Apache-2.0).
 
+## Front-end assets bundled with the dashboard
+
+- **Inter** (variable font), npm package `@fontsource-variable/inter` 5.x, https://github.com/rsms/inter. Licence: SIL Open Font License 1.1, Copyright 2016 The Inter Project Authors. The font files are served from the application's own origin, bundled by Vite; no font CDN is contacted. The licence text ships in the npm package (`node_modules/@fontsource-variable/inter/LICENSE`).
+- **Lucide** icons, npm package `lucide-react` 1.x, https://lucide.dev. Licence: ISC, Copyright (c) 2026 Lucide Icons and Contributors. Only the icons the dashboard uses are included in the bundle.
+
 ## Development tools (not shipped)
 
 - Playwright 1.61.0 (`e2e/`, Apache-2.0) drives the installed Chrome for the browser smoke test; a dev dependency of `e2e/` only.
