@@ -58,3 +58,22 @@ def test_migration_is_idempotent_and_fresh_databases_are_current(tmp_path):
     fresh = db.connect(tmp_path / "fresh.db")
     assert fresh.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     fresh.close()
+
+
+def test_user_version_is_raised_never_lowered_and_not_rewritten(tmp_path):
+    path = tmp_path / "v.db"
+    db.connect(path).close()
+    raw = sqlite3.connect(path)
+    raw.execute("PRAGMA user_version = 99")  # a newer schema: must not be downgraded
+    raw.commit()
+    raw.close()
+    c = db.connect(path)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == 99
+    c.close()
+    raw = sqlite3.connect(path)
+    raw.execute("PRAGMA user_version = 1")
+    raw.commit()
+    raw.close()
+    c = db.connect(path)
+    assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
+    c.close()

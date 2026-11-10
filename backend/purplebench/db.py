@@ -134,7 +134,9 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     _use_wal(conn)
     _migrate(conn)
     conn.executescript(SCHEMA)
-    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    # Only ever raise the version, and only write when it is lower (no write on every connection).
+    if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
+        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     return conn
 
 

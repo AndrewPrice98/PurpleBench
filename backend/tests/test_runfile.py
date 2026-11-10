@@ -381,3 +381,19 @@ def test_unknown_technique_imports_with_id_as_name(seeded_db, good, conn):
     good["executions"][0]["technique_id"] = "T9999"
     rid = runfile.import_run(conn, _raw(good))
     assert db.list_executions(conn, rid)[0]["technique_id"] == "T9999"
+
+
+def test_execution_with_every_event_oversize_is_did_not_run(seeded_db, good, conn):
+    ex = good["executions"][0]
+    ex["events_xml"] = [to_xml(_ev(fields={"Details": "B" * 70_000}))]
+    rid = runfile.import_run(conn, _raw(good))
+    row = db.list_executions(conn, rid)[0]
+    assert row["status"] == "did_not_run" and row["reason"] == "all collected events exceeded size limits"
+
+
+def test_runner_dropped_everything_is_did_not_run(seeded_db, good, conn):
+    ex = good["executions"][0]
+    ex["events_xml"] = []
+    ex["dropped_oversize"] = 5
+    rid = runfile.import_run(conn, _raw(good))
+    assert db.list_executions(conn, rid)[0]["status"] == "did_not_run"

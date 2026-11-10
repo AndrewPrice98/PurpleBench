@@ -282,6 +282,8 @@ def _did_not_run_reason(ex: dict[str, Any]) -> str | None:
         return f"the test did not run ({label})" + (f": {ex['error']}" if ex["error"] else "")
     if ex["collection_error"]:
         return f"event collection failed, so the test could not be scored: {ex['collection_error']}"
+    if not ex["events"] and ex["skipped_oversize"] + ex["dropped_oversize"] > 0:
+        return "all collected events exceeded size limits"
     return None
 
 
