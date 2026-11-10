@@ -28,6 +28,10 @@ PurpleBench does the small, honest version of that check: it names the rule set,
 5. **Export**: HTML and Markdown reports and an ATT&CK Navigator layer (format 4.5) per run.
 6. **Optional, lab mode**: run the campaign's Atomic tests yourself on a disposable lab VM with the PowerShell runner and upload the run file (see [Lab mode and safety](#lab-mode-and-safety)).
 
+## The dashboard
+
+A dark, table-first React dashboard with a fixed sidebar (a top bar with a menu drawer below 900 px). Pages: **Overview** (coverage score, trend, detection by tactic, open gaps, noisy rules), **Campaigns**, **Runs** (with a run page and a per-technique execution page that shows the matched events), **Coverage** (the ATT&CK matrix with a comparison between runs), **Rules**, **Gaps** and **Reports**. Every page carries a one-line recorded-mode notice that says what "missed" means; the sources and caveats open under "About this data", and the full ATT&CK notice, the dataset credits and the rule-author attribution stay in the footer and on each rule. Type is Inter, bundled with the app, and icons are Lucide; neither is loaded from a CDN (see [THIRD_PARTY.md](THIRD_PARTY.md)).
+
 ## The Sigma evaluator and its supported subset
 
 PurpleBench evaluates Sigma rules itself (`backend/purplebench/sigma/`), directly on normalised Windows events, targeting the [Sigma Rules Specification 2.1.0](https://github.com/SigmaHQ/sigma-specification). It implements a documented subset; pySigma is not used.
