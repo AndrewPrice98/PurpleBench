@@ -53,6 +53,7 @@ import yaml  # noqa: E402
 from purplebench.telemetry import (  # noqa: E402
     event_sort_key,
     parse_ts,
+    ReadStats,
     read_xml_log,
     write_jsonl_gz,
 )
@@ -407,7 +408,8 @@ def build(sources: Path, out: Path) -> dict[str, Any]:
     for spec in SPECS:
         aid, did = spec["attack_id"], spec["dataset_id"]
         log = sources / "logs" / f"{did}.log"
-        events = sorted(read_xml_log(log), key=event_sort_key)
+        stats = ReadStats()
+        events = sorted(read_xml_log(log, stats), key=event_sort_key)
         per_file[did] = events
         doc = load_atomic_tests(sources, aid)
         atomic = atomic_record(doc, aid, spec["atomic"], spec["guid"]) if spec["atomic"] else None
@@ -432,6 +434,7 @@ def build(sources: Path, out: Path) -> dict[str, Any]:
                 "repo": SPLUNK_REPO, "commit": SPLUNK_COMMIT, "path": src_rel, "url": MEDIA + src_rel,
                 "sha256": sha256_file(log), "bytes": log.stat().st_size, "dataset_author": dm["author"],
                 "dataset_date": dm["date"], "dataset_id": dm["id"], "dataset_description": dm["description"],
+                "parse": stats.as_dict(),
             },
             "license": "Apache-2.0",
         }
@@ -449,7 +452,9 @@ def build(sources: Path, out: Path) -> dict[str, Any]:
             "telemetry": rel,
             "note": spec["note"],
         })
-        print(f"{aid:10s} {entry['events']:5d} events  {entry['window']['method']:23s} {entry['bytes']:8d} B", flush=True)
+        print(f"{aid:10s} {entry['events']:5d} events  {entry['window']['method']:23s} {entry['bytes']:8d} B  "
+              f"source: {stats.parsed} parsed, {stats.skipped_total} skipped"
+              + (f" {dict(stats.skipped)}" if stats.skipped else ""), flush=True)
 
     base_events, base_info = build_baseline(per_file)
     # The baseline must not overlap any attack window or contain any anchor command.
@@ -518,7 +523,9 @@ the Apache License 2.0 (text in `LICENSE-Apache-2.0.txt`).
 
 Changes made by PurpleBench: events were parsed from Windows Event XML, normalised to JSON (original
 EventData field names kept), reduced to the events of one test window on one host (or, for
-`baseline.jsonl.gz`, to benign lead-in events), and re-compressed. No event content was altered.
+`baseline.jsonl.gz`, to benign lead-in events), and re-compressed. Event values are unchanged apart
+from timestamp precision (7→6 fractional digits) and conversion from XML to JSON. Events the parser
+could not read are counted per file in `manifest.json` (`source.parse`).
 Each file's exact upstream path, URL, dataset author and window derivation are listed in `manifest.json`.
 
 Dataset authors are named in the upstream `.yml` manifests and copied into `manifest.json`.

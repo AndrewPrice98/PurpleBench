@@ -5,15 +5,20 @@ Normalised event shape (field names inside ``fields`` are the original EventData
     {"ts": "2020-11-30T13:42:16.668830Z", "channel": "Microsoft-Windows-Sysmon/Operational",
      "event_id": 10, "host": "win-dc-11.attackrange.local", "record_id": 34, "fields": {...}}
 
-Windows Event XML is parsed with defusedxml (entities, DTDs and external references are refused).
-Nothing here executes or evaluates event content.
+Windows Event XML is parsed with defusedxml with ``forbid_dtd=True``: a document carrying any
+``<!DOCTYPE>`` is refused outright, so entity declarations and external references never reach the
+parser (defusedxml's own defaults would refuse entities and external references but still accept a
+bare DTD). Events that cannot be parsed are skipped and counted (:class:`ReadStats`), never silently
+dropped. Nothing here executes or evaluates event content.
 """
 
 from __future__ import annotations
 
 import gzip
 import json
+from collections import Counter
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -72,7 +77,7 @@ def parse_event_xml(xml: str) -> dict[str, Any]:
     if len(xml) > MAX_EVENT_BYTES:
         raise TelemetryError("event too large")
     try:
-        root = SafeET.fromstring(xml)
+        root = SafeET.fromstring(xml, forbid_dtd=True)
     except Exception as exc:  # defusedxml raises its own subclasses as well as ParseError
         raise TelemetryError(f"unparseable event: {type(exc).__name__}") from exc
     system = root.find(f"{_NS}System")
@@ -149,36 +154,80 @@ def parse_event_json(obj: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def iter_xml_events(lines: Iterable[str]) -> Iterator[str]:
+@dataclass
+class ReadStats:
+    """What a reader kept and what it skipped, by reason."""
+
+    parsed: int = 0
+    skipped: Counter = field(default_factory=Counter)
+
+    @property
+    def skipped_total(self) -> int:
+        return sum(self.skipped.values())
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"parsed": self.parsed, "skipped": self.skipped_total,
+                "skipped_by_reason": dict(sorted(self.skipped.items()))}
+
+
+def iter_xml_events(lines: Iterable[str], stats: ReadStats | None = None) -> Iterator[str]:
     """Group text lines into ``<Event ...>...</Event>`` documents.
 
     Splunk's exports hold one event per line, but a command line containing a newline spreads one
-    event over several lines, so events are delimited by tags, not by line.
+    event over several lines, so events are delimited by tags, not by line. Oversized events,
+    an event left unterminated at the end of input and non-blank text outside events are counted in
+    ``stats``.
     """
+    st = stats if stats is not None else ReadStats()
     buf: list[str] = []
     size = 0
+    dropping = False  # inside an oversized event, waiting for its end tag
     for line in lines:
         stripped = line.strip()
+        if dropping:
+            if stripped.endswith("</Event>"):
+                dropping = False
+            continue
         if not buf and not stripped.startswith("<Event"):
+            if stripped:
+                st.skipped["text outside an event"] += 1
             continue
         buf.append(line)
         size += len(line)
         if size > MAX_EVENT_BYTES:
+            st.skipped["event too large"] += 1
+            dropping = not stripped.endswith("</Event>")
             buf, size = [], 0
             continue
         if stripped.endswith("</Event>"):
             yield "".join(buf).strip()
             buf, size = [], 0
+    if buf:
+        st.skipped["unterminated event at end of input"] += 1
 
 
-def read_xml_log(path: Path | str) -> Iterator[dict[str, Any]]:
-    """Yield normalised events from a Windows Event XML file; malformed events are skipped."""
+def read_xml_log(path: Path | str, stats: ReadStats | None = None) -> Iterator[dict[str, Any]]:
+    """Yield normalised events from a Windows Event XML file.
+
+    Malformed events are skipped and counted in ``stats`` by reason (the build reports the counts and
+    records them in the manifest).
+    """
+    st = stats if stats is not None else ReadStats()
     with open(path, encoding="utf-8", errors="replace", newline="") as fh:
-        for doc in iter_xml_events(fh):
+        for doc in iter_xml_events(fh, st):
             try:
-                yield parse_event_xml(doc)
-            except TelemetryError:
+                ev = parse_event_xml(doc)
+            except TelemetryError as exc:
+                st.skipped[_reason(exc)] += 1
                 continue
+            st.parsed += 1
+            yield ev
+
+
+def _reason(exc: TelemetryError) -> str:
+    """Stable skip reason (without per-event detail such as the offending timestamp)."""
+    msg = str(exc)
+    return "bad timestamp" if msg.startswith("bad timestamp") else msg
 
 
 def event_sort_key(ev: dict[str, Any]) -> tuple[str, str, int]:

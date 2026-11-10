@@ -35,6 +35,11 @@
     "dataset_date": "2021-03-01",
     "dataset_description": "Invoke-atomictest T1059.001 of all Atomic Red Team T1059.001 PowerShell tests.",
     "dataset_id": "cc9b2647-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 21926,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1059.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "8f71b2a0ef81892551cd6a9ad115b8ec5c42d9f2071547b064c496511898c4e9",
@@ -95,6 +100,11 @@
     "dataset_date": "2020-11-30",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1047-1 WMI Reconnaissance Users Return value unclear for test T1047-2 WMI Reconnaissance Processes Return value unclear for test T1047-3 WMI Reconnaissance Software Return value unclear for test T1047-4 WMI Reconnaissance List Remote Services Return value unclear for test T1047-5 WMI Execute Local Process Return value unclear for test T1047-6 WMI Execute Remote Process",
     "dataset_id": "cc9b25d3-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6571,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1047/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "64651720e10813aa57d0f25ce149005ab06039b1974dbc09818b1fb45fbbc196",
@@ -155,6 +165,11 @@
     "dataset_date": "2021-04-05",
     "dataset_description": "Adversaries may abuse the Windows SC.exe to execute malicious commands or payloads which is captured by Windows System logs.",
     "dataset_id": "cc9b260a-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 8236,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1569.002/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "6864968926d7ef6b7fb97d6a5d8ee3478ca4c880d3f048a919f5a16d9e5d4982",
@@ -214,6 +229,11 @@
     "dataset_date": "2020-12-07",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1053.005-1 Scheduled Task Startup Script Return value unclear for test T1053.005-2 Scheduled task Local Return value unclear for test T1053.005-3 Scheduled task Remote Return value unclear for test T1053.005-4 Powershell Cmdlet Scheduled Task",
     "dataset_id": "cc9b265d-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6277,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1053.005/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "d346ab6c75b3151217dfc2c4c166c951fc16d68c31b7d5a8f3e577d9545ff9f0",
@@ -272,6 +292,11 @@
     "dataset_date": "2020-11-27",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1547.001-1 Reg Key Run Successful Execution of test T1547.001-2 Reg Key RunOnce Return value unclear for test T1547.001-3 PowerShell Registry RunOnce Successful Execution of test T1547.001-4 Suspicious vbs file run from startup Folder Successful Execution of test T1547.001-5 Suspicious jse file run from startup Folder Return value unclear for test T1547.001-6 Suspicious bat file run from startup Folder",
     "dataset_id": "cc9b261d-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6287,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1547.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "11d8c6f7ca60994936ae9332ea67e5c220027ae1addad48203df6bdde9d46f5d",
@@ -329,6 +354,11 @@
     "dataset_date": "2020-12-07",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1543.003-1 Modify Fax service to run PowerShell Return value unclear for test T1543.003-2 Service Installation CMD Return value unclear for test T1543.003-3 Service Installation PowerShell",
     "dataset_id": "cc9b2658-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6218,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1543.003/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "2e6ea9e053a84f4d32b37f462a40a39f1a90c2049adaf684b0660ee6e9f32d7a",
@@ -386,6 +416,11 @@
     "dataset_date": "2020-10-09",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1136.001-3 Create a new user in a command prompt Successful Execution of test T1136.001-4 Create a new user in PowerShell Successful Execution of test T1136.001-6 Create a new Windows admin user",
     "dataset_id": "cc9b25e2-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6386,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1136.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "334fff113e8d15026a7a1a0d3343643ce7e8a73552b1f33ee476eaa7826cbe42",
@@ -446,6 +481,11 @@
     "dataset_date": "2020-11-18",
     "dataset_description": "Generation of Atomic Red Team technique T1548.002",
     "dataset_id": "cc9b25fe-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6715,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1548.002/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "9871d7c2b348af4d9af6cb48797509f6a9567b15ea6dbaf0b622c9ca0c9fac0a",
@@ -502,6 +542,11 @@
     "dataset_date": "2020-10-09",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1562.001-9 Unload Sysmon Filter Driver Successful Execution of test T1562.001-10 Uninstall Sysmon Return value unclear for test T1562.001-11 AMSI Bypass - AMSI InitFailed Return value unclear for test T1562.001-12 AMSI Bypass - Remove AMSI Provider Reg Key Successful Execution of test T1562.001-13 Disable Arbitrary Security Windows Service Return value unclear for test T1562.001-14 Tamper with Windows Defender ATP PowerShell Successful Execution of test T1562.001-15 Tamper with Windows Defender Command Prompt Return value unclear for test T1562.001-16 Tamper with Windows Defender Registry Return value unclear for test T1562.001-17 Disable Microsoft Office Security Features Return value unclear for test T1562.001-18 Remove Windows Defender Definition Files Return value unclear for test T1562.001-19 Stop and Remove Arbitrary Security Windows Service Return value unclear for test T1562.001-20 Uninstall Crowdstrike Falcon on Windows Return value unclear for test T1562.001-21 Tamper with Windows Defender Evade Scanning -Folder Return value unclear for test T1562.001-22 Tamper with Windows Defender Evade Scanning -Extension Return value unclear for test T1562.001-23 Tamper with Windows Defender Evade Scanning -Process",
     "dataset_id": "cc9b2664-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 7745,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1562.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "696e1d2800d215e13c8f1ea5252cf2c2118e1018c1cacda82c041fdbeeac403d",
@@ -561,6 +606,11 @@
     "dataset_date": "2020-10-09",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1070.001-1 Clear Logs Successful Execution of test T1070.001-2 Delete System Logs Using Clear-EventLog",
     "dataset_id": "cc9b264e-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6226,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1070.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "58a5e3465bdced284a1c0b625063c539be77beca8f9921e29238bbdc4d26de11",
@@ -613,6 +663,11 @@
     "dataset_date": "2020-11-30",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1218.011-1 Rundll32 execute JavaScript Remote Payload With GetObject Successful Execution of test T1218.011-2 Rundll32 execute VBscript command Return value unclear for test T1218.011-3 Rundll32 advpack.dll Execution Return value unclear for test T1218.011-4 Rundll32 ieadvpack.dll Execution Return value unclear for test T1218.011-5 Rundll32 syssetup.dll Execution Return value unclear for test T1218.011-6 Rundll32 setupapi.dll Execution",
     "dataset_id": "cc9b2652-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 13363,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1218.011/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "0805f7d8a89371dee4f75c001ef11574c2d759d91626c1625bca7c9174cfe29f",
@@ -668,6 +723,11 @@
     "dataset_date": "2020-11-09",
     "dataset_description": "Invoked AtomicTestHarnesses executing T1218.005 manually and via pester tests. Atomic Test Results: Successful Execution of test T1218.005-1 Mshta executes JavaScript Scheme Fetch Remote Payload With GetObject Return value unclear for test T1218.005-2 Mshta executes VBScript to execute malicious command Return value unclear for test T1218.005-3 Mshta Executes Remote HTML Application (HTA) Successful Execution of test T1218.005-4 Invoke HTML Application - Jscript Engine over Local UNC Simulating Lateral Movement Successful Execution of test T1218.005-5 Invoke HTML Application - Jscript Engine Simulating Double Click Successful Execution of test T1218.005-6 Invoke HTML Application - Direct download from URI Successful Execution of test T1218.005-7 Invoke HTML Application - JScript Engine with Rundll32 and Inline Protocol Handler Successful Execution of test T1218.005-8 Invoke HTML Application - JScript Engine with Inline Protocol Handler Successful Execution of test T1218.005-9 Invoke HTML Application - Simulate Lateral Movement over UNC Path",
     "dataset_id": "cc9b261b-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 17950,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1218.005/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "9cd448deed170bd087c9cf2ca7cd2e7d4bc9ce60b13b254b2d39e858e7b020b4",
@@ -725,6 +785,11 @@
     "dataset_date": "2021-01-28",
     "dataset_description": "Successful execution of Atomic Tests T1218.010 T1218.010-1 Regsvr32 local COM scriptlet execution T1218.010-2 Regsvr32 remote COM scriptlet execution T1218.010-3 Regsvr32 local DLL execution T1218.010-4 Regsvr32 Registering Non DLL Manual execution of same tests, but with moved/renamed regsvr32.exe",
     "dataset_id": "cc9b2626-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 3314,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1218.010/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "b0d914a6318d8f6bb663430890ae71c1b3b462a5f698c0a3ff87552697dc40b7",
@@ -784,6 +849,11 @@
     "dataset_date": "2020-10-08",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1027-2 Execute base64-encoded PowerShell Successful Execution of test T1027-3 Execute base64-encoded PowerShell from Windows Registry Return value unclear for test T1027-4 Execution from Compressed File",
     "dataset_id": "cc9b25f3-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6235,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1027/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "43562f5040d3c1ec604fe917d6aaec43c8a48c073a3c49e439326e28845e5c38",
@@ -845,6 +915,11 @@
     "dataset_date": "2022-01-12",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1003.001-1 Windows Credential Editor Successful Execution of test T1003.001-2 Dump LSASS.exe Memory using ProcDump Return value unclear for test T1003.001-3 Dump LSASS.exe Memory using comsvcs.dll Successful Execution of test T1003.001-4 Dump LSASS.exe Memory using direct system calls and API unhooking Return value unclear for test T1003.001-6 Offline Credential Theft With Mimikatz Return value unclear for test T1003.001-7 LSASS read with pypykatz",
     "dataset_id": "cc9b25d6-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 7960,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1003.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "a1905850598f1e943708c3329190e29c6cb046389c1575cb2afd6369b5f269f1",
@@ -904,6 +979,11 @@
     "dataset_date": "2020-10-08",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1003.002-1 Registry dump of SAM, creds, and secrets Return value unclear for test T1003.002-2 Registry parse with pypykatz Successful Execution of test T1003.002-3 esentutl.exe SAM copy",
     "dataset_id": "cc9b25e7-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 7016,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1003.002/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "ae66c083bde9f793ebaa7f15807a99645b15d6f958894349e5026ced597665ea",
@@ -961,6 +1041,11 @@
     "dataset_date": "2020-10-08",
     "dataset_description": "Manual kerberoasting attack with mimikatz. Changed the kerberos encryption type to RC4.",
     "dataset_id": "cc9b2653-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 10000,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1558.003/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "e3a1a1d540d28e4e8d5e59d0e3c505d1904ec44067127fd6bcfa963d20fab704",
@@ -1020,6 +1105,11 @@
     "dataset_date": "2020-10-09",
     "dataset_description": "Atomic Red Team Execution of T1082",
     "dataset_id": "cc9b2615-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6475,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1082/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "5de7771a04caafaef69d6b98a4079681c54b34129007445efbf0a8d0efcf0dad",
@@ -1077,6 +1167,11 @@
     "dataset_date": "2020-12-04",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1033-1 System Owner/User Discovery Return value unclear for test T1033-3 Find computers where user has session - Stealth mode (PowerView)",
     "dataset_id": "cc9b265a-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 6606,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1033/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "7dc221cd808a62738dbe28d8eb1c3ba7d653d8098b82f745dfc18181148978b2",
@@ -1133,6 +1228,11 @@
     "dataset_date": "2020-12-16",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1018-1 Remote System Discovery - net Return value unclear for test T1018-2 Remote System Discovery - net group Domain Computers Return value unclear for test T1018-3 Remote System Discovery - nltest Return value unclear for test T1018-4 Remote System Discovery - ping sweep Return value unclear for test T1018-5 Remote System Discovery - arp Return value unclear for test T1018-8 Remote System Discovery - nslookup Return value unclear for test T1018-9 Remote System Discovery - adidnsdump Return value unclear for test T1018-10 Adfind - Enumerate Active Directory Computer Objects Return value unclear for test T1018-11 Adfind - Enumerate Active Directory Domain Controller Objects",
     "dataset_id": "cc9b2657-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 29042,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1018/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "0eeaa25cc569a9a7b52e5775175e1d73605fc5848cf89e43c49d2fa93b669ba3",
@@ -1198,6 +1298,11 @@
     "dataset_date": "2021-09-14",
     "dataset_description": "Simulated events with Atomic Red Team and manual.",
     "dataset_id": "d6a30644-63bf-464b-8a2a-4df5de49aa43",
+    "parse": {
+     "parsed": 67509,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1069.001/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "ffee39348e7c01954c0b3689e2eaf309a395cd5aca7f1365a651f6fa4c99216c",
@@ -1249,6 +1354,11 @@
     "dataset_date": "2020-11-10",
     "dataset_description": "Atomic Test Results: Return value unclear for test T1021.002-1 Map admin share Successful Execution of test T1021.002-2 Map Admin Share PowerShell Return value unclear for test T1021.002-3 Copy and Execute File with PsExec Return value unclear for test T1021.002-4 Execute command writing output to local Admin Share",
     "dataset_id": "cc9b260c-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 10,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1021.002/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "39685d672931f6da05918b8bbdd7f359c90feb73d6b02eb26a331aa60512f5d0",
@@ -1302,6 +1412,11 @@
     "dataset_date": "2020-10-08",
     "dataset_description": "Manual generation of attack data including pass the hash attack with mimikatz and psexec.",
     "dataset_id": "cc9b266a-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 10000,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1550.002/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "ae7bfafcd94f2e02f00b5e32b7aca5a9bdbf289340115824e564fd43a679e5c4",
@@ -1367,6 +1482,11 @@
     "dataset_date": "2021-04-22",
     "dataset_description": "The following data was generated with Cobalt Strike spawning 7z.exe to archive files on disk.",
     "dataset_id": "cc9b2619-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 17325,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1560.001/archive_utility/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "38048475c0ec9937dde51d05dda90005fa86616779acc966daaf932c2bbd181e",
@@ -1429,6 +1549,11 @@
     "dataset_date": "2021-03-25",
     "dataset_description": "Successful execution of Atomic Red Team T1105 - Ingress Tool Transfer. Also included Invoke-CertUtil using different command switches.",
     "dataset_id": "cc9b2600-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 2290,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1105/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "bd6bbf7884f44274988d159bcb3249505dc53623e551892b54a3fc87db06e18c",
@@ -1482,6 +1607,11 @@
     "dataset_date": "2020-11-09",
     "dataset_description": "Atomic Test Results: Successful Execution of test T1490-1 Windows - Delete Volume Shadow Copies Successful Execution of test T1490-2 Windows - Delete Volume Shadow Copies via WMI Return value unclear for test T1490-3 Windows - Delete Windows Backup Catalog Successful Execution of test T1490-4 Windows - Disable Windows Recovery Console Repair Return value unclear for test T1490-5 Windows - Delete Volume Shadow Copies via WMI with PowerShell Successful Execution of test T1490-6 Windows - Delete Backup Files",
     "dataset_id": "cc9b261e-efc9-11eb-926b-550bf0943fbb",
+    "parse": {
+     "parsed": 285,
+     "skipped": 0,
+     "skipped_by_reason": {}
+    },
     "path": "datasets/attack_techniques/T1490/atomic_red_team/windows-sysmon.log",
     "repo": "https://github.com/splunk/attack_data",
     "sha256": "b2d2d3e6a15185fa73e7ace39dd57a3d499f65a462f7101b215161e1ccbb8e96",

@@ -13,6 +13,7 @@ Verified 2026-11-10. Full evidence and URLs are in `DECISIONS.md`.
 - Source: https://github.com/splunk/attack_data, `datasets/attack_techniques/<ID>/...`, checked at commit `c8af10d015d392fca97f9eb65181e9f06bc18e40`.
 - Licence: Apache License 2.0. https://raw.githubusercontent.com/splunk/attack_data/master/LICENSE
 - Use: trimmed, normalised subsets of selected Windows Sysmon event logs (the events in each test window plus a benign lead-in baseline), committed under `backend/data/telemetry/`. The Apache-2.0 text (`LICENSE-Apache-2.0.txt`), a trimming notice (`NOTICE.md`) and, per file in `manifest.json`, the original dataset path, URL, commit, author and window derivation accompany them. Dataset authors are named in each upstream `.yml` manifest and copied into the manifest.
+- Upstream NOTICE: the repository has no `NOTICE` file at the pinned commit (full tree checked), so none is carried; `NOTICE.md` in the telemetry folder is PurpleBench's own modification notice.
 - Fallback (not used): OTRF Security-Datasets, https://github.com/OTRF/Security-Datasets, MIT `LICENSE` file but a conflicting "GPL-3.0" line in its README, so it is not committed unless clarified.
 
 ## SigmaHQ rules

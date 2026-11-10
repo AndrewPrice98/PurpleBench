@@ -86,6 +86,32 @@ def test_read_xml_log_skips_bad_events(tmp_path):
     assert [e["event_id"] for e in evs] == [1, 4688]
 
 
+def test_bare_dtd_is_refused():
+    # defusedxml's defaults accept a DOCTYPE without entities; forbid_dtd=True refuses any DTD.
+    with pytest.raises(T.TelemetryError, match="DTDForbidden"):
+        T.parse_event_xml("<!DOCTYPE Event>" + SYSMON_1)
+
+
+def test_read_xml_log_counts_skipped_events_by_reason(tmp_path):
+    p = tmp_path / "x.log"
+    big = "<Event>" + "a\n" * (T.MAX_EVENT_BYTES // 2 + 10) + "</Event>\n"
+    p.write_text("stray text\n" + SYSMON_1 + "\n<Event xmlns='x'>broken</Event>\n" + big
+                 + "<!DOCTYPE Event>" + SECURITY_4688 + "\n" + SECURITY_4688 + "\n" + "<Event xmlns='x'><System>\n",
+                 encoding="utf-8")
+    stats = T.ReadStats()
+    evs = list(T.read_xml_log(p, stats))
+    assert [e["event_id"] for e in evs] == [1, 4688]
+    assert stats.parsed == 2
+    # A line starting with a DOCTYPE is not an <Event> start, so it never reaches the parser.
+    assert stats.skipped == {
+        "text outside an event": 2,
+        "event has no System element": 1,
+        "event too large": 1,
+        "unterminated event at end of input": 1,
+    }
+    assert stats.as_dict()["skipped"] == 5
+
+
 @pytest.mark.parametrize(
     "raw,expected",
     [
