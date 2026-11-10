@@ -280,7 +280,8 @@ def _build(conn: sqlite3.Connection, run_id: int, now: Any) -> tuple[Any, list[t
             state = (T(f"closed in run {g['closed_in_run']}") if g["status"] == "closed" and g["closed_in_run"]
                      else _clean(g["status"]))
             rows.append([_safe(g["technique_id"], _TID), _tech_info(g["technique_id"])[0], _status(g["kind"]), state,
-                         g["notes"], g["telemetry_needed"] or h["telemetry_needed"], g["rule_idea"] or h["rule_idea"]])
+                         g["notes"] + (f" Analyst notes: {g['analyst_notes']}" if g.get("analyst_notes") else ""),
+                         g["telemetry_needed"] or h["telemetry_needed"], g["rule_idea"] or h["rule_idea"]])
         B.append(("table", [T(x) for x in ("Technique", "Name", "Kind", "State", "Notes", "Telemetry needed",
                                            "Rule idea")], rows))
 

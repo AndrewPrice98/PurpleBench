@@ -93,8 +93,8 @@ def test_gaps_table_is_migrated_to_allow_accepted(tmp_path):
     c = db.connect(path)
     try:
         assert db.update_gap(c, 1, status="accepted", notes="ok")
-        row = c.execute("SELECT status, notes FROM gaps WHERE id = 1").fetchone()
-        assert (row["status"], row["notes"]) == ("accepted", "ok")
+        row = c.execute("SELECT status, notes, analyst_notes FROM gaps WHERE id = 1").fetchone()
+        assert (row["status"], row["notes"], row["analyst_notes"]) == ("accepted", "n", "ok")  # importer text kept
         assert not db.update_gap(c, 5, status="open")
         assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     finally:

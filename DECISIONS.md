@@ -182,3 +182,13 @@ Built by `backend/scripts/build_datasets.py` from files fetched by `backend/scri
 
 - The CI workflow keeps STIGWatch's job layout (backend, frontend, audit, secrets). The "Technique catalog is current" step calls `python -m purplebench catalog --check`, implemented in Task 2.
 - The frontend job needs a `package.json` and lockfile, which a later task adds.
+
+## Task 8 fix round: API robustness and dashboard data
+
+- **Seeding failure** is logged once and cached for 60 s (monotonic); data routes answer 503 "Demo data is not available yet" meanwhile, so a broken database is not re-seeded on every request.
+- **Empty database.** `rulesets.ensure_bundled_ruleset()` creates a rule set `bundled` (every bundled rule) on first `POST /api/runs` when none exists (demo and non-demo); idempotent.
+- **Body limits are path-aware:** 64 KiB for every POST/PUT/PATCH except `POST /api/runs` (upload cap + multipart allowance).
+- **API docs** (/docs, /redoc, /openapi.json) are off; the schema is at `/api/openapi.json`, writers only.
+- **Gap notes.** Importer text stays in `gaps.notes` (API `system_notes`); PATCH writes `gaps.analyst_notes` (API `notes`); API `display_notes` joins both. Schema version 4.
+- **Rule objects** carry `licence: "DRL-1.1"` (custom rules are derived from SigmaHQ rules). `load_all_rules` is cached per rule-file set (mtime-keyed).
+- **Dashboard data.** Execution events accept `matched=true` and `rule=<id>` (server-side, before paging); run detail lists each execution's fired rules (id, title, author, relation, noisy). Hit keys `[null, n]` and non-object event lines are tolerated (skipped and counted in `events.skipped_lines`).

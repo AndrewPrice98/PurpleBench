@@ -15,6 +15,8 @@ import json
 import logging
 import re
 import sqlite3
+import threading
+import time
 import unicodedata
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -35,10 +37,35 @@ from .telemetry import parse_ts
 log = logging.getLogger("purplebench.api")
 
 
+SEED_RETRY_SECONDS = 60.0
+_seed_lock = threading.Lock()
+_seed_failed_until = 0.0  # time.monotonic() until which a failed seeding is not retried
+
+
+def _seed_unavailable() -> bool:
+    return time.monotonic() < _seed_failed_until
+
+
+def _try_seed() -> bool:
+    """Seed the demo database. A failure is logged once and cached for SEED_RETRY_SECONDS so a broken
+    database is not retried (and logged) on every request. Returns True when data may be served."""
+    global _seed_failed_until
+    with _seed_lock:
+        if _seed_unavailable():
+            return False
+        try:
+            demo.ensure_seeded()
+            return True
+        except Exception:
+            log.exception("Demo seeding failed; not retrying for %d s", int(SEED_RETRY_SECONDS))
+            _seed_failed_until = time.monotonic() + SEED_RETRY_SECONDS
+            return False
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     if config.demo_mode():
-        await run_in_threadpool(demo.ensure_seeded)
+        await run_in_threadpool(_try_seed)
     yield
 
 
@@ -46,6 +73,7 @@ app = FastAPI(
     lifespan=lifespan,
     title="PurpleBench API",
     version=__version__,
+    docs_url=None, redoc_url=None, openapi_url=None,  # served writer-only at /api/openapi.json below
     description="Purple-team detection validation: Atomic Red Team tests against Sigma rules. "
                 "'Missed' means no rule in the rule set fired on this telemetry; it says nothing about any product.",
 )
@@ -87,6 +115,8 @@ class SecurityHeadersMiddleware:
 
 
 MULTIPART_OVERHEAD = 64 * 1024
+SMALL_BODY_LIMIT = 64 * 1024  # every JSON endpoint; only the run upload may be large
+UPLOAD_PATH = "/api/runs"
 
 
 class _TooLarge(Exception):
@@ -108,22 +138,29 @@ class BodyLimitMiddleware:
         self.app = app
 
     @staticmethod
-    def _limit() -> int:
-        return config.max_upload_bytes() + MULTIPART_OVERHEAD
+    def _is_upload(scope) -> bool:
+        return scope["method"] == "POST" and scope.get("path", "").rstrip("/") == UPLOAD_PATH
 
-    @staticmethod
-    async def _reject(send) -> None:
-        message = f"Request too large (max {config.max_upload_bytes() // (1024 * 1024)} MB)"
+    @classmethod
+    def _limit(cls, scope) -> int:
+        return config.max_upload_bytes() + MULTIPART_OVERHEAD if cls._is_upload(scope) else SMALL_BODY_LIMIT
+
+    @classmethod
+    async def _reject(cls, scope, send) -> None:
+        if cls._is_upload(scope):
+            message = f"Request too large (max {config.max_upload_bytes() // (1024 * 1024)} MB)"
+        else:
+            message = f"Request too large (max {SMALL_BODY_LIMIT // 1024} KiB)"
         await JSONResponse({"detail": message}, status_code=413)({"type": "http"}, _noop_receive, send)
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or scope["method"] not in ("POST", "PUT", "PATCH"):
             await self.app(scope, receive, send)
             return
-        limit = self._limit()
+        limit = self._limit(scope)
         declared = dict(scope["headers"]).get(b"content-length", b"")
         if declared.isdigit() and int(declared) > limit:
-            await self._reject(send)
+            await self._reject(scope, send)
             return
 
         received = 0
@@ -152,7 +189,7 @@ class BodyLimitMiddleware:
         except _TooLarge:
             pass
         if exceeded and not sent_any:
-            await self._reject(send)
+            await self._reject(scope, send)
 
 
 app.add_middleware(BodyLimitMiddleware)
@@ -167,13 +204,16 @@ async def last_resort(request: Request, exc: Exception):
 
 def get_conn() -> Iterator[sqlite3.Connection]:
     conn = db.connect()
+    if config.demo_mode():
+        if _seed_unavailable():
+            conn.close()
+            raise HTTPException(503, "Demo data is not available yet")
+        if not db.list_campaigns(conn):  # normally seeded at startup; this covers a cold or reset database
+            conn.close()
+            if not _try_seed():
+                raise HTTPException(503, "Demo data is not available yet")
+            conn = db.connect()
     try:
-        if config.demo_mode() and not db.list_campaigns(conn):
-            try:  # normally seeded at startup; this covers a cold or reset database
-                demo.seed(conn)
-            except Exception:
-                conn.rollback()
-                log.exception("Demo seeding failed; serving the request anyway")
         yield conn
     finally:
         conn.close()
@@ -210,6 +250,9 @@ def _clean_text(value: str, what: str, *, multiline: bool = False) -> str:
 
 # -- rules (every rule shown carries its author) -----------------------------------------------------
 
+LICENCE = "DRL-1.1"  # SigmaHQ Detection Rule License 1.1 (the bundled custom rules are derived from it)
+
+
 @lru_cache(maxsize=2)
 def _rule_catalog(rules_dir: str) -> dict[str, dict[str, Any]]:
     attr = rulesets.rule_attribution(rules_dir)
@@ -218,12 +261,16 @@ def _rule_catalog(rules_dir: str) -> dict[str, dict[str, Any]]:
         a = attr.get(rule.id, {})
         out[rule.id] = {
             "id": rule.id, "title": rule.title, "author": a.get("author") or rule.author or "unknown",
-            "licence": a.get("license") or rule.license or "", "source": a.get("origin") or rule.origin or "custom",
+            "licence": LICENCE, "source": a.get("origin") or rule.origin or "custom",
             "file": a.get("file", ""), "url": a.get("url", ""), "level": rule.level,
             "status": rule.status, "reason": rule.reason if rule.status != "ok" else None,
             "techniques": list(rule.techniques), "_path": rule.path,
         }
     return out
+
+
+def _rules_by_id() -> dict[str, Any]:
+    return {r.id: r for r in rulesets.load_all_rules().values()}  # load_all_rules is cached
 
 
 def _catalog() -> dict[str, dict[str, Any]]:
@@ -235,7 +282,7 @@ def rule_obj(rule_id: str, title: str | None = None, origin: str | None = None) 
     r = _catalog().get(rule_id)
     if r is not None:
         return {k: v for k, v in r.items() if not k.startswith("_")}
-    return {"id": rule_id, "title": title or rule_id, "author": "unknown", "licence": "",
+    return {"id": rule_id, "title": title or rule_id, "author": "unknown", "licence": LICENCE,
             "source": origin if origin in rulesets.ORIGINS else "custom", "file": "", "url": "", "level": None,
             "status": "unsupported", "reason": "rule file is not bundled with this version", "techniques": []}
 
@@ -327,8 +374,13 @@ def _noisy_rules(conn: sqlite3.Connection, run: dict) -> list[dict[str, Any]]:
 
 def _gap_out(g: dict) -> dict[str, Any]:
     out = dict(g)
+    system, analyst = g["notes"] or "", g["analyst_notes"] or ""
+    out["system_notes"] = system  # written by the importer; PATCH never changes it
+    out["notes"] = analyst  # the analyst's own notes (PATCH)
+    out["display_notes"] = (system + (" Analyst notes: " + analyst if analyst else "")).strip()
+    out.pop("analyst_notes", None)
     out["technique"] = _tech(g["technique_id"])
-    out["rules"] = _rules_named_in(g["notes"] or "")  # rules named in the notes, each with its author
+    out["rules"] = _rules_named_in(system + " " + analyst)  # rules named in the notes, each with its author
     return out
 
 
@@ -377,6 +429,11 @@ protected = APIRouter(dependencies=[Depends(auth.require_user)])
 @protected.get("/api/auth/me")
 def me(user: Annotated[str, Depends(auth.require_user)]):
     return {"username": user, "guest": user == auth.GUEST_USER}
+
+
+@protected.get("/api/openapi.json", include_in_schema=False)
+def openapi_schema(_w: Annotated[str, Writer]):
+    return app.openapi()
 
 
 # -- overview ----------------------------------------------------------------------------------------
@@ -539,9 +596,17 @@ def run_detail(run_id: str, conn: Conn):
     hit_counts = dict(conn.execute(
         "SELECT h.execution_id, COUNT(*) FROM hits h JOIN executions e ON e.id = h.execution_id "
         "WHERE e.run_id = ? GROUP BY h.execution_id", (run["id"],)).fetchall())
+    by_exec: dict[int, list[dict]] = {}
+    for h in conn.execute(
+            "SELECT h.execution_id, h.rule_id, h.relation, h.noisy FROM hits h JOIN executions e "
+            "ON e.id = h.execution_id WHERE e.run_id = ? ORDER BY h.noisy, h.first_ts, h.rule_id", (run["id"],)):
+        r = rule_obj(h["rule_id"])
+        by_exec.setdefault(h["execution_id"], []).append(
+            {"id": r["id"], "title": r["title"], "author": r["author"], "relation": h["relation"],
+             "noisy": bool(h["noisy"])})
     execs = [{"id": e["id"], "technique": _tech(e["technique_id"]), "test_guid": e["test_guid"],
               "status": e["status"], "ttd_ms": e["ttd_ms"], "reason": e["reason"],
-              "rules_fired": hit_counts.get(e["id"], 0), "started_at": e["started_at"], "ended_at": e["ended_at"]}
+              "rules_fired": hit_counts.get(e["id"], 0), "rules": by_exec.get(e["id"], []), "started_at": e["started_at"], "ended_at": e["ended_at"]}
              for e in db.list_executions(conn, run["id"])]
     return {**_run_out(run), **st, "executions": execs,
             "gaps": [_gap_out(g) for g in db.list_gaps(conn, run["id"])],
@@ -611,8 +676,13 @@ async def upload_run(request: Request, _w: Annotated[str, Writer], conn: Conn):
     finally:
         await form.close()
 
+    def do_import() -> int:
+        if ruleset_id is None:
+            rulesets.ensure_bundled_ruleset(conn)  # an empty database has no rule set to score with
+        return runfile.import_run(conn, raw, ruleset_id=ruleset_id)
+
     try:
-        run_id = await run_in_threadpool(lambda: runfile.import_run(conn, raw, ruleset_id=ruleset_id))
+        run_id = await run_in_threadpool(do_import)
     except runfile.RunFileError as exc:
         raise HTTPException(400, str(exc)) from None
     run = db.get_run(conn, run_id)
@@ -645,8 +715,9 @@ def _match_index(hits: list[dict]) -> dict[tuple[str | None, int], list[str]]:
     idx: dict[tuple[str | None, int], list[str]] = {}
     for h in hits:
         for ref in h["record_ids"]:
-            if isinstance(ref, (list, tuple)) and len(ref) == 2 and isinstance(ref[1], int):
-                key: tuple[str | None, int] = (str(ref[0]), ref[1])
+            if (isinstance(ref, (list, tuple)) and len(ref) == 2 and isinstance(ref[1], int)
+                    and not isinstance(ref[1], bool)):
+                key: tuple[str | None, int] = (None if ref[0] is None else str(ref[0]), ref[1])
             elif isinstance(ref, int) and not isinstance(ref, bool):
                 key = (None, ref)
             else:
@@ -668,35 +739,47 @@ def _event_out(ev: dict, matched: list[str]) -> dict[str, Any]:
             "truncated_fields": cut, "matched": bool(matched), "matched_rules": sorted(set(matched))}
 
 
-def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: int, limit: int) -> tuple[list, bool]:
-    """Stream the file and keep only the requested page (plus one event to learn whether more follow)."""
-    items, seen = [], 0
+def _page_events(path: Path, window: tuple[Any, Any] | None, idx: dict, offset: int, limit: int, *,
+                 only_matched: bool = False, rule: str | None = None) -> tuple[list, bool, int]:
+    """Stream the file and keep only the requested page (plus one event to learn whether more follow).
+    Filters (matched only, one rule) apply before paging. Returns (items, has_more, unreadable lines skipped)."""
+    items, seen, skipped = [], 0, 0
     with gzip.open(path, "rt", encoding="utf-8") as fh:
         for line in fh:
             if not line.strip():
                 continue
-            ev = json.loads(line)
-            if window is not None:
-                try:
+            try:
+                ev = json.loads(line)
+                if not isinstance(ev, dict):
+                    raise TypeError
+                if window is not None:
                     t = parse_ts(ev["ts"])
-                except Exception:  # noqa: BLE001 - an event without a usable time is not in any window
-                    continue
-                if not (window[0] <= t <= window[1]):
-                    continue
-            if seen >= offset:
-                if len(items) == limit:
-                    return items, True
+                    if not (window[0] <= t <= window[1]):
+                        continue
                 rid = ev.get("record_id")
                 matched = idx.get((ev.get("channel"), rid), []) + idx.get((None, rid), [])
+                if (only_matched and not matched) or (rule is not None and rule not in matched):
+                    continue
+                if seen < offset:
+                    seen += 1
+                    continue
+                if len(items) == limit:
+                    return items, True, skipped
                 items.append(_event_out(ev, matched))
-            seen += 1
-    return items, False
+                seen += 1
+            except (AttributeError, TypeError, KeyError, ValueError):
+                skipped += 1  # not an event object, or no usable time: left out and counted
+    return items, False, skipped
 
 
 @protected.get("/api/executions/{execution_id}")
 def execution(execution_id: str, conn: Conn,
               limit: Annotated[int, Query(ge=1, le=MAX_EVENT_PAGE)] = 50,
-              offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0):
+              offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,
+              matched: bool = False,
+              rule: Annotated[str | None, Query(max_length=36)] = None):
+    if rule is not None and not _UUID.match(rule):
+        raise HTTPException(422, "rule must be a rule id (UUID)")
     ex = db.get_execution(conn, _int_id(execution_id, "execution"))
     if ex is None:
         raise HTTPException(404, "execution not found")
@@ -715,7 +798,7 @@ def execution(execution_id: str, conn: Conn,
                   "source_url": a.source_url,
                   "note": "Display only. PurpleBench never runs this command; the lab runner does, on an allow-listed target."}
     events: dict[str, Any] = {"source": run["mode"], "items": [], "offset": offset, "limit": limit,
-                              "has_more": False, "available": False, "note": None}
+                              "has_more": False, "available": False, "note": None, "skipped_lines": 0}
     path = _events_path(run["mode"], ex["events_ref"]) if ex["events_ref"] else None
     if path is None or not path.is_file():
         events["note"] = "The events for this execution are not available."
@@ -727,7 +810,9 @@ def execution(execution_id: str, conn: Conn,
             window = (start, end)
             events["window"] = {"start": start.strftime("%Y-%m-%dT%H:%M:%SZ"), "end": end.strftime("%Y-%m-%dT%H:%M:%SZ")}
         try:
-            events["items"], events["has_more"] = _page_events(path, window, _match_index(hits), offset, limit)
+            events["items"], events["has_more"], events["skipped_lines"] = _page_events(
+                path, window, _match_index(hits), offset, limit, only_matched=matched,
+                rule=rule.lower() if rule else None)
             events["available"] = True
         except (OSError, ValueError, EOFError):
             events["note"] = "The events for this execution could not be read."
@@ -815,7 +900,7 @@ def rule_detail(rule_id: str, conn: Conn):
         text = path.read_text(encoding="utf-8")
     except OSError:
         raise HTTPException(404, "rule file not available") from None
-    rule = next((r for r in rulesets.load_all_rules().values() if r.id == cat["id"]), None)
+    rule = _rules_by_id().get(cat["id"])
     hits = [dict(h) for h in conn.execute(
         "SELECT e.run_id, h.execution_id, e.technique_id, h.count, h.relation, h.noisy FROM hits h "
         "JOIN executions e ON e.id = h.execution_id WHERE h.rule_id = ? ORDER BY e.run_id, e.id LIMIT 500",

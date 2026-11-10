@@ -130,17 +130,57 @@ V4 = RuleSetDef("v4", 41, (
 RULESETS: tuple[RuleSetDef, ...] = (V1, V2, V3, V4)
 
 
-def load_all_rules(rules_dir: Path | str | None = None) -> dict[str, Rule]:
-    """Every bundled rule keyed by file stem. Stems are unique across the two folders."""
-    root = Path(rules_dir) if rules_dir else config.RULES_DIR
+def _signature(root: Path) -> tuple:
+    """Rule files and their modification times: the cache key, so an edited rule is reloaded."""
+    sig = []
+    for origin in ORIGINS:
+        for p in sorted((root / origin).glob("*.yml")):
+            sig.append((str(p), p.stat().st_mtime_ns))
+    return tuple(sig)
+
+
+@lru_cache(maxsize=4)
+def _load_all(root: str, signature: tuple) -> dict[str, Rule]:
     out: dict[str, Rule] = {}
     for origin in ORIGINS:
-        for r in load_rules(root / origin):
+        for r in load_rules(Path(root) / origin):
             stem = Path(r.path).stem
             if stem in out:
                 raise ValueError(f"duplicate rule file name {stem}")
             out[stem] = r
     return out
+
+
+def load_all_rules(rules_dir: Path | str | None = None) -> dict[str, Rule]:
+    """Every bundled rule keyed by file stem. Stems are unique across the two folders. Loaded once per
+    set of rule files (re-read when a file changes); the returned dict is a copy."""
+    root = Path(rules_dir) if rules_dir else config.RULES_DIR
+    return dict(_load_all(str(root), _signature(root)))
+
+
+BUNDLED_VERSION = "bundled"
+
+
+def ensure_bundled_ruleset(conn) -> int:
+    """The id of the rule set to score with when none exists yet: creates ``bundled`` (every bundled rule)
+    on an empty database, and returns the newest existing rule set otherwise. Idempotent and race-safe
+    (the version is unique)."""
+    import sqlite3
+
+    from . import db
+
+    existing = db.list_rulesets(conn)
+    if existing:
+        return max(r["id"] for r in existing)
+    rules = sorted(load_all_rules().values(), key=lambda r: str(r.path))
+    rows = [{"rule_id": r.id, "file": Path(r.path).name, "origin": r.origin or "custom", "title": r.title,
+             "added_in": BUNDLED_VERSION, "note": ""} for r in rules]
+    try:
+        return db.add_ruleset(conn, BUNDLED_VERSION, db.now_utc(), rules_hash(rules),
+                              "Every bundled rule, created automatically because the database had no rule set.", rows)
+    except sqlite3.IntegrityError:  # another request created it first
+        conn.rollback()
+        return max(r["id"] for r in db.list_rulesets(conn))
 
 
 def ruleset_stems(version: str, all_stems: list[str]) -> list[str]:

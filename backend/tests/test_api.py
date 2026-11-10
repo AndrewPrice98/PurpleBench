@@ -412,3 +412,124 @@ def test_end_to_end_empty_db(empty, recorded, db_file):
     assert md.status_code == 200 and "Lab mode" in md.text
     assert empty.get(f"/api/runs/{rid}/report.html").status_code == 200
     assert empty.get("/api/overview").json()["latest"]["run"]["id"] == rid
+
+
+# -- fix round: robustness and dashboard data ------------------------------------------------------------
+
+def test_seed_failure_is_logged_once_and_cached(db_file, monkeypatch, caplog):
+    import time
+    calls = []
+
+    def broken():
+        calls.append(1)
+        raise RuntimeError("disk full")
+
+    monkeypatch.setenv("PURPLEBENCH_DEMO", "1")
+    monkeypatch.setattr(demo, "ensure_seeded", broken)
+    monkeypatch.setattr(api, "_seed_failed_until", 0.0)
+    c = TestClient(api.app)  # no lifespan: the first request tries to seed
+    for _ in range(6):
+        r = c.get("/api/overview")
+        assert r.status_code == 503 and r.json() == {"detail": "Demo data is not available yet"}
+    assert len(calls) == 1
+    assert sum("Demo seeding failed" in m for m in caplog.messages) == 1
+    assert c.get("/api/health").status_code == 200  # health does not need data
+    monkeypatch.setattr(api, "_seed_failed_until", time.monotonic() - 1)  # TTL over: one retry
+    c.get("/api/overview")
+    assert len(calls) == 2
+    monkeypatch.setattr(api, "_seed_failed_until", 0.0)
+
+
+def test_bundled_ruleset_is_created_lazily_and_idempotent(empty):
+    from purplebench import rulesets
+    c = db.connect()
+    assert db.list_rulesets(c) == []
+    a = rulesets.ensure_bundled_ruleset(c)
+    assert rulesets.ensure_bundled_ruleset(c) == a
+    rs = db.get_ruleset(c, a)
+    assert rs["version"] == "bundled" and len(rs["rules"]) == 70
+    c.close()
+
+
+def test_upload_on_empty_db_without_any_ruleset(empty, recorded):
+    r = post_run(empty, run_file(recorded, 2))
+    assert r.status_code == 201, r.text
+    assert r.json()["run"]["ruleset_version"] == "bundled"
+    r2 = post_run(empty, run_file(recorded, 1) | {"campaign": "Second"})
+    assert r2.status_code == 201
+    assert len(empty.get("/api/rulesets").json()) == 1
+
+
+def test_small_body_cap_except_upload(empty):
+    big = b"x" * (1024 * 1024)
+    for path in ("/api/auth/login", "/api/campaigns"):
+        r = empty.post(path, content=big, headers={"content-type": "application/json"})
+        assert r.status_code == 413 and "64 KiB" in r.json()["detail"], path
+    assert empty.patch("/api/gaps/1", content=big, headers={"content-type": "application/json"}).status_code == 413
+
+
+def test_docs_disabled_and_openapi_writer_only(seeded_db, monkeypatch):
+    monkeypatch.setenv("PURPLEBENCH_DEMO", "1")
+    with TestClient(api.app) as c:
+        for p in ("/docs", "/redoc", "/openapi.json"):
+            assert c.get(p).status_code == 404
+        assert c.get("/api/openapi.json").status_code == 403
+        _login(c)
+        assert c.get("/api/openapi.json").json()["info"]["title"] == "PurpleBench API"
+
+
+def test_licence_is_drl(admin):
+    rules = admin.get("/api/rules").json()["rules"]
+    assert {r["licence"] for r in rules} == {"DRL-1.1"}
+
+
+def test_gap_patch_keeps_importer_text(admin):
+    g = next(g for g in admin.get("/api/gaps?status=closed").json()["gaps"] if g["system_notes"])
+    after = admin.patch(f"/api/gaps/{g['id']}", json={"notes": "my note"}).json()
+    assert after["system_notes"] == g["system_notes"] and after["notes"] == "my note"
+    assert g["system_notes"] in after["display_notes"] and "my note" in after["display_notes"]
+    assert "my note" in admin.get("/api/runs/%d/report.md" % g["run_id"]).text
+
+
+def test_run_detail_has_rules_per_execution(admin):
+    run = admin.get("/api/runs/3").json()
+    fired = [e for e in run["executions"] if e["rules_fired"]]
+    assert fired
+    for e in fired:
+        assert len(e["rules"]) == e["rules_fired"]
+        assert all(set(r) == {"id", "title", "author", "relation", "noisy"} and r["author"] for r in e["rules"])
+
+
+def test_event_filters_matched_and_rule(admin):
+    run = admin.get("/api/runs/3").json()
+    ex = next(e for e in run["executions"] if e["rules_fired"] and e["rules"][0]["relation"])
+    rid = ex["rules"][0]["id"]
+    allm = admin.get(f"/api/executions/{ex['id']}?matched=true&limit=200").json()["events"]
+    assert allm["items"] and all(e["matched"] for e in allm["items"])
+    one = admin.get(f"/api/executions/{ex['id']}?rule={rid}&limit=200").json()["events"]
+    assert one["items"] and all(rid in e["matched_rules"] for e in one["items"])
+    assert len(one["items"]) <= len(allm["items"])
+    paged = admin.get(f"/api/executions/{ex['id']}?matched=true&limit=1&offset=1").json()["events"]
+    if len(allm["items"]) > 1:
+        assert paged["items"][0]["record_id"] == allm["items"][1]["record_id"]
+    assert admin.get(f"/api/executions/{ex['id']}?rule=nope").status_code == 422
+
+
+def test_hit_keys_and_odd_event_lines(admin, db_file, tmp_path):
+    assert api._match_index([{"rule_id": "r", "record_ids": [[None, 5], ["Ch", 6], 7, [1], True, "x"]}]) == {
+        (None, 5): ["r"], ("Ch", 6): ["r"], (None, 7): ["r"]}
+    import gzip
+    f = tmp_path / "e.jsonl.gz"
+    with gzip.open(f, "wt", encoding="utf-8") as fh:
+        fh.write('[1,2]\n"str"\n{"ts":"2026-01-01T00:00:00Z","record_id":1,"channel":"c","fields":{"a":"b"}}\n{"fields":5,"ts":"x"}\n')
+    items, more, skipped = api._page_events(f, None, {}, 0, 10)
+    assert len(items) == 1 and not more and skipped == 3
+
+
+def test_rule_loading_is_cached():
+    from purplebench import rulesets
+    rulesets.load_all_rules.__wrapped__ if hasattr(rulesets.load_all_rules, "__wrapped__") else None
+    rulesets._load_all.cache_clear()
+    rulesets.load_all_rules(); rulesets.load_all_rules(); rulesets.load_all_rules()
+    info = rulesets._load_all.cache_info()
+    assert info.misses == 1 and info.hits >= 2

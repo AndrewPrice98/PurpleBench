@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS gaps (
     status            TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed','accepted')),
     telemetry_needed  TEXT NOT NULL DEFAULT '',
     rule_idea         TEXT NOT NULL DEFAULT '',
-    closed_in_run     INTEGER REFERENCES runs(id) ON DELETE SET NULL
+    closed_in_run     INTEGER REFERENCES runs(id) ON DELETE SET NULL,
+    analyst_notes     TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_runs_campaign     ON runs(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_executions_run    ON executions(run_id);
@@ -107,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_gaps_run          ON gaps(run_id);
 CREATE INDEX IF NOT EXISTS idx_ruleset_rules_set ON ruleset_rules(ruleset_id);
 """
 
-SCHEMA_VERSION = 3  # 2: executions.status also allows 'did_not_run'; 3: gaps.status also allows 'accepted'
+SCHEMA_VERSION = 4  # 4: gaps.analyst_notes (the importer text stays in gaps.notes); 2: executions.status also allows 'did_not_run'; 3: gaps.status also allows 'accepted'
 BUSY_TIMEOUT_SECONDS = 15.0
 GAP_KINDS = ("missed", "telemetry_gap", "partial")
 GAP_STATUSES = ("open", "closed", "accepted")
@@ -152,6 +153,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
              "id, run_id, technique_id, test_guid, started_at, ended_at, status, ttd_ms, events_ref, reason")
     _rebuild(conn, "gaps", "accepted",
              "id, run_id, technique_id, kind, notes, status, telemetry_needed, rule_idea, closed_in_run")
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(gaps)")]
+    if cols and "analyst_notes" not in cols:
+        try:
+            conn.execute("ALTER TABLE gaps ADD COLUMN analyst_notes TEXT NOT NULL DEFAULT ''")
+            conn.commit()
+        except sqlite3.OperationalError:  # another process added it first
+            conn.rollback()
 
 
 def _rebuild(conn: sqlite3.Connection, table: str, marker: str, cols: str) -> None:
@@ -373,7 +381,7 @@ def set_gap_status(conn: sqlite3.Connection, gap_id: int, status: str, *, closed
 
 
 def update_gap(conn: sqlite3.Connection, gap_id: int, *, status: str | None = None, notes: str | None = None) -> bool:
-    """Change a gap's status and/or notes. Returns False if there is no such gap. Re-opening or accepting a
+    """Change a gap's status and/or the analyst's notes (the importer text in ``notes`` is never touched). Returns False if there is no such gap. Re-opening or accepting a
     gap clears ``closed_in_run`` (it only means something for a closed gap)."""
     if status is not None and status not in GAP_STATUSES:
         raise ValueError("gap status must be 'open', 'closed' or 'accepted'")
@@ -383,6 +391,7 @@ def update_gap(conn: sqlite3.Connection, gap_id: int, *, status: str | None = No
             return False
         new_status = status or row["status"]
         closed_in = row["closed_in_run"] if new_status == "closed" else None
-        conn.execute("UPDATE gaps SET status = ?, closed_in_run = ?, notes = COALESCE(?, notes) WHERE id = ?",
+        conn.execute("UPDATE gaps SET status = ?, closed_in_run = ?, analyst_notes = COALESCE(?, analyst_notes) "
+                     "WHERE id = ?",
                      (new_status, closed_in, notes, gap_id))
     return True
