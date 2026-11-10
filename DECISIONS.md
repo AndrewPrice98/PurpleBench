@@ -1,0 +1,110 @@
+# Decisions
+
+## Dependencies
+
+- **uvicorn[standard] (>=0.30).** The ASGI server for FastAPI, used for local runs and self-hosted deployment. The Vercel demo uses the serverless entry point instead. Same choice as STIGWatch.
+- **httpx (>=0.27), dev only.** Required by Starlette's `TestClient`, used by the API tests. Not installed at runtime.
+- Everything else in `backend/requirements.txt` (fastapi, pyyaml, python-multipart, pyjwt) is on the plan's fixed version list. No other dependency is added without an entry here.
+
+## Sources and verified facts
+
+Verified 2026-11-10 against primary sources (GitHub API and raw files, mitre.org). Nothing is cited from memory. Where a fact could not be confirmed, that is stated.
+
+### 1. Atomic Red Team
+
+- Repository: https://github.com/redcanaryco/atomic-red-team (default branch `master`, checked at commit `a0e3f9bc69fed2fd711bd1f1aa87a40c33482fe6`).
+- Licence: MIT, "Copyright (c) 2018 Red Canary, Inc." (https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt; GitHub reports SPDX `MIT`).
+- Test location and format: `atomics/<ID>/<ID>.yaml`, for example https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1003.002/T1003.002.yaml. Top-level keys `attack_technique`, `display_name`, `atomic_tests[]`. Each test has `name`, `auto_generated_guid`, `description`, `supported_platforms`, `input_arguments`, `dependencies`, `executor` (`name`, `command`, `cleanup_command`, `elevation_required`).
+- Only metadata is used. The web app never ships or runs the test commands.
+- **ATT&CK v19 migration (important).** Atomic Red Team migrated to ATT&CK v19 IDs (commit "Attack v19 migration (#3329)", 2026-05-02). `atomics/T1562.001/` and `atomics/T1070.001/` no longer exist. Their Windows tests moved to `atomics/T1685/` (Disable or Modify Tools) and `atomics/T1685.005/` (Clear Windows Event Logs). Test GUIDs were preserved (for example "Clear Logs" is still `e6abb60e-26b8-41da-8aae-0c35174b0967`).
+- **Test numbers drift; GUIDs do not.** Splunk's dataset descriptions cite test numbers such as "T1562.001-15" from the numbering at recording time (2020-2022). Current numbering differs (for T1003.001, T1136.001 and T1562.001 the numbers no longer line up). Tests were therefore matched to datasets by test name and resolved to the current `auto_generated_guid`. Never match by index.
+
+### 2. Recorded telemetry
+
+#### 2a. Splunk attack_data (chosen primary source)
+
+- Repository: https://github.com/splunk/attack_data (default branch `master`, checked at commit `c8af10d015d392fca97f9eb65181e9f06bc18e40`).
+- Licence: Apache-2.0 (https://raw.githubusercontent.com/splunk/attack_data/master/LICENSE; README "License" section; GitHub SPDX `Apache-2.0`). Redistribution of trimmed subsets is allowed with the licence text and notices retained (see THIRD_PARTY.md).
+- Layout: `datasets/attack_techniques/<TechniqueID>/<dataset_name>/` holding a `<name>.yml` manifest (author, id, date, description, environment, `mitre_technique`, `datasets[]` with `path`, `sourcetype`, `source`) plus `.log` files. 72 technique folders have an `atomic_red_team/` dataset (counted from the git tree API; the tree response was not truncated).
+- Content format: `.log` files are Windows Event Log XML, one `<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>...</Event>` per line (`sourcetype: XmlWinEventLog`; `source: XmlWinEventLog:Microsoft-Windows-Sysmon/Operational` or `XmlWinEventLog:Security`). Verified by reading the first bytes of `T1490/atomic_red_team/windows-sysmon.log`: Sysmon event 10, `Computer` `win-dc-770.attackrange.local`, timestamps in January 2021.
+- Storage: **Git LFS.** `.gitattributes` routes `datasets/**/*.log`, `*.json`, `*.ndjson` and `*.csv` through LFS. `raw.githubusercontent.com` returns a ~130-byte pointer (`version https://git-lfs.github.com/spec/v1`, `oid sha256:...`, `size N`); the `size` line is the real file size (used in the table below).
+- **Downloadable without LFS tooling: yes.** `https://media.githubusercontent.com/media/splunk/attack_data/master/<path>` serves the real content over plain HTTPS (a HEAD request returned 200 with `Content-Length` equal to the pointer's size, and an HTTP `Range` request returned the first bytes). No git-lfs install is needed, and ranged or streamed reads are possible, so Task 2 can pull and trim without cloning.
+- Caveat: datasets are whole attack_range runs, typically 10-50 MB per Sysmon file (one is 85 MB). The 26 files in the table total about 477 MB, so they must be trimmed to the events in each test window plus a benign baseline to meet the plan's ~30 MB repo budget.
+- Caveat: telemetry dates from 2020-2022 and covers the technique's tests as a run, so a dataset is linked to a specific Atomic test only where the manifest description names it (column "Link" below).
+
+#### 2b. OTRF Security-Datasets (fallback)
+
+- Repository: https://github.com/OTRF/Security-Datasets (last push 2024-03-20).
+- Licence: the `LICENSE` file is MIT ("Copyright (c) 2021 Open Threat Research Forge"; GitHub SPDX `MIT`). **Ambiguity:** the README also contains a "License: GPL-3.0" line linking to a different repository's licence. That conflict is unresolved, so OTRF data is not committed unless it is clarified.
+- Format: zipped JSON event files (for example `datasets/atomic/windows/credential_access/host/cmd_lsass_memory_dumpert_syscalls.zip`, 12,915 bytes), grouped by tactic folder (collection, credential_access, defense_evasion, discovery, execution, lateral_movement, other, persistence, privilege_escalation). Smaller files, but fewer techniques and JSON rather than XML.
+- Decision: **Splunk attack_data is primary** (Apache-2.0 is unambiguous, it covers all 26 selected techniques with Sysmon XML, and it supports ranged HTTPS reads). OTRF is the documented fallback for a technique whose Splunk file proves unusable.
+
+### 3. SigmaHQ rules
+
+- Repository: https://github.com/SigmaHQ/sigma (latest release `r2026-07-01`, published 2026-07-09).
+- Licence: Detection Rule License (DRL) 1.1 for the rules (README "Licenses" section; text at https://github.com/SigmaHQ/Detection-Rule-License, file `LICENSE.Detection.Rules.md`). The repository's `LICENSE` file states that the Sigma specification and logo are public domain. GitHub's licence detector shows "NOASSERTION" because the licence is custom.
+- Exact obligations (from the licence text):
+  - If you **share** the rules (including modified), retain, where supplied within the rule: (1) identification of the `author`(s); (2) a URI or hyperlink to the rule set or the explicit rule, where reasonably practicable; (3) an indication that the rules are licensed under the DRL, with the licence text or a URI to it, where reasonably practicable.
+  - If you **use** the rules on data, messages based on matches must retain, where supplied, the identification of the rule `author`(s).
+  - Provided "AS IS", no warranty.
+- PurpleBench consequences: keep each rule's `author`, `id` and `license` fields untouched; show the author on every detection result and export (these are "messages based on matches"); link to the rule's source and to the DRL; attribute SigmaHQ in THIRD_PARTY.md and the README.
+
+### 4. Sigma specification version
+
+- Repository: https://github.com/SigmaHQ/sigma-specification. Latest release tag `v2.1.0` (published 2025-09-12); the specification document itself states "Version 2.1.0, Release date 2025-08-02" (https://github.com/SigmaHQ/sigma-specification/blob/main/specification/sigma-rules-specification.md). Earlier tags: v2.0 (2024-08-08), v1.0.5.
+- Target: **Sigma Rules Specification 2.1.0.** Correlation rules and filters are separate specifications and fall outside the supported subset (reported as unsupported, never silently skipped). The specification is public domain.
+
+### 5. ATT&CK Navigator layer format and ATT&CK version
+
+- Layer format: **4.5**, defined at https://github.com/mitre-attack/attack-navigator/blob/master/layers/spec/v4.5/layerformat.md (the newest folder under `layers/spec/`; the layers README links to it as the latest). Navigator release `v5.3.2` (2026-04-21); the Navigator repository is Apache-2.0.
+- Required fields: top level `name` (string) and `domain` (`enterprise-attack`, `mobile-attack` or `ics-attack`). The `versions` object is listed "No" in the property table, but inside it `navigator` (string, "at least 4.9.0") and `layer` (must be "4.5") are required, and `attack` is optional (defaults to the current version). Each entry in `techniques[]` requires `techniqueID` (`T####` or `T####.###`). Optional fields PurpleBench uses: `description`, `techniques[].score`, `color`, `comment`, `tactic`, `metadata`, `legendItems`, `gradient`. Export values: `"layer": "4.5"`, `"navigator": "5.3.2"`, `"attack": "20"`, `"domain": "enterprise-attack"`.
+- Current ATT&CK Enterprise: **v20** (released 2026-10-13 per https://attack.mitre.org/resources/updates/). The STIX data repository https://github.com/mitre-attack/attack-stix-data tags `v20.0` and `v20.1` (both published 2026-11-05), and the downloaded `enterprise-attack.json` collection reports `x_mitre_version` 20.1. Cite as "ATT&CK v20 (data release 20.1)".
+- **v19 restructuring (important).** v19 (2026-04-28, https://attack.mitre.org/resources/updates/updates-april-2026/) split the Defense Evasion tactic into **Stealth (TA0005)** and **Defense Impairment (TA0112)**; Enterprise now has 15 tactics and there is no `defense-evasion` tactic. Verified in the v20.1 STIX bundle: T1562.001 and T1070.001 are `revoked`; the replacements are T1685 "Disable or Modify Tools" (defense-impairment) and T1685.005 "Clear Windows Event Logs" (defense-impairment). T1218.011 Rundll32 and T1027 are `stealth`; T1112 Modify Registry is defense-impairment and persistence.
+- Decision: the catalog uses **current v20 technique IDs and tactic names**, with a `dataset_id` alias for Splunk's folder names where they differ (T1562.001 -> T1685; T1070.001 -> T1685.005). The plan's example list uses pre-v19 IDs; "at least 8 tactics" is counted on the v20 tactic set.
+
+### 6. Technique selection (26 techniques, 11 tactics)
+
+Tactics covered (v20 names): execution, persistence, privilege-escalation, stealth, defense-impairment, credential-access, discovery, lateral-movement, collection, command-and-control, impact. Every row was checked: the Atomic test exists in the current `atomics/` YAML with `windows` in `supported_platforms`, and the dataset file exists in the Splunk git tree with the size read from its LFS pointer. Nothing was downloaded.
+
+Link column: **named** means the dataset manifest description names this Atomic test (matched by name, see section 1). **dataset-level** means the dataset is an Atomic Red Team run of the technique (or a manual attack_range run) but the description does not name per-test results, so the test shown is the intended primary Windows test and the per-test event window must be determined from the events in Task 2.
+
+| # | ATT&CK ID (v20) | Dataset folder ID | Technique | Tactic(s) | Atomic test (GUID) | Dataset file (under `datasets/attack_techniques/`) | Size (bytes) | Link |
+|---|---|---|---|---|---|---|---|---|
+| 1 | T1059.001 | T1059.001 | PowerShell | execution | Powershell Invoke-DownloadCradle (`cc50fa2a-a4be-42af-a88f-e347ba0bf4d7`) | `T1059.001/atomic_red_team/windows-sysmon.log` | 38,928,903 | dataset-level |
+| 2 | T1047 | T1047 | Windows Management Instrumentation | execution | WMI Execute Local Process (`b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3`) | `T1047/atomic_red_team/windows-sysmon.log` | 11,815,541 | named |
+| 3 | T1569.002 | T1569.002 | Service Execution | execution | Use PsExec to execute a command on a remote host (`873106b7-cfed-454b-8680-fa9f6400431c`) | `T1569.002/atomic_red_team/windows-sysmon.log` | 13,756,037 | dataset-level |
+| 4 | T1053.005 | T1053.005 | Scheduled Task | execution, persistence, privilege-escalation | Scheduled task Local (`42f53695-ad4a-4546-abb6-7d837f644a71`) | `T1053.005/atomic_red_team/windows-sysmon.log` | 11,410,982 | named |
+| 5 | T1547.001 | T1547.001 | Registry Run Keys / Startup Folder | persistence, privilege-escalation | Reg Key Run (`e55be3fd-3521-4610-9d1a-e210e42dcf05`) | `T1547.001/atomic_red_team/windows-sysmon.log` | 11,357,100 | named |
+| 6 | T1543.003 | T1543.003 | Windows Service | persistence, privilege-escalation | Service Installation CMD (`981e2942-e433-44e9-afc1-8c957a1496b6`) | `T1543.003/atomic_red_team/windows-sysmon.log` | 11,281,916 | named |
+| 7 | T1136.001 | T1136.001 | Local Account | persistence | Create a new user in PowerShell (`bc8be0ac-475c-4fbf-9b1d-9fffd77afbde`) | `T1136.001/atomic_red_team/windows-sysmon.log` | 11,560,462 | named |
+| 8 | T1548.002 | T1548.002 | Bypass User Account Control | privilege-escalation | Bypass UAC using Event Viewer (cmd) (`5073adf8-9a50-4bd9-b298-a9bd2ead8af9`) | `T1548.002/atomic_red_team/windows-sysmon.log` | 12,143,752 | dataset-level |
+| 9 | T1685 | T1562.001 | Disable or Modify Tools | defense-impairment | Tamper with Windows Defender Command Prompt (`aa875ed4-8935-47e2-b2c5-6ec00ab220d2`) | `T1562.001/atomic_red_team/windows-sysmon.log` | 14,504,430 | named |
+| 10 | T1685.005 | T1070.001 | Clear Windows Event Logs | defense-impairment | Clear Logs (`e6abb60e-26b8-41da-8aae-0c35174b0967`) | `T1070.001/atomic_red_team/windows-sysmon.log` | 11,267,266 | named |
+| 11 | T1218.011 | T1218.011 | Rundll32 | stealth | Rundll32 execute VBscript command (`638730e7-7aed-43dc-bf8c-8117f805f5bb`) | `T1218.011/atomic_red_team/windows-sysmon.log` | 23,784,139 | named |
+| 12 | T1218.005 | T1218.005 | Mshta | stealth | Mshta executes VBScript to execute malicious command (`906865c3-e05f-4acc-85c4-fbc185455095`) | `T1218.005/atomic_red_team/windows-sysmon.log` | 33,033,884 | named |
+| 13 | T1218.010 | T1218.010 | Regsvr32 | stealth | Regsvr32 local COM scriptlet execution (`449aa403-6aba-47ce-8a37-247d21ef0306`) | `T1218.010/atomic_red_team/windows-sysmon.log` | 6,329,227 | named |
+| 14 | T1027 | T1027 | Obfuscated Files or Information | stealth | Execute base64-encoded PowerShell (`a50d5a97-2531-499e-a1de-5544c74432c6`) | `T1027/atomic_red_team/windows-sysmon.log` | 11,316,256 | named |
+| 15 | T1003.001 | T1003.001 | LSASS Memory | credential-access | Dump LSASS.exe Memory using ProcDump (`0be2230c-9ab3-4ac2-8826-3199b9a0ebf8`) | `T1003.001/atomic_red_team/windows-sysmon.log` | 14,235,927 | named |
+| 16 | T1003.002 | T1003.002 | Security Account Manager | credential-access | Registry dump of SAM, creds, and secrets (`5c2571d0-1572-416d-9676-812e64ca9f44`) | `T1003.002/atomic_red_team/windows-sysmon.log` | 12,789,744 | named |
+| 17 | T1558.003 | T1558.003 | Kerberoasting | credential-access | Request for service tickets (`3f987809-3681-43c8-bcd8-b3ff3a28533a`) | `T1558.003/atomic_red_team/windows-sysmon.log` | 18,090,394 | dataset-level |
+| 18 | T1082 | T1082 | System Information Discovery | discovery | System Information Discovery (`66703791-c902-4560-8770-42b8a91f7667`) | `T1082/atomic_red_team/windows-sysmon.log` | 11,738,807 | dataset-level |
+| 19 | T1033 | T1033 | System Owner/User Discovery | discovery | System Owner/User Discovery (`4c4959bf-addf-4b4a-be86-8d09cc1857aa`) | `T1033/atomic_red_team/windows-sysmon.log` | 11,994,992 | named |
+| 20 | T1018 | T1018 | Remote System Discovery | discovery | Remote System Discovery - net (`85321a9c-897f-4a60-9f20-29788e50bccd`) | `T1018/atomic_red_team/windows-sysmon.log` | 51,733,783 | named |
+| 21 | T1069.001 | T1069.001 | Local Groups | discovery | Basic Permission Groups Discovery Windows (Local) (`1f454dd6-e134-44df-bebb-67de70fb6cd8`) | `T1069.001/atomic_red_team/windows-sysmon.log` | 85,029,761 | dataset-level |
+| 22 | T1021.002 | T1021.002 | SMB/Windows Admin Shares | lateral-movement | Map admin share (`3386975b-367a-4fbb-9d77-4dcf3639ffd3`) | `T1021.002/atomic_red_team/windows-sysmon.log` | 21,361 | named |
+| 23 | T1550.002 | T1550.002 | Pass the Hash | lateral-movement | Mimikatz Pass the Hash (`ec23cef9-27d9-46e4-a68d-6f75f7b86908`) | `T1550.002/atomic_red_team/windows-sysmon.log` | 19,796,940 | dataset-level |
+| 24 | T1560.001 | T1560.001 | Archive via Utility | collection | Compress Data for Exfiltration With Rar (`02ea31cb-3b4c-4a2d-9bf1-e4e70ebcf5d0`) | `T1560.001/archive_utility/windows-sysmon.log` | 24,954,216 | dataset-level (Cobalt Strike 7z, not an Atomic run) |
+| 25 | T1105 | T1105 | Ingress Tool Transfer | command-and-control | certutil download (urlcache) (`dd3b61dd-7bbc-48cd-ab51-49ad1a776df0`) | `T1105/atomic_red_team/windows-sysmon.log` | 3,625,178 | dataset-level |
+| 26 | T1490 | T1490 | Inhibit System Recovery | impact | Windows - Delete Volume Shadow Copies (`43819286-91a9-4369-90ed-d31fb4da2c01`) | `T1490/atomic_red_team/windows-sysmon.log` | 510,708 | named |
+
+Notes on the list:
+- T1560.001 telemetry (`archive_utility`) is a Cobalt Strike run spawning 7z.exe, not an Atomic run; the Atomic test shown is the nearest Windows test. T1550.002 and T1558.003 are manual mimikatz generation per their manifests. Treat these three as weaker links.
+- The plan's example list also names T1087.001 (Splunk has `AD_discovery`, a simulated attack_range dataset, not an Atomic run), T1112 and T1485 (its dataset is a manual `.wcry` file creation); these were left out in favour of datasets closer to Atomic runs. They remain available candidates.
+- Machine-readable copy: `backend/data/technique_candidates.json`.
+- Several techniques only have Security-channel files as `4688_*` or `4698_*` variants rather than a plain `windows-security.log`. Sysmon is the primary source because every row has one; Security variants are optional extras.
+- The 26 files total about 477 MB uncompressed, so only trimmed subsets are committed (see 2a).
+
+## Scaffold notes
+
+- The CI workflow keeps STIGWatch's job layout (backend, frontend, audit, secrets). The "Technique catalog is current" step calls `python -m purplebench catalog --check`, which does not exist yet; it is a placeholder that a later task implements. Until then that CI step fails by design and must be implemented (or the step adjusted) before the first push.
+- The frontend job needs a `package.json` and lockfile, which a later task adds.

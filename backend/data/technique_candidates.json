@@ -1,0 +1,344 @@
+[
+ {
+  "dataset_id": "T1059.001",
+  "attack_id": "T1059.001",
+  "name": "PowerShell",
+  "tactics": [
+   "execution"
+  ],
+  "atomic_guid": "cc50fa2a-a4be-42af-a88f-e347ba0bf4d7",
+  "atomic_name": "Powershell Invoke-DownloadCradle",
+  "path": "datasets/attack_techniques/T1059.001/atomic_red_team/windows-sysmon.log",
+  "size": 38928903,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1047",
+  "attack_id": "T1047",
+  "name": "Windows Management Instrumentation",
+  "tactics": [
+   "execution"
+  ],
+  "atomic_guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+  "atomic_name": "WMI Execute Local Process",
+  "path": "datasets/attack_techniques/T1047/atomic_red_team/windows-sysmon.log",
+  "size": 11815541,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1569.002",
+  "attack_id": "T1569.002",
+  "name": "Service Execution",
+  "tactics": [
+   "execution"
+  ],
+  "atomic_guid": "873106b7-cfed-454b-8680-fa9f6400431c",
+  "atomic_name": "Use PsExec to execute a command on a remote host",
+  "path": "datasets/attack_techniques/T1569.002/atomic_red_team/windows-sysmon.log",
+  "size": 13756037,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1053.005",
+  "attack_id": "T1053.005",
+  "name": "Scheduled Task",
+  "tactics": [
+   "execution",
+   "persistence",
+   "privilege-escalation"
+  ],
+  "atomic_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+  "atomic_name": "Scheduled task Local",
+  "path": "datasets/attack_techniques/T1053.005/atomic_red_team/windows-sysmon.log",
+  "size": 11410982,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1547.001",
+  "attack_id": "T1547.001",
+  "name": "Registry Run Keys / Startup Folder",
+  "tactics": [
+   "persistence",
+   "privilege-escalation"
+  ],
+  "atomic_guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+  "atomic_name": "Reg Key Run",
+  "path": "datasets/attack_techniques/T1547.001/atomic_red_team/windows-sysmon.log",
+  "size": 11357100,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1543.003",
+  "attack_id": "T1543.003",
+  "name": "Windows Service",
+  "tactics": [
+   "persistence",
+   "privilege-escalation"
+  ],
+  "atomic_guid": "981e2942-e433-44e9-afc1-8c957a1496b6",
+  "atomic_name": "Service Installation CMD",
+  "path": "datasets/attack_techniques/T1543.003/atomic_red_team/windows-sysmon.log",
+  "size": 11281916,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1136.001",
+  "attack_id": "T1136.001",
+  "name": "Local Account",
+  "tactics": [
+   "persistence"
+  ],
+  "atomic_guid": "bc8be0ac-475c-4fbf-9b1d-9fffd77afbde",
+  "atomic_name": "Create a new user in PowerShell",
+  "path": "datasets/attack_techniques/T1136.001/atomic_red_team/windows-sysmon.log",
+  "size": 11560462,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1548.002",
+  "attack_id": "T1548.002",
+  "name": "Bypass User Account Control",
+  "tactics": [
+   "privilege-escalation"
+  ],
+  "atomic_guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
+  "atomic_name": "Bypass UAC using Event Viewer (cmd)",
+  "path": "datasets/attack_techniques/T1548.002/atomic_red_team/windows-sysmon.log",
+  "size": 12143752,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1562.001",
+  "attack_id": "T1685",
+  "name": "Disable or Modify Tools",
+  "tactics": [
+   "defense-impairment"
+  ],
+  "atomic_guid": "aa875ed4-8935-47e2-b2c5-6ec00ab220d2",
+  "atomic_name": "Tamper with Windows Defender Command Prompt",
+  "path": "datasets/attack_techniques/T1562.001/atomic_red_team/windows-sysmon.log",
+  "size": 14504430,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1070.001",
+  "attack_id": "T1685.005",
+  "name": "Clear Windows Event Logs",
+  "tactics": [
+   "defense-impairment"
+  ],
+  "atomic_guid": "e6abb60e-26b8-41da-8aae-0c35174b0967",
+  "atomic_name": "Clear Logs",
+  "path": "datasets/attack_techniques/T1070.001/atomic_red_team/windows-sysmon.log",
+  "size": 11267266,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1218.011",
+  "attack_id": "T1218.011",
+  "name": "Rundll32",
+  "tactics": [
+   "stealth"
+  ],
+  "atomic_guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+  "atomic_name": "Rundll32 execute VBscript command",
+  "path": "datasets/attack_techniques/T1218.011/atomic_red_team/windows-sysmon.log",
+  "size": 23784139,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1218.005",
+  "attack_id": "T1218.005",
+  "name": "Mshta",
+  "tactics": [
+   "stealth"
+  ],
+  "atomic_guid": "906865c3-e05f-4acc-85c4-fbc185455095",
+  "atomic_name": "Mshta executes VBScript to execute malicious command",
+  "path": "datasets/attack_techniques/T1218.005/atomic_red_team/windows-sysmon.log",
+  "size": 33033884,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1218.010",
+  "attack_id": "T1218.010",
+  "name": "Regsvr32",
+  "tactics": [
+   "stealth"
+  ],
+  "atomic_guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+  "atomic_name": "Regsvr32 local COM scriptlet execution",
+  "path": "datasets/attack_techniques/T1218.010/atomic_red_team/windows-sysmon.log",
+  "size": 6329227,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1027",
+  "attack_id": "T1027",
+  "name": "Obfuscated Files or Information",
+  "tactics": [
+   "stealth"
+  ],
+  "atomic_guid": "a50d5a97-2531-499e-a1de-5544c74432c6",
+  "atomic_name": "Execute base64-encoded PowerShell",
+  "path": "datasets/attack_techniques/T1027/atomic_red_team/windows-sysmon.log",
+  "size": 11316256,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1003.001",
+  "attack_id": "T1003.001",
+  "name": "LSASS Memory",
+  "tactics": [
+   "credential-access"
+  ],
+  "atomic_guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+  "atomic_name": "Dump LSASS.exe Memory using ProcDump",
+  "path": "datasets/attack_techniques/T1003.001/atomic_red_team/windows-sysmon.log",
+  "size": 14235927,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1003.002",
+  "attack_id": "T1003.002",
+  "name": "Security Account Manager",
+  "tactics": [
+   "credential-access"
+  ],
+  "atomic_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+  "atomic_name": "Registry dump of SAM, creds, and secrets",
+  "path": "datasets/attack_techniques/T1003.002/atomic_red_team/windows-sysmon.log",
+  "size": 12789744,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1558.003",
+  "attack_id": "T1558.003",
+  "name": "Kerberoasting",
+  "tactics": [
+   "credential-access"
+  ],
+  "atomic_guid": "3f987809-3681-43c8-bcd8-b3ff3a28533a",
+  "atomic_name": "Request for service tickets",
+  "path": "datasets/attack_techniques/T1558.003/atomic_red_team/windows-sysmon.log",
+  "size": 18090394,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1082",
+  "attack_id": "T1082",
+  "name": "System Information Discovery",
+  "tactics": [
+   "discovery"
+  ],
+  "atomic_guid": "66703791-c902-4560-8770-42b8a91f7667",
+  "atomic_name": "System Information Discovery",
+  "path": "datasets/attack_techniques/T1082/atomic_red_team/windows-sysmon.log",
+  "size": 11738807,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1033",
+  "attack_id": "T1033",
+  "name": "System Owner/User Discovery",
+  "tactics": [
+   "discovery"
+  ],
+  "atomic_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+  "atomic_name": "System Owner/User Discovery",
+  "path": "datasets/attack_techniques/T1033/atomic_red_team/windows-sysmon.log",
+  "size": 11994992,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1018",
+  "attack_id": "T1018",
+  "name": "Remote System Discovery",
+  "tactics": [
+   "discovery"
+  ],
+  "atomic_guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+  "atomic_name": "Remote System Discovery - net",
+  "path": "datasets/attack_techniques/T1018/atomic_red_team/windows-sysmon.log",
+  "size": 51733783,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1069.001",
+  "attack_id": "T1069.001",
+  "name": "Local Groups",
+  "tactics": [
+   "discovery"
+  ],
+  "atomic_guid": "1f454dd6-e134-44df-bebb-67de70fb6cd8",
+  "atomic_name": "Basic Permission Groups Discovery Windows (Local)",
+  "path": "datasets/attack_techniques/T1069.001/atomic_red_team/windows-sysmon.log",
+  "size": 85029761,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1021.002",
+  "attack_id": "T1021.002",
+  "name": "SMB/Windows Admin Shares",
+  "tactics": [
+   "lateral-movement"
+  ],
+  "atomic_guid": "3386975b-367a-4fbb-9d77-4dcf3639ffd3",
+  "atomic_name": "Map admin share",
+  "path": "datasets/attack_techniques/T1021.002/atomic_red_team/windows-sysmon.log",
+  "size": 21361,
+  "link": "named"
+ },
+ {
+  "dataset_id": "T1550.002",
+  "attack_id": "T1550.002",
+  "name": "Pass the Hash",
+  "tactics": [
+   "lateral-movement"
+  ],
+  "atomic_guid": "ec23cef9-27d9-46e4-a68d-6f75f7b86908",
+  "atomic_name": "Mimikatz Pass the Hash",
+  "path": "datasets/attack_techniques/T1550.002/atomic_red_team/windows-sysmon.log",
+  "size": 19796940,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1560.001",
+  "attack_id": "T1560.001",
+  "name": "Archive via Utility",
+  "tactics": [
+   "collection"
+  ],
+  "atomic_guid": "02ea31cb-3b4c-4a2d-9bf1-e4e70ebcf5d0",
+  "atomic_name": "Compress Data for Exfiltration With Rar",
+  "path": "datasets/attack_techniques/T1560.001/archive_utility/windows-sysmon.log",
+  "size": 24954216,
+  "link": "dataset-level (Cobalt Strike 7z, not an Atomic run)"
+ },
+ {
+  "dataset_id": "T1105",
+  "attack_id": "T1105",
+  "name": "Ingress Tool Transfer",
+  "tactics": [
+   "command-and-control"
+  ],
+  "atomic_guid": "dd3b61dd-7bbc-48cd-ab51-49ad1a776df0",
+  "atomic_name": "certutil download (urlcache)",
+  "path": "datasets/attack_techniques/T1105/atomic_red_team/windows-sysmon.log",
+  "size": 3625178,
+  "link": "dataset-level"
+ },
+ {
+  "dataset_id": "T1490",
+  "attack_id": "T1490",
+  "name": "Inhibit System Recovery",
+  "tactics": [
+   "impact"
+  ],
+  "atomic_guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+  "atomic_name": "Windows - Delete Volume Shadow Copies",
+  "path": "datasets/attack_techniques/T1490/atomic_red_team/windows-sysmon.log",
+  "size": 510708,
+  "link": "named"
+ }
+]
