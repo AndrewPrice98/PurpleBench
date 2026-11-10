@@ -77,3 +77,25 @@ def test_user_version_is_raised_never_lowered_and_not_rewritten(tmp_path):
     c = db.connect(path)
     assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     c.close()
+
+
+def test_gaps_table_is_migrated_to_allow_accepted(tmp_path):
+    path = tmp_path / "old_gaps.db"
+    c = sqlite3.connect(path)
+    c.executescript(db.SCHEMA.replace(",'accepted'", ""))
+    c.execute("INSERT INTO campaigns (id, name) VALUES (1, 'c')")
+    c.execute("INSERT INTO rulesets (id, version, created_at, rules_json_hash) VALUES (1, 'v1', 't', 'h')")
+    c.execute("INSERT INTO runs (id, campaign_id, ruleset_id, mode, started_at) VALUES (1, 1, 1, 'lab', 't')")
+    c.execute("INSERT INTO gaps (id, run_id, technique_id, kind, notes) VALUES (1, 1, 'T1003.001', 'missed', 'n')")
+    c.execute("PRAGMA user_version = 2")
+    c.commit()
+    c.close()
+    c = db.connect(path)
+    try:
+        assert db.update_gap(c, 1, status="accepted", notes="ok")
+        row = c.execute("SELECT status, notes FROM gaps WHERE id = 1").fetchone()
+        assert (row["status"], row["notes"]) == ("accepted", "ok")
+        assert not db.update_gap(c, 5, status="open")
+        assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
+    finally:
+        c.close()

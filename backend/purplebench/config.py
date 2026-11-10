@@ -50,7 +50,14 @@ def db_path() -> Path:
 
 
 def max_upload_bytes() -> int:
-    return int(os.environ.get("PURPLEBENCH_MAX_UPLOAD_MB", "10")) * 1024 * 1024
+    """Largest accepted run-file upload: 32 MB locally (the run-file format cap), 4 MB on the hosted demo
+    (a serverless function has little memory). ``PURPLEBENCH_MAX_UPLOAD_MB`` overrides either."""
+    default = "4" if demo_mode() else "32"
+    try:
+        mb = float(os.environ.get("PURPLEBENCH_MAX_UPLOAD_MB") or default)
+    except ValueError:
+        mb = float(default)
+    return max(1, int(mb * 1024 * 1024))
 
 
 # -- authentication --------------------------------------------------------------------

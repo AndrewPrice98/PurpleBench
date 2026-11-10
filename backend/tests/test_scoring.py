@@ -286,3 +286,15 @@ def test_suppressed_noisy_exact_rule_is_noted():
     clean = rule("r-clean", "\\u\\evil.exe", title="clean")
     s = run([R_EVIL, clean], [ex(events=[evil(2)])], base).executions[0]
     assert s.status == DETECTED and "earned no credit" in s.reason and "r-evil" in s.reason
+
+
+def test_navigator_metadata_names_rule_author():
+    from purplebench import rulesets
+    rule = next(r for r in rulesets.load_all_rules().values() if r.author)
+    cov = coverage.Coverage(
+        techniques=(coverage.TechniqueCoverage("T1003.001", "x", ("credential-access",), "detected", "r", 1, 0.0, (rule.id,)),),
+        tactics=(), counts={}, tested=1, score=100.0, partial_score=100.0)
+    layer = navigator.build_layer(cov)
+    value = next(m["value"] for m in layer["techniques"][0]["metadata"] if "rules" in m["name"])
+    assert value == f"{rule.title} ({rule.author})"
+    assert navigator.validate_layer(layer) == []

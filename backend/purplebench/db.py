@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS gaps (
     technique_id      TEXT NOT NULL,
     kind              TEXT NOT NULL CHECK (kind IN ('missed','telemetry_gap','partial')),
     notes             TEXT NOT NULL DEFAULT '',
-    status            TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed')),
+    status            TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','closed','accepted')),
     telemetry_needed  TEXT NOT NULL DEFAULT '',
     rule_idea         TEXT NOT NULL DEFAULT '',
     closed_in_run     INTEGER REFERENCES runs(id) ON DELETE SET NULL
@@ -107,9 +107,10 @@ CREATE INDEX IF NOT EXISTS idx_gaps_run          ON gaps(run_id);
 CREATE INDEX IF NOT EXISTS idx_ruleset_rules_set ON ruleset_rules(ruleset_id);
 """
 
-SCHEMA_VERSION = 2  # 2: executions.status also allows 'did_not_run'
+SCHEMA_VERSION = 3  # 2: executions.status also allows 'did_not_run'; 3: gaps.status also allows 'accepted'
 BUSY_TIMEOUT_SECONDS = 15.0
 GAP_KINDS = ("missed", "telemetry_gap", "partial")
+GAP_STATUSES = ("open", "closed", "accepted")
 
 
 def now_utc() -> str:
@@ -143,29 +144,36 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
 def _migrate(conn: sqlite3.Connection) -> None:
     """Bring a database created by an older version up to date, keeping its rows.
 
-    Version 2 widened the CHECK on ``executions.status`` (SQLite cannot alter a CHECK in place, so the
-    table is rebuilt: create new, copy, drop old, rename; child tables keep pointing at the name).
+    SQLite cannot alter a CHECK in place, so a table whose CHECK was widened is rebuilt: create new, copy,
+    drop old, rename; child tables keep pointing at the name. Version 2 widened ``executions.status``
+    (``did_not_run``); version 3 widened ``gaps.status`` (``accepted``).
     """
+    _rebuild(conn, "executions", "did_not_run",
+             "id, run_id, technique_id, test_guid, started_at, ended_at, status, ttd_ms, events_ref, reason")
+    _rebuild(conn, "gaps", "accepted",
+             "id, run_id, technique_id, kind, notes, status, telemetry_needed, rule_idea, closed_in_run")
+
+
+def _rebuild(conn: sqlite3.Connection, table: str, marker: str, cols: str) -> None:
     def stale() -> bool:
-        row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'executions'").fetchone()
-        return row is not None and "did_not_run" not in row[0]
+        row = conn.execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone()
+        return row is not None and marker not in row[0]
 
     if not stale():
         return
+    head = f"CREATE TABLE IF NOT EXISTS {table}"
     conn.execute("PRAGMA foreign_keys = OFF")  # cannot change inside a transaction
     try:
         conn.execute("BEGIN IMMEDIATE")
         try:
             if stale():  # another process may have migrated while we waited for the lock
-                ddl = SCHEMA[SCHEMA.index("CREATE TABLE IF NOT EXISTS executions"):]
-                ddl = ddl[:ddl.index(");") + 2].replace("CREATE TABLE IF NOT EXISTS executions",
-                                                         "CREATE TABLE executions_new", 1)
-                conn.execute("DROP TABLE IF EXISTS executions_new")
+                ddl = SCHEMA[SCHEMA.index(head):]
+                ddl = ddl[:ddl.index(");") + 2].replace(head, f"CREATE TABLE {table}_new", 1)
+                conn.execute(f"DROP TABLE IF EXISTS {table}_new")
                 conn.execute(ddl)
-                cols = "id, run_id, technique_id, test_guid, started_at, ended_at, status, ttd_ms, events_ref, reason"
-                conn.execute(f"INSERT INTO executions_new ({cols}) SELECT {cols} FROM executions")
-                conn.execute("DROP TABLE executions")
-                conn.execute("ALTER TABLE executions_new RENAME TO executions")
+                conn.execute(f"INSERT INTO {table}_new ({cols}) SELECT {cols} FROM {table}")
+                conn.execute(f"DROP TABLE {table}")
+                conn.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
             conn.commit()
         except BaseException:
             conn.rollback()
@@ -358,7 +366,23 @@ def run_summary(conn: sqlite3.Connection, run_id: int) -> dict:
 
 def set_gap_status(conn: sqlite3.Connection, gap_id: int, status: str, *, closed_in_run: int | None = None,
                    commit: bool = True) -> None:
-    if status not in ("open", "closed"):
-        raise ValueError("gap status must be 'open' or 'closed'")
+    if status not in GAP_STATUSES:
+        raise ValueError("gap status must be 'open', 'closed' or 'accepted'")
     with _tx(conn, commit):
         conn.execute("UPDATE gaps SET status = ?, closed_in_run = ? WHERE id = ?", (status, closed_in_run, gap_id))
+
+
+def update_gap(conn: sqlite3.Connection, gap_id: int, *, status: str | None = None, notes: str | None = None) -> bool:
+    """Change a gap's status and/or notes. Returns False if there is no such gap. Re-opening or accepting a
+    gap clears ``closed_in_run`` (it only means something for a closed gap)."""
+    if status is not None and status not in GAP_STATUSES:
+        raise ValueError("gap status must be 'open', 'closed' or 'accepted'")
+    with conn:
+        row = conn.execute("SELECT status, closed_in_run FROM gaps WHERE id = ?", (gap_id,)).fetchone()
+        if row is None:
+            return False
+        new_status = status or row["status"]
+        closed_in = row["closed_in_run"] if new_status == "closed" else None
+        conn.execute("UPDATE gaps SET status = ?, closed_in_run = ?, notes = COALESCE(?, notes) WHERE id = ?",
+                     (new_status, closed_in, notes, gap_id))
+    return True

@@ -32,7 +32,21 @@ _TID = re.compile(r"^T\d{4}(\.\d{3})?$")
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
-def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: str = "") -> dict[str, Any]:
+def rule_labels() -> dict[str, str]:
+    """``"title (author)"`` of every bundled rule by id (SigmaHQ's Detection Rule License 1.1 requires the
+    author wherever a rule is shown)."""
+    from . import rulesets
+
+    attr = rulesets.rule_attribution()
+    out = {}
+    for r in rulesets.load_all_rules().values():
+        out[r.id] = f"{r.title} ({attr.get(r.id, {}).get('author') or r.author or 'unknown author'})"
+    return out
+
+
+def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: str = "",
+                labels: dict[str, str] | None = None) -> dict[str, Any]:
+    labels = rule_labels() if labels is None else labels
     techniques = []
     for t in cov.techniques:
         comment = f"{LABELS[t.status]}: {t.reason}"
@@ -40,7 +54,8 @@ def build_layer(cov: Coverage, name: str = "PurpleBench coverage", description: 
             comment += f" (time to detect {t.ttd_seconds:.1f} s)"
         meta = [{"name": "status", "value": t.status}]
         if t.rules:
-            meta.append({"name": "rules that matched (any relation)", "value": ", ".join(t.rules)})
+            meta.append({"name": "rules that matched (any relation)",
+                         "value": "; ".join(labels.get(r, r) for r in t.rules)})
         if t.ttd_seconds is not None:
             meta.append({"name": "time to detect (s)", "value": f"{t.ttd_seconds:.1f}"})
         entry: dict[str, Any] = {"techniqueID": t.technique, "color": COLORS[t.status], "comment": comment,
