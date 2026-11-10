@@ -60,7 +60,7 @@ RUNS = [
 ]
 
 
-# Why some gaps honestly stay open (written by hand from the recorded data; see DECISIONS.md Task 3).
+# Why some gaps honestly stay open (written by hand from the recorded data; see DECISIONS.md).
 OPEN_REMARKS = {
     "T1550.002": "Limit of the recorded data: the run launched mimikatz interactively with no sekurlsa::pth on "
                  "the command line, and the recording has no Security channel, so logon-based pass-the-hash "

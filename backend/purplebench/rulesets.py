@@ -92,10 +92,9 @@ V3 = RuleSetDef("v3", 27, (
     "encoded-PowerShell rule, local group enumeration with net.exe, 7-Zip archives with split volumes or maximum "
     "compression, and quser/qwinsta session discovery. The noisy SigmaHQ rule stays enabled and visible but "
     "no longer carries any credit."), (
-    ("proc_creation_win_powershell_encoded_command_tuned", "Closes T1059.001 (missed in run 1, partial in "
-                                                           "run 2 with the noisy rule's credit withheld) and T1027: encoded commands outside the "
-                                                           "remote-management harness shapes that make the "
-                                                           "SigmaHQ rule noisy."),
+    ("proc_creation_win_powershell_encoded_command_tuned",
+     "Closes T1059.001 (missed in run 1, partial in run 2 with the noisy rule's credit withheld) and T1027: "
+     "encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."),
     (H + "net_localgroup_enumeration", "Closes T1069.001: the SigmaHQ wmic rule never matched the recorded "
                                        "'net localgroup' and was noisy on the baseline."),
     (H + "7zip_split_or_max_compression", "Closes T1560.001: the SigmaHQ 7-Zip rule only covers password-protected "
@@ -114,13 +113,14 @@ V4_NOTES = {
     H + "rundll32_uncommon_dll_extension": "Second T1218.011 rule.",
     H + "reg_dumping_sensitive_hives": "Closes T1003.002 (SAM and SYSTEM hive dumping).",
     H + "esentutl_sensitive_file_copy": "Second T1003.002 rule.",
-    H + "systeminfo_execution": "Closes T1082 (partial in run 2: only a noisy rule fired).",
+    H + "systeminfo_execution": "Closes T1082 (missed in run 2: only a noisy rule for another technique fired).",
     H + "whoami_output": "Second T1033 rule.",
     H + "cmd_ping_sweep": "Second T1018 rule: ping sweeps from a cmd loop.",
     "proc_access_win_lsass_from_user_writable_path": "Credit source for T1003.001 in place of the noisy "
         "proc_access_win_lsass_memdump rule.",
 }
-V4_DEFAULT = "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+V4_DEFAULT = ("Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, "
+              "or outside recorded telemetry).")
 V4 = RuleSetDef("v4", 41, (
     "The full bundled set (58 SigmaHQ and 12 custom rules): the held-back UAC, rundll32, credential and "
     "discovery rules, and every other bundled rule. Rules that cannot match recorded telemetry (Security, System "

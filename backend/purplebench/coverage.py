@@ -19,7 +19,8 @@ from typing import Any
 import yaml
 
 from . import library
-from .scoring import DETECTED, MISSED, PARTIAL, STATUSES, TELEMETRY_GAP, UNTESTED, DID_NOT_RUN, NOT_TESTED, ExecutionScore, RunScore
+from .scoring import (DETECTED, DID_NOT_RUN, MISSED, NOT_TESTED, PARTIAL, STATUSES, TELEMETRY_GAP, UNTESTED,
+                      ExecutionScore, RunScore)
 
 _BEST = (DETECTED, PARTIAL, MISSED, TELEMETRY_GAP, DID_NOT_RUN, UNTESTED)
 GENERIC_HINT = {
@@ -129,32 +130,3 @@ def load_gap_hints(path: Path | str | None = None) -> dict[str, dict[str, str]]:
         data = yaml.safe_load(fh) or {}
     return {str(k): {"telemetry_needed": str(v["telemetry_needed"]), "rule_idea": str(v["rule_idea"])}
             for k, v in data.items()}
-
-
-@dataclass(frozen=True)
-class Gap:
-    technique: str
-    name: str
-    tactics: tuple[str, ...]
-    kind: str  # missed | telemetry_gap
-    reason: str
-    telemetry_needed: str
-    rule_idea: str
-    hinted: bool
-
-    def to_dict(self) -> dict[str, Any]:
-        return dict(self.__dict__, tactics=list(self.tactics))
-
-
-def compute_gaps(run: RunScore, hints: dict[str, dict[str, str]] | None = None) -> list[Gap]:
-    """One gap per missed / telemetry-gap execution, in run order."""
-    hints = load_gap_hints() if hints is None else hints
-    out = []
-    for e in run.executions:
-        if e.status not in (MISSED, TELEMETRY_GAP):
-            continue
-        h = hints.get(e.technique)
-        use = h or GENERIC_HINT
-        out.append(Gap(e.technique, e.name, e.tactics, e.status, e.reason, use["telemetry_needed"],
-                       use["rule_idea"], h is not None))
-    return out

@@ -1210,7 +1210,7 @@
      "origin": "sigmahq",
      "title": "Suspicious Execution of Systeminfo",
      "added_in": "v4",
-     "note": "Closes T1082 (partial in run 2: only a noisy rule fired)."
+     "note": "Closes T1082 (missed in run 2: only a noisy rule for another technique fired)."
     },
     {
      "rule_id": "7f741dcf-fc22-4759-87b4-9ae8376676a2",
@@ -1866,7 +1866,7 @@
     {
      "technique_id": "T1548.002",
      "kind": "missed",
-     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): partial.",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): missed.",
      "status": "open",
      "telemetry_needed": "Sysmon event 13 on the shell\\open\\command keys under HKCU\\Software\\Classes and Sysmon event 1 with integrity level for auto-elevating binaries.",
      "rule_idea": "Match eventvwr.exe, fodhelper.exe or computerdefaults.exe spawning a shell, and writes to HKCU\\Software\\Classes\\*\\shell\\open\\command.",
@@ -1893,7 +1893,7 @@
     {
      "technique_id": "T1003.002",
      "kind": "missed",
-     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): partial.",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): missed.",
      "status": "open",
      "telemetry_needed": "Sysmon event 1 for reg.exe, Sysmon event 11 for hive copies, Security 4656/4663 on the SAM key with registry auditing.",
      "rule_idea": "Match reg.exe save/export of HKLM\\SAM, SYSTEM or SECURITY, and shadow-copy based copies of the config\\SAM file.",
@@ -1939,15 +1939,15 @@
    "summary": {
     "counts": {
      "detected": 9,
-     "partial": 4,
-     "missed": 1,
+     "partial": 3,
+     "missed": 2,
      "telemetry_gap": 0,
      "untested": 0,
      "did_not_run": 0
     },
     "tested": 14,
     "score": 64.3,
-    "partial_score": 78.6
+    "partial_score": 75.0
    },
    "executions": [
     {
@@ -2435,10 +2435,10 @@
      "test_guid": "66703791-c902-4560-8770-42b8a91f7667",
      "started_at": "2020-10-12T08:42:42.742121Z",
      "ended_at": "2020-10-12T08:44:42.742121Z",
-     "status": "partial",
-     "ttd_ms": 0,
+     "status": "missed",
+     "ttd_ms": null,
      "events_ref": "T1082/system-information-discovery.jsonl.gz",
-     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "reason": "no rule in the rule set is tagged for this technique (8 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
      "hits": [
       {
        "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
@@ -2789,8 +2789,8 @@
     },
     {
      "technique_id": "T1082",
-     "kind": "partial",
-     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Closed in run 4 (rule set v4): Suspicious Execution of Systeminfo.",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique (8 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Closed in run 4 (rule set v4): Suspicious Execution of Systeminfo.",
      "status": "closed",
      "telemetry_needed": "Sysmon event 1 or Security 4688 with command-line auditing.",
      "rule_idea": "Match systeminfo.exe, and clusters of discovery commands (hostname, ver, wmic os) from one parent process.",
@@ -2827,15 +2827,15 @@
    "summary": {
     "counts": {
      "detected": 10,
-     "partial": 2,
-     "missed": 1,
+     "partial": 0,
+     "missed": 3,
      "telemetry_gap": 1,
      "untested": 1,
      "did_not_run": 0
     },
     "tested": 14,
     "score": 71.4,
-    "partial_score": 78.6
+    "partial_score": 71.4
    },
    "executions": [
     {
@@ -2995,10 +2995,10 @@
      "test_guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
      "started_at": "2020-11-18T10:08:52.277099Z",
      "ended_at": "2020-11-18T10:10:52.277099Z",
-     "status": "partial",
-     "ttd_ms": 0,
+     "status": "missed",
+     "ttd_ms": null,
      "events_ref": "T1548.002/bypass-uac-using-event-viewer-cmd.jsonl.gz",
-     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "reason": "2 rule(s) tagged for this technique were evaluated; none fired (5 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
      "hits": [
       {
        "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
@@ -3273,10 +3273,10 @@
      "test_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
      "started_at": "2020-10-08T11:03:46.617920Z",
      "ended_at": "2020-10-08T11:05:46.617920Z",
-     "status": "partial",
-     "ttd_ms": 0,
+     "status": "missed",
+     "ttd_ms": null,
      "events_ref": "T1003.002/registry-dump-of-sam-creds-and-secrets.jsonl.gz",
-     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "reason": "no rule in the rule set is tagged for this technique (3 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
      "hits": [
       {
        "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
@@ -3652,8 +3652,8 @@
    "gaps": [
     {
      "technique_id": "T1548.002",
-     "kind": "partial",
-     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (UAC Bypass Via Shell Open Command Hijack, Bypass UAC via Fodhelper.exe, UAC Disabled); re-run the campaign to confirm.",
+     "kind": "missed",
+     "notes": "Missed: 2 rule(s) tagged for this technique were evaluated; none fired (5 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (UAC Bypass Via Shell Open Command Hijack, Bypass UAC via Fodhelper.exe, UAC Disabled); re-run the campaign to confirm.",
      "status": "open",
      "telemetry_needed": "Sysmon event 13 on the shell\\open\\command keys under HKCU\\Software\\Classes and Sysmon event 1 with integrity level for auto-elevating binaries.",
      "rule_idea": "Match eventvwr.exe, fodhelper.exe or computerdefaults.exe spawning a shell, and writes to HKCU\\Software\\Classes\\*\\shell\\open\\command.",
@@ -3670,8 +3670,8 @@
     },
     {
      "technique_id": "T1003.002",
-     "kind": "partial",
-     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (Dumping of Sensitive Hives Via Reg.EXE, Copying Sensitive Files with Credential Data); re-run the campaign to confirm.",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique (3 match(es) outside the execution window ignored); noisy rule(s) for other techniques fired but earn no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (Dumping of Sensitive Hives Via Reg.EXE, Copying Sensitive Files with Credential Data); re-run the campaign to confirm.",
      "status": "open",
      "telemetry_needed": "Sysmon event 1 for reg.exe, Sysmon event 11 for hive copies, Security 4656/4663 on the SAM key with registry auditing.",
      "rule_idea": "Match reg.exe save/export of HKLM\\SAM, SYSTEM or SECURITY, and shadow-copy based copies of the config\\SAM file.",

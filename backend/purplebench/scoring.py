@@ -14,7 +14,8 @@ library alias table when a rule is loaded, so ``attack.t1562.001`` already reads
     reason is *parent-technique rule* (the test is a sub-technique and only a rule tagged with its
     parent, e.g. T1569 for T1569.002, fired), *detected via related technique <id>* (rules tagged with
     other techniques fired; a rule for a more specific sub-technique of a tested parent counts here
-    too), or *noisy rule* (only rules over the noise threshold fired).
+    too), or *noisy rule* (only rules over the noise threshold fired, tagged with the exact technique or its parent).
+    A noisy rule tagged only for some other technique earns no credit; it is named in the ``missed`` reason.
 ``missed``
     nothing fired in the window although the rules tagged for the technique could have matched
     (or no rule is tagged for it at all). "Missed" only ever means "no rule in this rule set fired on
@@ -170,9 +171,6 @@ def seconds_between(a: str, b: str) -> float:
     return (parse_ts(a) - parse_ts(b)).total_seconds()
 
 
-_seconds = seconds_between  # old private name, still used by runfile.py
-
-
 def _relation(tested: str, rule_techniques: Iterable[str]) -> str:
     techs = set(rule_techniques)
     if not techs:
@@ -200,7 +198,7 @@ def _in_window(res: RuleResult, anchor: str, skew: float, window: float) -> tupl
     """Timestamps of the rule's matches inside the execution window, and the number outside it."""
     inside, outside = [], 0
     for ref in res.matches:
-        d = _seconds(ref.ts, anchor)
+        d = seconds_between(ref.ts, anchor)
         if -skew <= d <= window:
             inside.append(ref.ts)
         else:
@@ -242,7 +240,7 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
         hits.append(RuleHit(
             rule_id=r.id, title=r.title, techniques=r.techniques, relation=_relation(ex.technique, r.techniques),
             noisy=bool(n and n.noisy), noise_hits=n.hits if n else 0, events=len(inside), first_ts=first,
-            ttd_seconds=max(0.0, _seconds(first, ex.anchor_ts)),
+            ttd_seconds=max(0.0, seconds_between(first, ex.anchor_ts)),
         ))
     rank = {EXACT: 0, PARENT: 1, RELATED: 2, NONE: 3}
     hits.sort(key=lambda h: (h.noisy, rank[h.relation], h.first_ts, h.rule_id))
@@ -251,7 +249,9 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
     exact = [h for h in clean if h.relation == EXACT]
     parent = [h for h in clean if h.relation == PARENT]
     related = [h for h in clean if h.relation == RELATED]
-    noisy = [h for h in hits if h.noisy and h.relation != NONE]
+    # Noisy credit needs the exact technique or its parent; a noisy rule tagged only for another technique earns nothing.
+    noisy = [h for h in hits if h.noisy and h.relation in (EXACT, PARENT)]
+    noisy_other = [h for h in hits if h.noisy and h.relation == RELATED]
     suppressed = [h for h in noisy if h.relation == EXACT]
     sup_note = ("; noisy rule(s) for this technique earned no credit: " + "; ".join(
         f"{h.title} [{h.rule_id}] ({h.noise_hits} baseline hits)" for h in suppressed)) if suppressed else ""
@@ -277,6 +277,9 @@ def _score_execution(ex: Execution, rules: Sequence[Rule], noise: dict[str, Rule
     # Nothing fired in the window.
     evaluable = [(r, res) for r, res in tagged if res.status != UNSUPPORTED]
     note = f" ({outside} match(es) outside the execution window ignored)" if outside else ""
+    if noisy_other:
+        note += "; noisy rule(s) for other techniques fired but earn no credit: " + "; ".join(
+            f"{h.title} [{h.rule_id}] ({h.noise_hits} baseline hits)" for h in noisy_other)
     if evaluable and all(res.status == GAP for _, res in evaluable):
         details = tuple(sorted(f"{r.id}: {res.detail}" for r, res in evaluable))
         return ExecutionScore(status=TELEMETRY_GAP, reason="rules tagged for this technique cannot match this "

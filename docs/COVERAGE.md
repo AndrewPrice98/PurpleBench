@@ -40,12 +40,12 @@ Each row is a rule set evaluated over the recorded telemetry (detected technique
 
 ### Initial access to credential theft
 
-Run 3, rule set v3, recorded mode. 10 detected, 2 partial, 1 missed, 1 telemetry gap, 1 untested.
+Run 3, rule set v3, recorded mode. 10 detected, 3 missed, 1 telemetry gap, 1 untested.
 
 | Technique | Name | Status | Rules that fired (author) |
 |---|---|---|---|
 | T1003.001 | LSASS Memory | detected | Potential LSASS Process Dump Via Procdump (Florian Roth (Nextron Systems)); Process Memory Dump Via Comsvcs.DLL (Florian Roth (Nextron Systems), Modexp, Nasreddine Bencherchali (Nextron Systems), Swachchhanda Shrawan Poudel (Nextron Systems)) |
-| T1003.002 | Security Account Manager | partial | none credited; noisy only: Suspicious Execution of Powershell with Base64 (frack113) |
+| T1003.002 | Security Account Manager | missed | none credited; noisy only: Suspicious Execution of Powershell with Base64 (frack113) |
 | T1027 | Obfuscated Files or Information | detected | PowerShell Encoded Command Outside The Remote Management Harness (Andrew T. Price II) |
 | T1033 | System Owner/User Discovery | detected | Logged-On User Discovery With Quser Or Qwinsta (Andrew T. Price II) |
 | T1053.005 | Scheduled Task | detected | Scheduled Task Creation Via Schtasks.EXE (Florian Roth (Nextron Systems)) |
@@ -56,7 +56,7 @@ Run 3, rule set v3, recorded mode. 10 detected, 2 partial, 1 missed, 1 telemetry
 | T1218.010 | Regsvr32 | detected | Potential Regsvr32 Commandline Flag Anomaly (Florian Roth (Nextron Systems)) |
 | T1218.011 | Rundll32 | missed | - |
 | T1547.001 | Registry Run Keys / Startup Folder | detected | Potential Persistence Attempt Via Run Keys Using Reg.EXE (Florian Roth (Nextron Systems), Swachchhanda Shrawan Poudel (Nextron Systems)) |
-| T1548.002 | Bypass User Account Control | partial | none credited; noisy only: Suspicious Execution of Powershell with Base64 (frack113) |
+| T1548.002 | Bypass User Account Control | missed | none credited; noisy only: Suspicious Execution of Powershell with Base64 (frack113) |
 | T1550.002 | Pass the Hash | telemetry gap | - |
 | T1558.003 | Kerberoasting | untested | - |
 

@@ -1,4 +1,4 @@
-"""Scoring, coverage, gaps and Navigator export (Review Focus 3 and 4)."""
+"""Scoring, coverage, gaps and Navigator export."""
 import copy
 import json
 from datetime import UTC, datetime, timedelta
@@ -97,6 +97,28 @@ def test_noisy_rule_excluded_from_coverage():
     assert s3.status == DETECTED and s3.reason.startswith("detected by clean")
 
 
+NOISY_BASE = [proc(50, ts(-500), Image="C:\\benign\\evil.exe")]  # every "\\evil.exe" rule fires on benign activity
+
+
+def test_noisy_exact_rule_is_partial():
+    r = run([rule("r-n", "\\evil.exe", tags=("attack.t1059.001",))], [ex(events=[evil(3)])], NOISY_BASE)
+    assert r.executions[0].status == PARTIAL and r.executions[0].reason.startswith("noisy rule")
+
+
+def test_noisy_parent_rule_is_partial():
+    r = run([rule("r-n", "\\evil.exe", tags=("attack.t1059",))], [ex(events=[evil(3)])], NOISY_BASE)
+    assert r.executions[0].status == PARTIAL and r.executions[0].reason.startswith("noisy rule")
+
+
+def test_noisy_related_only_rule_is_not_partial():
+    r = run([rule("r-n", "\\evil.exe", tags=("attack.t1082",))], [ex(events=[evil(3)])], NOISY_BASE)
+    s = r.executions[0]
+    assert s.status == MISSED
+    assert "noisy rule(s) for other techniques" in s.reason and "r-n" in s.reason
+    assert s.hits and s.hits[0].noisy  # still listed, never credited
+    assert coverage.compute_coverage(r).counts[PARTIAL] == 0
+
+
 def test_parent_technique_rule_is_partial():
     parent = rule("r-parent", "\\evil.exe", tags=("attack.t1569",))
     s = run([parent], [ex("T1569.002", [evil(2)])]).executions[0]
@@ -163,14 +185,6 @@ def test_best_status_across_executions_of_one_technique():
     assert len(cov.techniques) == 1 and cov.techniques[0].status == DETECTED and cov.techniques[0].executions == 2
 
 
-def test_gaps_use_curated_hints():
-    r = run([R_EVIL], [ex("T1047", [proc(1, ts(1))]), ex("T1999", [proc(1, ts(1))]), ex(events=[evil(1)])])
-    gaps = coverage.compute_gaps(r)
-    assert [g.technique for g in gaps] == ["T1047", "T1999"]
-    assert gaps[0].hinted and "wmic" in gaps[0].rule_idea.lower() and gaps[0].kind == MISSED
-    assert not gaps[1].hinted and gaps[1].telemetry_needed
-
-
 def test_every_library_technique_has_a_hint():
     hints = coverage.load_gap_hints()
     ids = {t.attack_id for t in library.list_techniques()}
@@ -188,6 +202,9 @@ def test_navigator_layer_is_valid_and_colours_by_status():
     assert navigator.validate_layer(layer) == []
     assert layer["versions"] == {"attack": "20", "navigator": "5.3.2", "layer": "4.5"}
     assert layer["domain"] == "enterprise-attack"
+    from purplebench.attribution import ATTACK_NOTICE
+    assert layer["description"].endswith(ATTACK_NOTICE)
+    assert "Atomic Red Team telemetry" not in layer["description"]  # not every recording is an Atomic test
     by = {t["techniqueID"]: t for t in layer["techniques"]}
     assert by["T1059.001"]["color"] == navigator.COLORS[DETECTED] and by["T1059.001"]["score"] == 100
     assert by["T1105"]["color"] == navigator.COLORS[DETECTED]
