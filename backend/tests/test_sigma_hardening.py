@@ -218,3 +218,28 @@ def test_profile_is_required():
 
 def test_stale_top_level_evaluator_stub_is_gone():
     assert importlib.util.find_spec("purplebench.evaluator") is None
+
+
+# -------------------------------------------------------------------------------------------- fix round 2
+
+def test_regex_time_is_bounded_per_rule(monkeypatch, caplog):
+    monkeypatch.setattr(P, "check_regex", lambda pattern: None)
+    r = rule({"sel": {"CommandLine|re": "(a|aa)+b"}, "condition": "sel"})
+    evs = [proc(rid=i, CommandLine="a" * 60) for i in range(200)]
+    t = time.perf_counter()
+    with caplog.at_level(logging.WARNING):
+        res = evaluate_on(r, evs)
+    elapsed = time.perf_counter() - t
+    assert elapsed < 1.0, elapsed  # 5 timeouts x 50 ms, not 200 x 50 ms
+    assert res.status == sigma.UNSUPPORTED
+    assert res.detail == f"regex too slow: |re timed out {P.REGEX_MAX_TIMEOUTS_PER_RULE} times; rule abandoned"
+    assert res.regex_timeouts == P.REGEX_MAX_TIMEOUTS_PER_RULE and res.matched_events == ()
+    assert any("abandoned" in rec.getMessage() for rec in caplog.records)
+
+
+def test_evaluate_all_validates_the_profile_once():
+    r = rule({"sel": {"Image": "x"}, "condition": "sel"})
+    with pytest.raises(TypeError, match="evaluate_all"):
+        sigma.evaluate_all([r, r], [proc()], None)
+    with pytest.raises(TypeError, match="evaluate_all"):
+        sigma.evaluate_all([], [proc()], {"not": "a profile"})

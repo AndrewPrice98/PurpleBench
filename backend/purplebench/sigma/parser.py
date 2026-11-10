@@ -45,6 +45,7 @@ MAX_CONDITION_DEPTH = 64         # nesting of parentheses and "not" in a conditi
 MAX_REGEX_INPUT = 32_768         # characters of a field value a |re pattern is applied to
 SUPPORTED_MODIFIERS = frozenset({"contains", "startswith", "endswith", "all", "cased", "exists", "windash", "re"})
 REGEX_TIMEOUT_S = 0.05           # time limit for one |re match (seconds)
+REGEX_MAX_TIMEOUTS_PER_RULE = 5  # timed-out matches after which one evaluation abandons the rule
 REGEX_FLAGS = {"i": regex.IGNORECASE, "m": regex.MULTILINE, "s": regex.DOTALL}
 KNOWN_UNSUPPORTED_MODIFIERS = frozenset({
     "base64", "base64offset", "utf16", "utf16le", "utf16be", "wide", "cidr", "expand", "fieldref",
@@ -286,6 +287,18 @@ class RegexTimeouts:
         self.count = 0
 
 
+class RegexBudgetExceeded(Exception):
+    """Raised inside one evaluation once :data:`REGEX_MAX_TIMEOUTS_PER_RULE` matches have timed out.
+
+    Bounds the regex time one rule can cost to about REGEX_MAX_TIMEOUTS_PER_RULE x REGEX_TIMEOUT_S
+    (0.25 s) before the evaluator abandons it as unsupported.
+    """
+
+    def __init__(self, count: int) -> None:
+        super().__init__(count)
+        self.count = count
+
+
 _TIMEOUTS: contextvars.ContextVar[RegexTimeouts | None] = contextvars.ContextVar("sigma_regex_timeouts", default=None)
 
 
@@ -303,7 +316,9 @@ def regex_predicate(pattern: str, flags: str) -> Pred:
     """``|re`` predicate using the third-party ``regex`` module with a per-match time limit.
 
     A match that runs longer than :data:`REGEX_TIMEOUT_S` counts as a non-match for that event; it is
-    counted (``RuleResult.regex_timeouts`` and the result detail) and logged.
+    counted (``RuleResult.regex_timeouts`` and the result detail) and logged. Within one evaluation,
+    the :data:`REGEX_MAX_TIMEOUTS_PER_RULE`-th timeout raises :class:`RegexBudgetExceeded` and the
+    evaluator abandons the rule, so a rule's regex time is bounded regardless of the event count.
     """
     check_regex(pattern)
     f = regex.VERSION0
@@ -316,10 +331,12 @@ def regex_predicate(pattern: str, flags: str) -> Pred:
             return rx.search(v[:MAX_REGEX_INPUT], timeout=REGEX_TIMEOUT_S) is not None
         except TimeoutError:
             counter = _TIMEOUTS.get()
-            if counter is not None:
-                counter.count += 1
             log.warning("|re pattern %r timed out after %.0f ms; treated as no match for this event",
                         pattern[:80], REGEX_TIMEOUT_S * 1000)
+            if counter is not None:
+                counter.count += 1
+                if counter.count >= REGEX_MAX_TIMEOUTS_PER_RULE:
+                    raise RegexBudgetExceeded(counter.count) from None
             return False
     return pred
 

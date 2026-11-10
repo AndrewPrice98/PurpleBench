@@ -41,6 +41,7 @@ from .. import library
 from ..telemetry import event_sort_key, read_jsonl_gz
 from . import mapping
 from .parser import (
+    RegexBudgetExceeded,
     Rule,
     SearchId,
     eval_condition,
@@ -248,6 +249,11 @@ def evaluate(rule: Rule, events: Iterable[dict[str, Any]] | EventIndex, profile:
                     return _m[name]
                 if eval_condition(det.condition, value):
                     hits[(ev["ts"], ev["host"], ev["record_id"], ev["channel"], ev["event_id"])] = ev
+    except RegexBudgetExceeded as exc:
+        log.warning("rule %s abandoned: |re timed out %d times", rule.id, exc.count)
+        return RuleResult(rule.id, UNSUPPORTED, (), None,
+                          f"regex too slow: |re timed out {exc.count} times; rule abandoned",
+                          gaps=tuple(gaps), regex_timeouts=exc.count)
     finally:
         stop_regex_timeout_count(token)
     timeouts = counter.count
@@ -267,6 +273,8 @@ def evaluate(rule: Rule, events: Iterable[dict[str, Any]] | EventIndex, profile:
 def evaluate_all(rules: Iterable[Rule], events: Iterable[dict[str, Any]] | EventIndex,
                  profile: TelemetryProfile) -> list[RuleResult]:
     """Evaluate every rule; a rule that fails unexpectedly is reported, never aborts the others."""
+    if not isinstance(profile, TelemetryProfile):  # checked once: a bad call is the caller's error
+        raise TypeError("evaluate_all() needs a TelemetryProfile (for example recorded_profile())")
     index = events if isinstance(events, EventIndex) else EventIndex(events)
     out: list[RuleResult] = []
     for r in rules:

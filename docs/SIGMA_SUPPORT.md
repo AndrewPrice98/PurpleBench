@@ -142,7 +142,10 @@ System and PowerShell rule is a telemetry gap there (a documented limitation of 
 
 `|re` patterns run on the third-party `regex` module with a **50 ms time limit per match**. A match
 that runs out of time counts as no match for that event; the result reports the number of timed-out
-matches (`regex_timeouts`, and in the detail) and a warning is logged. Before that, a cheap static
+matches (`regex_timeouts`, and in the detail) and a warning is logged. After **5 timed-out matches
+in one evaluation** the rule is abandoned: the result is `unsupported` with
+`regex too slow: |re timed out 5 times; rule abandoned`, so one rule's regex time stays near 0.25 s
+however many events it is evaluated on. Before that, a cheap static
 check rejects some patterns when the rule loads (the rule becomes `unsupported` with the reason):
 
 - longer than 1,024 characters;
