@@ -28,6 +28,10 @@ jobs:
       - name: Technique catalog is current
         working-directory: backend
         run: python -m purplebench catalog --check
+      # Rebuilds the demo runs with the real evaluator and compares with data/demo_fixture.json.
+      - name: Demo fixture is current
+        working-directory: backend
+        run: python scripts/build_demo.py --check
 
   frontend:
     runs-on: ubuntu-latest

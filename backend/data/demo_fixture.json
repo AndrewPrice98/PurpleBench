@@ -1,0 +1,5034 @@
+{
+ "meta": {
+  "anchor_date": "2026-09-28",
+  "mode": "recorded",
+  "dataset": {
+   "name": "Splunk attack_data",
+   "license": "Apache-2.0",
+   "url": "https://github.com/splunk/attack_data"
+  },
+  "generator": "backend/scripts/build_demo.py",
+  "note": "Computed by the real evaluator at build time. Run timestamps are demo dates; execution timestamps are those of the original recordings.",
+  "progression": [
+   {
+    "version": "v1",
+    "all": {
+     "detected": 9,
+     "tested": 25,
+     "score": 36.0
+    },
+    "Initial access to credential theft": {
+     "detected": 6,
+     "tested": 14,
+     "score": 42.9
+    },
+    "Ransomware precursors": {
+     "detected": 5,
+     "tested": 14,
+     "score": 35.7
+    }
+   },
+   {
+    "version": "v2",
+    "all": {
+     "detected": 13,
+     "tested": 25,
+     "score": 52.0
+    },
+    "Initial access to credential theft": {
+     "detected": 6,
+     "tested": 14,
+     "score": 42.9
+    },
+    "Ransomware precursors": {
+     "detected": 9,
+     "tested": 14,
+     "score": 64.3
+    }
+   },
+   {
+    "version": "v3",
+    "all": {
+     "detected": 18,
+     "tested": 25,
+     "score": 72.0
+    },
+    "Initial access to credential theft": {
+     "detected": 10,
+     "tested": 14,
+     "score": 71.4
+    },
+    "Ransomware precursors": {
+     "detected": 11,
+     "tested": 14,
+     "score": 78.6
+    }
+   },
+   {
+    "version": "v4",
+    "all": {
+     "detected": 22,
+     "tested": 25,
+     "score": 88.0
+    },
+    "Initial access to credential theft": {
+     "detected": 13,
+     "tested": 14,
+     "score": 92.9
+    },
+    "Ransomware precursors": {
+     "detected": 12,
+     "tested": 14,
+     "score": 85.7
+    }
+   }
+  ]
+ },
+ "campaigns": [
+  {
+   "id": 1,
+   "name": "Initial access to credential theft",
+   "description": "What an intruder does after the first foothold: run scripts and signed binaries, persist, escalate, dump credentials, learn the host and move with stolen hashes. Kerberoasting (T1558.003) is listed but cannot be scored: the recorded dataset holds no execution of it.",
+   "techniques": [
+    "T1059.001",
+    "T1027",
+    "T1218.005",
+    "T1218.010",
+    "T1218.011",
+    "T1105",
+    "T1547.001",
+    "T1053.005",
+    "T1548.002",
+    "T1003.001",
+    "T1003.002",
+    "T1558.003",
+    "T1033",
+    "T1069.001",
+    "T1550.002"
+   ]
+  },
+  {
+   "id": 2,
+   "name": "Ransomware precursors",
+   "description": "The steps that usually come right before encryption: remote execution and services, new accounts, tampering with Defender and logs, staging data, discovery and deleting recovery points.",
+   "techniques": [
+    "T1059.001",
+    "T1047",
+    "T1569.002",
+    "T1543.003",
+    "T1136.001",
+    "T1685",
+    "T1685.005",
+    "T1490",
+    "T1021.002",
+    "T1560.001",
+    "T1003.001",
+    "T1053.005",
+    "T1082",
+    "T1018"
+   ]
+  }
+ ],
+ "rulesets": [
+  {
+   "id": 1,
+   "version": "v1",
+   "created_at": "2026-09-27T08:00:00Z",
+   "rules_json_hash": "3b9e15a525fc751ef8d73fdf1d53f4192190cf53f40926084ce7a056f6f17813",
+   "notes": "Starter set: 15 well-known SigmaHQ rules a team enables first (LSASS dumping with ProcDump, shadow copy deletion, event log clearing, Run key and scheduled task persistence, new local users, certutil downloads, regsvr32 and mshta abuse, PsExec) plus two Windows Security/System log rules and the Security-channel pass-the-hash rule. The recorded telemetry has no Security or System channel, so those three can show nothing here.",
+   "rules": [
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "file": "proc_access_win_lsass_memdump.yml",
+     "origin": "sigmahq",
+     "title": "Potential Credential Dumping Activity Via LSASS",
+     "added_in": "v1",
+     "note": "LSASS memory access. Fires on benign activity in the baseline (2 hits), so it is noisy and earns no credit."
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "file": "proc_creation_win_certutil_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Download Via Certutil.EXE",
+     "added_in": "v1",
+     "note": "Certutil used to download files."
+    },
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "file": "proc_creation_win_mshta_susp_child_processes.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious MSHTA Child Process",
+     "added_in": "v1",
+     "note": "Mshta spawning interpreters."
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "file": "proc_creation_win_net_user_add.yml",
+     "origin": "sigmahq",
+     "title": "New User Created Via Net.EXE",
+     "added_in": "v1",
+     "note": "New local user with net.exe."
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "file": "proc_creation_win_powershell_shadowcopy_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+     "added_in": "v1",
+     "note": "Shadow copy deletion with PowerShell."
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "file": "proc_creation_win_reg_add_run_key.yml",
+     "origin": "sigmahq",
+     "title": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+     "added_in": "v1",
+     "note": "Run key persistence."
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "file": "proc_creation_win_regsvr32_flags_anomaly.yml",
+     "origin": "sigmahq",
+     "title": "Potential Regsvr32 Commandline Flag Anomaly",
+     "added_in": "v1",
+     "note": "Regsvr32 scriptlet abuse."
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "file": "proc_creation_win_schtasks_creation.yml",
+     "origin": "sigmahq",
+     "title": "Scheduled Task Creation Via Schtasks.EXE",
+     "added_in": "v1",
+     "note": "Scheduled task creation."
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "file": "proc_creation_win_susp_eventlog_clear.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Eventlog Clearing or Configuration Change Activity",
+     "added_in": "v1",
+     "note": "Event log clearing."
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "file": "proc_creation_win_susp_shadow_copies_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+     "added_in": "v1",
+     "note": "Shadow copy deletion (vssadmin, wmic)."
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "file": "proc_creation_win_sysinternals_procdump_lsass.yml",
+     "origin": "sigmahq",
+     "title": "Potential LSASS Process Dump Via Procdump",
+     "added_in": "v1",
+     "note": "LSASS dumping with ProcDump."
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "file": "proc_creation_win_sysinternals_psexec_execution.yml",
+     "origin": "sigmahq",
+     "title": "Psexec Execution",
+     "added_in": "v1",
+     "note": "PsExec use. Only tagged with the parent technique T1021, so it earns partial credit for T1021.002 at best."
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "file": "win_security_pass_the_hash_2.yml",
+     "origin": "sigmahq",
+     "title": "Pass the Hash Activity 2",
+     "added_in": "v1",
+     "note": "Pass-the-hash logon (event 4624). Telemetry gap in recorded mode, so T1550.002 reads as a telemetry gap, not a miss."
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "file": "win_security_user_creation.yml",
+     "origin": "sigmahq",
+     "title": "Local User Creation",
+     "added_in": "v1",
+     "note": "User created (event 4720). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "file": "win_system_eventlog_cleared.yml",
+     "origin": "sigmahq",
+     "title": "Eventlog Cleared",
+     "added_in": "v1",
+     "note": "System log cleared (event 104). Telemetry gap in recorded mode."
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "version": "v2",
+   "created_at": "2026-10-11T08:00:00Z",
+   "rules_json_hash": "75393ce2be1ac18112f071718fa325b3117b06cdd3a4b9dfb4cb54f3bee4e6f3",
+   "notes": "More SigmaHQ coverage after run 1: services, WMI, Defender tampering and network discovery, plus the popular encoded-PowerShell rule. That rule fires on the benign baseline (5 hits) so it is flagged noisy and its credit is withheld. The Event Viewer UAC bypass rules from SigmaHQ are added too; they do not match the recorded telemetry (Sysmon writes the key as ...\\command\\(Default)).",
+   "rules": [
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "file": "posh_ps_susp_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious PowerShell Download - Powershell Script",
+     "added_in": "v2",
+     "note": "Script block logging rule (event 4104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "file": "proc_access_win_lsass_memdump.yml",
+     "origin": "sigmahq",
+     "title": "Potential Credential Dumping Activity Via LSASS",
+     "added_in": "v1",
+     "note": "LSASS memory access. Fires on benign activity in the baseline (2 hits), so it is noisy and earns no credit."
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "file": "proc_creation_win_certutil_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Download Via Certutil.EXE",
+     "added_in": "v1",
+     "note": "Certutil used to download files."
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "file": "proc_creation_win_eventvwr_susp_child_process.yml",
+     "origin": "sigmahq",
+     "title": "Potentially Suspicious Event Viewer Child Process",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass. Does not match the recording."
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "file": "proc_creation_win_mshta_javascript.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious JavaScript Execution Via Mshta.EXE",
+     "added_in": "v2",
+     "note": "Mshta running script content."
+    },
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "file": "proc_creation_win_mshta_susp_child_processes.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious MSHTA Child Process",
+     "added_in": "v1",
+     "note": "Mshta spawning interpreters."
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "file": "proc_creation_win_net_user_add.yml",
+     "origin": "sigmahq",
+     "title": "New User Created Via Net.EXE",
+     "added_in": "v1",
+     "note": "New local user with net.exe."
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "file": "proc_creation_win_net_view_share_and_sessions_enum.yml",
+     "origin": "sigmahq",
+     "title": "Share And Session Enumeration Using Net.EXE",
+     "added_in": "v2",
+     "note": "Remote system discovery with net view (T1018)."
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "file": "proc_creation_win_powershell_base64_iex.yml",
+     "origin": "sigmahq",
+     "title": "PowerShell Base64 Encoded IEX Cmdlet",
+     "added_in": "v2",
+     "note": "Uses the unsupported |base64offset modifier, so it is listed as unsupported and never evaluated as no-match."
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "file": "proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+     "origin": "sigmahq",
+     "title": "Disable Windows Defender AV Security Monitoring",
+     "added_in": "v2",
+     "note": "Defender tampering with PowerShell (T1685)."
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "file": "proc_creation_win_powershell_encode.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Execution of Powershell with Base64",
+     "added_in": "v2",
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "file": "proc_creation_win_powershell_shadowcopy_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+     "added_in": "v1",
+     "note": "Shadow copy deletion with PowerShell."
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "file": "proc_creation_win_reg_add_run_key.yml",
+     "origin": "sigmahq",
+     "title": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+     "added_in": "v1",
+     "note": "Run key persistence."
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "file": "proc_creation_win_regsvr32_flags_anomaly.yml",
+     "origin": "sigmahq",
+     "title": "Potential Regsvr32 Commandline Flag Anomaly",
+     "added_in": "v1",
+     "note": "Regsvr32 scriptlet abuse."
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "file": "proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+     "origin": "sigmahq",
+     "title": "Process Memory Dump Via Comsvcs.DLL",
+     "added_in": "v2",
+     "note": "LSASS dump through comsvcs.dll."
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "file": "proc_creation_win_sc_create_service.yml",
+     "origin": "sigmahq",
+     "title": "New Service Creation Using Sc.EXE",
+     "added_in": "v2",
+     "note": "Service creation with sc.exe (T1543.003)."
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "file": "proc_creation_win_schtasks_creation.yml",
+     "origin": "sigmahq",
+     "title": "Scheduled Task Creation Via Schtasks.EXE",
+     "added_in": "v1",
+     "note": "Scheduled task creation."
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "file": "proc_creation_win_susp_eventlog_clear.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Eventlog Clearing or Configuration Change Activity",
+     "added_in": "v1",
+     "note": "Event log clearing."
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "file": "proc_creation_win_susp_service_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious New Service Creation",
+     "added_in": "v2",
+     "note": "Second service creation rule."
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "file": "proc_creation_win_susp_shadow_copies_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+     "added_in": "v1",
+     "note": "Shadow copy deletion (vssadmin, wmic)."
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "file": "proc_creation_win_sysinternals_procdump_lsass.yml",
+     "origin": "sigmahq",
+     "title": "Potential LSASS Process Dump Via Procdump",
+     "added_in": "v1",
+     "note": "LSASS dumping with ProcDump."
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "file": "proc_creation_win_sysinternals_psexec_execution.yml",
+     "origin": "sigmahq",
+     "title": "Psexec Execution",
+     "added_in": "v1",
+     "note": "PsExec use. Only tagged with the parent technique T1021, so it earns partial credit for T1021.002 at best."
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "file": "proc_creation_win_wmic_process_creation.yml",
+     "origin": "sigmahq",
+     "title": "Process Creation Attempt via Wmic.EXE",
+     "added_in": "v2",
+     "note": "WMI process creation (T1047)."
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "file": "proc_creation_win_wmic_recon_group.yml",
+     "origin": "sigmahq",
+     "title": "Local Groups Reconnaissance Via Wmic.EXE",
+     "added_in": "v2",
+     "note": "Group recon with wmic. It fires once on the baseline (noisy) and did not match the recorded local group enumeration, so T1069.001 stays a gap until v3."
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "file": "registry_set_uac_bypass_eventvwr.yml",
+     "origin": "sigmahq",
+     "title": "UAC Bypass via Event Viewer",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass key. Does not match the recording: the key path ends in \\command\\(Default) in Sysmon."
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "file": "win_security_pass_the_hash_2.yml",
+     "origin": "sigmahq",
+     "title": "Pass the Hash Activity 2",
+     "added_in": "v1",
+     "note": "Pass-the-hash logon (event 4624). Telemetry gap in recorded mode, so T1550.002 reads as a telemetry gap, not a miss."
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "file": "win_security_susp_scheduled_task_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Scheduled Task Creation",
+     "added_in": "v2",
+     "note": "Scheduled task (event 4698). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "file": "win_security_user_creation.yml",
+     "origin": "sigmahq",
+     "title": "Local User Creation",
+     "added_in": "v1",
+     "note": "User created (event 4720). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "file": "win_system_eventlog_cleared.yml",
+     "origin": "sigmahq",
+     "title": "Eventlog Cleared",
+     "added_in": "v1",
+     "note": "System log cleared (event 104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "file": "win_system_service_install_susp.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Service Installation",
+     "added_in": "v2",
+     "note": "Service install (event 7045). Telemetry gap in recorded mode."
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "version": "v3",
+   "created_at": "2026-10-25T08:00:00Z",
+   "rules_json_hash": "610df8ab55e29680654714eb9cd336130d94cd6e966d0508f8a8d03d22d3ac5f",
+   "notes": "First custom rules, each written for a gap runs 1 and 2 showed: a tuned replacement for the noisy encoded-PowerShell rule, local group enumeration with net.exe, 7-Zip archives with split volumes or maximum compression, and quser/qwinsta session discovery. The noisy SigmaHQ rule stays enabled and visible but no longer carries any credit.",
+   "rules": [
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "file": "posh_ps_susp_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious PowerShell Download - Powershell Script",
+     "added_in": "v2",
+     "note": "Script block logging rule (event 4104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "file": "proc_access_win_lsass_memdump.yml",
+     "origin": "sigmahq",
+     "title": "Potential Credential Dumping Activity Via LSASS",
+     "added_in": "v1",
+     "note": "LSASS memory access. Fires on benign activity in the baseline (2 hits), so it is noisy and earns no credit."
+    },
+    {
+     "rule_id": "6339ddf7-e217-4bce-b3a5-0698bc4a4eaf",
+     "file": "proc_creation_win_7zip_split_or_max_compression.yml",
+     "origin": "custom",
+     "title": "7-Zip Archive Created With Split Volumes Or Maximum Compression",
+     "added_in": "v3",
+     "note": "Closes T1560.001: the SigmaHQ 7-Zip rule only covers password-protected archives."
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "file": "proc_creation_win_certutil_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Download Via Certutil.EXE",
+     "added_in": "v1",
+     "note": "Certutil used to download files."
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "file": "proc_creation_win_eventvwr_susp_child_process.yml",
+     "origin": "sigmahq",
+     "title": "Potentially Suspicious Event Viewer Child Process",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass. Does not match the recording."
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "file": "proc_creation_win_mshta_javascript.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious JavaScript Execution Via Mshta.EXE",
+     "added_in": "v2",
+     "note": "Mshta running script content."
+    },
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "file": "proc_creation_win_mshta_susp_child_processes.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious MSHTA Child Process",
+     "added_in": "v1",
+     "note": "Mshta spawning interpreters."
+    },
+    {
+     "rule_id": "466cc903-dc93-4a6c-994a-9e51377e4167",
+     "file": "proc_creation_win_net_localgroup_enumeration.yml",
+     "origin": "custom",
+     "title": "Local Group Enumeration With Net.exe",
+     "added_in": "v3",
+     "note": "Closes T1069.001: the SigmaHQ wmic rule never matched the recorded 'net localgroup' and was noisy on the baseline."
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "file": "proc_creation_win_net_user_add.yml",
+     "origin": "sigmahq",
+     "title": "New User Created Via Net.EXE",
+     "added_in": "v1",
+     "note": "New local user with net.exe."
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "file": "proc_creation_win_net_view_share_and_sessions_enum.yml",
+     "origin": "sigmahq",
+     "title": "Share And Session Enumeration Using Net.EXE",
+     "added_in": "v2",
+     "note": "Remote system discovery with net view (T1018)."
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "file": "proc_creation_win_powershell_base64_iex.yml",
+     "origin": "sigmahq",
+     "title": "PowerShell Base64 Encoded IEX Cmdlet",
+     "added_in": "v2",
+     "note": "Uses the unsupported |base64offset modifier, so it is listed as unsupported and never evaluated as no-match."
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "file": "proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+     "origin": "sigmahq",
+     "title": "Disable Windows Defender AV Security Monitoring",
+     "added_in": "v2",
+     "note": "Defender tampering with PowerShell (T1685)."
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "file": "proc_creation_win_powershell_encode.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Execution of Powershell with Base64",
+     "added_in": "v2",
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+    },
+    {
+     "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+     "file": "proc_creation_win_powershell_encoded_command_tuned.yml",
+     "origin": "custom",
+     "title": "PowerShell Encoded Command Outside The Remote Management Harness",
+     "added_in": "v3",
+     "note": "Closes T1059.001 (missed in run 1, noisy partial in run 2) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "file": "proc_creation_win_powershell_shadowcopy_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+     "added_in": "v1",
+     "note": "Shadow copy deletion with PowerShell."
+    },
+    {
+     "rule_id": "a86050af-7b68-4a3b-a2d2-affe1bd8bd94",
+     "file": "proc_creation_win_quser_qwinsta_session_discovery.yml",
+     "origin": "custom",
+     "title": "Logged-On User Discovery With Quser Or Qwinsta",
+     "added_in": "v3",
+     "note": "Closes T1033: logged-on user discovery with quser/qwinsta."
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "file": "proc_creation_win_reg_add_run_key.yml",
+     "origin": "sigmahq",
+     "title": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+     "added_in": "v1",
+     "note": "Run key persistence."
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "file": "proc_creation_win_regsvr32_flags_anomaly.yml",
+     "origin": "sigmahq",
+     "title": "Potential Regsvr32 Commandline Flag Anomaly",
+     "added_in": "v1",
+     "note": "Regsvr32 scriptlet abuse."
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "file": "proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+     "origin": "sigmahq",
+     "title": "Process Memory Dump Via Comsvcs.DLL",
+     "added_in": "v2",
+     "note": "LSASS dump through comsvcs.dll."
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "file": "proc_creation_win_sc_create_service.yml",
+     "origin": "sigmahq",
+     "title": "New Service Creation Using Sc.EXE",
+     "added_in": "v2",
+     "note": "Service creation with sc.exe (T1543.003)."
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "file": "proc_creation_win_schtasks_creation.yml",
+     "origin": "sigmahq",
+     "title": "Scheduled Task Creation Via Schtasks.EXE",
+     "added_in": "v1",
+     "note": "Scheduled task creation."
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "file": "proc_creation_win_susp_eventlog_clear.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Eventlog Clearing or Configuration Change Activity",
+     "added_in": "v1",
+     "note": "Event log clearing."
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "file": "proc_creation_win_susp_service_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious New Service Creation",
+     "added_in": "v2",
+     "note": "Second service creation rule."
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "file": "proc_creation_win_susp_shadow_copies_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+     "added_in": "v1",
+     "note": "Shadow copy deletion (vssadmin, wmic)."
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "file": "proc_creation_win_sysinternals_procdump_lsass.yml",
+     "origin": "sigmahq",
+     "title": "Potential LSASS Process Dump Via Procdump",
+     "added_in": "v1",
+     "note": "LSASS dumping with ProcDump."
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "file": "proc_creation_win_sysinternals_psexec_execution.yml",
+     "origin": "sigmahq",
+     "title": "Psexec Execution",
+     "added_in": "v1",
+     "note": "PsExec use. Only tagged with the parent technique T1021, so it earns partial credit for T1021.002 at best."
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "file": "proc_creation_win_wmic_process_creation.yml",
+     "origin": "sigmahq",
+     "title": "Process Creation Attempt via Wmic.EXE",
+     "added_in": "v2",
+     "note": "WMI process creation (T1047)."
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "file": "proc_creation_win_wmic_recon_group.yml",
+     "origin": "sigmahq",
+     "title": "Local Groups Reconnaissance Via Wmic.EXE",
+     "added_in": "v2",
+     "note": "Group recon with wmic. It fires once on the baseline (noisy) and did not match the recorded local group enumeration, so T1069.001 stays a gap until v3."
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "file": "registry_set_uac_bypass_eventvwr.yml",
+     "origin": "sigmahq",
+     "title": "UAC Bypass via Event Viewer",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass key. Does not match the recording: the key path ends in \\command\\(Default) in Sysmon."
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "file": "win_security_pass_the_hash_2.yml",
+     "origin": "sigmahq",
+     "title": "Pass the Hash Activity 2",
+     "added_in": "v1",
+     "note": "Pass-the-hash logon (event 4624). Telemetry gap in recorded mode, so T1550.002 reads as a telemetry gap, not a miss."
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "file": "win_security_susp_scheduled_task_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Scheduled Task Creation",
+     "added_in": "v2",
+     "note": "Scheduled task (event 4698). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "file": "win_security_user_creation.yml",
+     "origin": "sigmahq",
+     "title": "Local User Creation",
+     "added_in": "v1",
+     "note": "User created (event 4720). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "file": "win_system_eventlog_cleared.yml",
+     "origin": "sigmahq",
+     "title": "Eventlog Cleared",
+     "added_in": "v1",
+     "note": "System log cleared (event 104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "file": "win_system_service_install_susp.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Service Installation",
+     "added_in": "v2",
+     "note": "Service install (event 7045). Telemetry gap in recorded mode."
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "version": "v4",
+   "created_at": "2026-11-08T08:00:00Z",
+   "rules_json_hash": "290497a4c51f6f252ede9c6cbe0092e3b2620da35c619d035c603c8dd1c352ff",
+   "notes": "The full bundled set (58 SigmaHQ and 12 custom rules): the held-back UAC, rundll32, credential and discovery rules, and every other bundled rule. Rules that cannot match recorded telemetry (Security, System and PowerShell script block channels) or use unsupported Sigma features stay in the set and are labelled as such, not hidden.",
+   "rules": [
+    {
+     "rule_id": "a5a2d357-1ab8-4675-a967-ef9990a59391",
+     "file": "file_event_win_lsass_default_dump_file_names.yml",
+     "origin": "sigmahq",
+     "title": "LSASS Process Memory Dump Files",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "2aa0a6b4-a865-495b-ab51-c28249537b75",
+     "file": "file_event_win_startup_folder_file_write.yml",
+     "origin": "sigmahq",
+     "title": "Startup Folder File Write",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "259e5a6a-b8d2-4c38-86e2-26c5e651361d",
+     "file": "file_event_win_sysinternals_psexec_service.yml",
+     "origin": "sigmahq",
+     "title": "PsExec Service File Creation",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "cdc8da7d-c303-42f8-b08c-b4ab47230263",
+     "file": "net_connection_win_rundll32_net_connections.yml",
+     "origin": "sigmahq",
+     "title": "Rundll32 Internet Connection",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "4fdc44df-bfe9-4fcc-b041-68f5a2d3031c",
+     "file": "posh_ps_localuser.yml",
+     "origin": "sigmahq",
+     "title": "Powershell LocalAccount Manipulation",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "file": "posh_ps_susp_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious PowerShell Download - Powershell Script",
+     "added_in": "v2",
+     "note": "Script block logging rule (event 4104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "146bcd53-9281-45dd-b973-3e8390027f91",
+     "file": "proc_access_win_lsass_from_user_writable_path.yml",
+     "origin": "custom",
+     "title": "LSASS Opened By A Process Running From A User-Writable Folder",
+     "added_in": "v4",
+     "note": "Credit source for T1003.001 in place of the noisy proc_access_win_lsass_memdump rule."
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "file": "proc_access_win_lsass_memdump.yml",
+     "origin": "sigmahq",
+     "title": "Potential Credential Dumping Activity Via LSASS",
+     "added_in": "v1",
+     "note": "LSASS memory access. Fires on benign activity in the baseline (2 hits), so it is noisy and earns no credit."
+    },
+    {
+     "rule_id": "9fbf5927-5261-4284-a71d-f681029ea574",
+     "file": "proc_creation_win_7zip_password_compression.yml",
+     "origin": "sigmahq",
+     "title": "Compress Data and Lock With Password for Exfiltration With 7-ZIP",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "6339ddf7-e217-4bce-b3a5-0698bc4a4eaf",
+     "file": "proc_creation_win_7zip_split_or_max_compression.yml",
+     "origin": "custom",
+     "title": "7-Zip Archive Created With Split Volumes Or Maximum Compression",
+     "added_in": "v3",
+     "note": "Closes T1560.001: the SigmaHQ 7-Zip rule only covers password-protected archives."
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "file": "proc_creation_win_certutil_download.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Download Via Certutil.EXE",
+     "added_in": "v1",
+     "note": "Certutil used to download files."
+    },
+    {
+     "rule_id": "fbd8e0d5-3bf6-4dc3-94c8-36a4591c55b2",
+     "file": "proc_creation_win_cmd_ping_sweep.yml",
+     "origin": "custom",
+     "title": "Ping Sweep From A Command Shell Loop",
+     "added_in": "v4",
+     "note": "Second T1018 rule: ping sweeps from a cmd loop."
+    },
+    {
+     "rule_id": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+     "file": "proc_creation_win_esentutl_sensitive_file_copy.yml",
+     "origin": "sigmahq",
+     "title": "Copying Sensitive Files with Credential Data",
+     "added_in": "v4",
+     "note": "Second T1003.002 rule."
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "file": "proc_creation_win_eventvwr_susp_child_process.yml",
+     "origin": "sigmahq",
+     "title": "Potentially Suspicious Event Viewer Child Process",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass. Does not match the recording."
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "file": "proc_creation_win_mshta_javascript.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious JavaScript Execution Via Mshta.EXE",
+     "added_in": "v2",
+     "note": "Mshta running script content."
+    },
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "file": "proc_creation_win_mshta_susp_child_processes.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious MSHTA Child Process",
+     "added_in": "v1",
+     "note": "Mshta spawning interpreters."
+    },
+    {
+     "rule_id": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+     "file": "proc_creation_win_net_groups_and_accounts_recon.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Group And Account Reconnaissance Activity Using Net.EXE",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "466cc903-dc93-4a6c-994a-9e51377e4167",
+     "file": "proc_creation_win_net_localgroup_enumeration.yml",
+     "origin": "custom",
+     "title": "Local Group Enumeration With Net.exe",
+     "added_in": "v3",
+     "note": "Closes T1069.001: the SigmaHQ wmic rule never matched the recorded 'net localgroup' and was noisy on the baseline."
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "file": "proc_creation_win_net_user_add.yml",
+     "origin": "sigmahq",
+     "title": "New User Created Via Net.EXE",
+     "added_in": "v1",
+     "note": "New local user with net.exe."
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "file": "proc_creation_win_net_view_share_and_sessions_enum.yml",
+     "origin": "sigmahq",
+     "title": "Share And Session Enumeration Using Net.EXE",
+     "added_in": "v2",
+     "note": "Remote system discovery with net view (T1018)."
+    },
+    {
+     "rule_id": "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+     "file": "proc_creation_win_nltest_recon.yml",
+     "origin": "sigmahq",
+     "title": "Potential Recon Activity Via Nltest.EXE",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "fdb62a13-9a81-4e5c-a38f-ea93a16f6d7c",
+     "file": "proc_creation_win_powershell_base64_frombase64string.yml",
+     "origin": "sigmahq",
+     "title": "PowerShell Base64 Encoded FromBase64String Cmdlet",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "file": "proc_creation_win_powershell_base64_iex.yml",
+     "origin": "sigmahq",
+     "title": "PowerShell Base64 Encoded IEX Cmdlet",
+     "added_in": "v2",
+     "note": "Uses the unsupported |base64offset modifier, so it is listed as unsupported and never evaluated as no-match."
+    },
+    {
+     "rule_id": "1ec65a5f-9473-4f12-97da-622044d6df21",
+     "file": "proc_creation_win_powershell_defender_disable_feature.yml",
+     "origin": "sigmahq",
+     "title": "Powershell Defender Disable Scan Feature",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "file": "proc_creation_win_powershell_disable_defender_av_security_monitoring.yml",
+     "origin": "sigmahq",
+     "title": "Disable Windows Defender AV Security Monitoring",
+     "added_in": "v2",
+     "note": "Defender tampering with PowerShell (T1685)."
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "file": "proc_creation_win_powershell_encode.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Execution of Powershell with Base64",
+     "added_in": "v2",
+     "note": "Encoded PowerShell. Noisy: 5 hits on the benign baseline, so T1059.001 reads as partial (noisy rule) until v3 adds a tuned replacement."
+    },
+    {
+     "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+     "file": "proc_creation_win_powershell_encoded_command_tuned.yml",
+     "origin": "custom",
+     "title": "PowerShell Encoded Command Outside The Remote Management Harness",
+     "added_in": "v3",
+     "note": "Closes T1059.001 (missed in run 1, noisy partial in run 2) and T1027: encoded commands outside the remote-management harness shapes that make the SigmaHQ rule noisy."
+    },
+    {
+     "rule_id": "e32d4572-9826-4738-b651-95fa63747e8a",
+     "file": "proc_creation_win_powershell_frombase64string.yml",
+     "origin": "sigmahq",
+     "title": "Base64 Encoded PowerShell Command Detected",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "fb902c61-a077-478a-8c06-8e0a425a54fa",
+     "file": "proc_creation_win_powershell_new_localuser.yml",
+     "origin": "custom",
+     "title": "Local Account Created With PowerShell New-LocalUser",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "3fcbdd8a-468d-46b8-b6b4-3fe6a262972f",
+     "file": "proc_creation_win_powershell_new_service.yml",
+     "origin": "custom",
+     "title": "Service Created With PowerShell New-Service",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "d5f22328-8ef9-4106-b453-c703f42dc983",
+     "file": "proc_creation_win_powershell_register_scheduledtask.yml",
+     "origin": "custom",
+     "title": "Scheduled Task Registered With PowerShell Cmdlets",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "file": "proc_creation_win_powershell_shadowcopy_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Deletion of Volume Shadow Copies via WMI with PowerShell",
+     "added_in": "v1",
+     "note": "Shadow copy deletion with PowerShell."
+    },
+    {
+     "rule_id": "e6c54d94-498c-4562-a37c-b469d8e9a275",
+     "file": "proc_creation_win_powershell_susp_download_patterns.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious PowerShell Download and Execute Pattern",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "a86050af-7b68-4a3b-a2d2-affe1bd8bd94",
+     "file": "proc_creation_win_quser_qwinsta_session_discovery.yml",
+     "origin": "custom",
+     "title": "Logged-On User Discovery With Quser Or Qwinsta",
+     "added_in": "v3",
+     "note": "Closes T1033: logged-on user discovery with quser/qwinsta."
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "file": "proc_creation_win_reg_add_run_key.yml",
+     "origin": "sigmahq",
+     "title": "Potential Persistence Attempt Via Run Keys Using Reg.EXE",
+     "added_in": "v1",
+     "note": "Run key persistence."
+    },
+    {
+     "rule_id": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+     "file": "proc_creation_win_reg_dumping_sensitive_hives.yml",
+     "origin": "sigmahq",
+     "title": "Dumping of Sensitive Hives Via Reg.EXE",
+     "added_in": "v4",
+     "note": "Closes T1003.002 (SAM and SYSTEM hive dumping)."
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "file": "proc_creation_win_regsvr32_flags_anomaly.yml",
+     "origin": "sigmahq",
+     "title": "Potential Regsvr32 Commandline Flag Anomaly",
+     "added_in": "v1",
+     "note": "Regsvr32 scriptlet abuse."
+    },
+    {
+     "rule_id": "867356ee-9352-41c9-a8f2-1be690d78216",
+     "file": "proc_creation_win_regsvr32_network_pattern.yml",
+     "origin": "sigmahq",
+     "title": "Potentially Suspicious Regsvr32 HTTP/FTP Pattern",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "14187fb3-74db-4976-b032-a4a177aa578f",
+     "file": "proc_creation_win_rundll32_mshtml_script_protocol.yml",
+     "origin": "custom",
+     "title": "Rundll32 Runs Inline Script Through Mshtml RunHTMLApplication",
+     "added_in": "v4",
+     "note": "Closes T1218.011: the comparable SigmaHQ rule has no ATT&CK tag, so it could not be credited to a technique."
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "file": "proc_creation_win_rundll32_process_dump_via_comsvcs.yml",
+     "origin": "sigmahq",
+     "title": "Process Memory Dump Via Comsvcs.DLL",
+     "added_in": "v2",
+     "note": "LSASS dump through comsvcs.dll."
+    },
+    {
+     "rule_id": "c3a99af4-35a9-4668-879e-c09aeb4f2bdf",
+     "file": "proc_creation_win_rundll32_uncommon_dll_extension.yml",
+     "origin": "sigmahq",
+     "title": "Rundll32 Execution With Uncommon DLL Extension",
+     "added_in": "v4",
+     "note": "Second T1218.011 rule."
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "file": "proc_creation_win_sc_create_service.yml",
+     "origin": "sigmahq",
+     "title": "New Service Creation Using Sc.EXE",
+     "added_in": "v2",
+     "note": "Service creation with sc.exe (T1543.003)."
+    },
+    {
+     "rule_id": "138d3531-8793-4f50-a2cd-f291b2863d78",
+     "file": "proc_creation_win_sc_service_path_modification.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Service Path Modification",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "81bcb81b-5b1f-474b-b373-52c871aaa7b1",
+     "file": "proc_creation_win_sc_stop_service.yml",
+     "origin": "sigmahq",
+     "title": "Stop Windows Service Via Sc.EXE",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "43269c66-3d33-4049-8192-a9f13805a54e",
+     "file": "proc_creation_win_sc_windefend_tamper.yml",
+     "origin": "custom",
+     "title": "Microsoft Defender Service Stopped Or Reconfigured With Sc.exe",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "file": "proc_creation_win_schtasks_creation.yml",
+     "origin": "sigmahq",
+     "title": "Scheduled Task Creation Via Schtasks.EXE",
+     "added_in": "v1",
+     "note": "Scheduled task creation."
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "file": "proc_creation_win_susp_eventlog_clear.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Eventlog Clearing or Configuration Change Activity",
+     "added_in": "v1",
+     "note": "Event log clearing."
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "file": "proc_creation_win_susp_service_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious New Service Creation",
+     "added_in": "v2",
+     "note": "Second service creation rule."
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "file": "proc_creation_win_susp_shadow_copies_deletion.yml",
+     "origin": "sigmahq",
+     "title": "Shadow Copies Deletion Using Operating Systems Utilities",
+     "added_in": "v1",
+     "note": "Shadow copy deletion (vssadmin, wmic)."
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "file": "proc_creation_win_sysinternals_procdump_lsass.yml",
+     "origin": "sigmahq",
+     "title": "Potential LSASS Process Dump Via Procdump",
+     "added_in": "v1",
+     "note": "LSASS dumping with ProcDump."
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "file": "proc_creation_win_sysinternals_psexec_execution.yml",
+     "origin": "sigmahq",
+     "title": "Psexec Execution",
+     "added_in": "v1",
+     "note": "PsExec use. Only tagged with the parent technique T1021, so it earns partial credit for T1021.002 at best."
+    },
+    {
+     "rule_id": "0ef56343-059e-4cb6-adc1-4c3c967c5e46",
+     "file": "proc_creation_win_systeminfo_execution.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Execution of Systeminfo",
+     "added_in": "v4",
+     "note": "Closes T1082 (partial in run 2: only a noisy rule fired)."
+    },
+    {
+     "rule_id": "7f741dcf-fc22-4759-87b4-9ae8376676a2",
+     "file": "proc_creation_win_uac_bypass_fodhelper.yml",
+     "origin": "sigmahq",
+     "title": "Bypass UAC via Fodhelper.exe",
+     "added_in": "v4",
+     "note": "Second UAC bypass rule for T1548.002."
+    },
+    {
+     "rule_id": "c30fb093-1109-4dc8-88a8-b30d11c95a5d",
+     "file": "proc_creation_win_whoami_output.yml",
+     "origin": "sigmahq",
+     "title": "Whoami.EXE Execution With Output Option",
+     "added_in": "v4",
+     "note": "Second T1033 rule."
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "file": "proc_creation_win_wmic_process_creation.yml",
+     "origin": "sigmahq",
+     "title": "Process Creation Attempt via Wmic.EXE",
+     "added_in": "v2",
+     "note": "WMI process creation (T1047)."
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "file": "proc_creation_win_wmic_recon_group.yml",
+     "origin": "sigmahq",
+     "title": "Local Groups Reconnaissance Via Wmic.EXE",
+     "added_in": "v2",
+     "note": "Group recon with wmic. It fires once on the baseline (noisy) and did not match the recorded local group enumeration, so T1069.001 stays a gap until v3."
+    },
+    {
+     "rule_id": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+     "file": "proc_creation_win_wmic_recon_hotfix.yml",
+     "origin": "sigmahq",
+     "title": "Windows Hotfix Updates Reconnaissance Via Wmic.EXE",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "20f0ee37-5942-4e45-b7d5-c5b5db9df5cd",
+     "file": "registry_set_asep_reg_keys_modification_currentversion.yml",
+     "origin": "sigmahq",
+     "title": "CurrentVersion Autorun Keys Modification",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "file": "registry_set_uac_bypass_eventvwr.yml",
+     "origin": "sigmahq",
+     "title": "UAC Bypass via Event Viewer",
+     "added_in": "v2",
+     "note": "Event Viewer UAC bypass key. Does not match the recording: the key path ends in \\command\\(Default) in Sysmon."
+    },
+    {
+     "rule_id": "5aae86d9-df8a-4529-a7db-a1e18a21e69a",
+     "file": "registry_set_uac_bypass_shell_open_command.yml",
+     "origin": "custom",
+     "title": "UAC Bypass Via Shell Open Command Hijack",
+     "added_in": "v4",
+     "note": "Closes T1548.002: matches the shell\\open\\command hijack including Sysmon's \\(Default) suffix, which the SigmaHQ Event Viewer rules miss."
+    },
+    {
+     "rule_id": "48437c39-9e5f-47fb-af95-3d663c3f2919",
+     "file": "registry_set_uac_disable.yml",
+     "origin": "sigmahq",
+     "title": "UAC Disabled",
+     "added_in": "v4",
+     "note": "Third UAC rule for T1548.002."
+    },
+    {
+     "rule_id": "d99b79d2-0a6f-4f46-ad8b-260b6e17f982",
+     "file": "win_security_audit_log_cleared.yml",
+     "origin": "sigmahq",
+     "title": "Security Eventlog Cleared",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "d04ae2b8-ad54-4de0-bd87-4bc1da66aa59",
+     "file": "win_security_kerberoasting_activity.yml",
+     "origin": "sigmahq",
+     "title": "Kerberoasting Activity - Initial Query",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "file": "win_security_pass_the_hash_2.yml",
+     "origin": "sigmahq",
+     "title": "Pass the Hash Activity 2",
+     "added_in": "v1",
+     "note": "Pass-the-hash logon (event 4624). Telemetry gap in recorded mode, so T1550.002 reads as a telemetry gap, not a miss."
+    },
+    {
+     "rule_id": "4a1b6da0-d94f-4fc3-98fc-2d9cb9e5ee76",
+     "file": "win_security_susp_lsass_dump_generic.yml",
+     "origin": "sigmahq",
+     "title": "Potentially Suspicious AccessMask Requested From LSASS",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "file": "win_security_susp_scheduled_task_creation.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Scheduled Task Creation",
+     "added_in": "v2",
+     "note": "Scheduled task (event 4698). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "file": "win_security_user_creation.yml",
+     "origin": "sigmahq",
+     "title": "Local User Creation",
+     "added_in": "v1",
+     "note": "User created (event 4720). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "file": "win_system_eventlog_cleared.yml",
+     "origin": "sigmahq",
+     "title": "Eventlog Cleared",
+     "added_in": "v1",
+     "note": "System log cleared (event 104). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "file": "win_system_service_install_susp.yml",
+     "origin": "sigmahq",
+     "title": "Suspicious Service Installation",
+     "added_in": "v2",
+     "note": "Service install (event 7045). Telemetry gap in recorded mode."
+    },
+    {
+     "rule_id": "42c575ea-e41e-41f1-b248-8093c3e82a28",
+     "file": "win_system_service_install_sysinternals_psexec.yml",
+     "origin": "sigmahq",
+     "title": "PsExec Service Installation",
+     "added_in": "v4",
+     "note": "Remaining bundled rule enabled in v4 (second rule for a technique that was already covered, or outside recorded telemetry)."
+    }
+   ]
+  }
+ ],
+ "runs": [
+  {
+   "id": 1,
+   "campaign_id": 1,
+   "ruleset_id": 1,
+   "mode": "recorded",
+   "source": "Recorded mode: Sysmon recordings from Splunk attack_data (Apache-2.0), trimmed to each test window; https://github.com/splunk/attack_data. Nothing was executed and no lab was used.",
+   "started_at": "2026-09-28T09:00:00Z",
+   "notes": "Baseline: the starter rule set against the credential theft campaign.",
+   "summary": {
+    "counts": {
+     "detected": 6,
+     "partial": 0,
+     "missed": 7,
+     "telemetry_gap": 1,
+     "untested": 1
+    },
+    "tested": 14,
+    "score": 42.9,
+    "partial_score": 42.9
+   },
+   "executions": [
+    {
+     "technique_id": "T1059.001",
+     "name": "PowerShell",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "bf8c1441-4674-4dab-8e4e-39d93d08f9b7",
+     "started_at": "2021-03-01T22:53:27.638275Z",
+     "ended_at": "2021-03-01T22:55:27.638275Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1059.001/run-bloodhound-from-memory-using-download-cradle.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1053.005",
+     "name": "Scheduled Task",
+     "tactics": [
+      "execution",
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+     "started_at": "2020-12-07T12:36:14.566933Z",
+     "ended_at": "2020-12-07T12:38:14.566933Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1053.005/scheduled-task-local.jsonl.gz",
+     "reason": "detected by Scheduled Task Creation Via Schtasks.EXE [92626ddd-662c-49e3-ac59-f6535f12d189]",
+     "hits": [
+      {
+       "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+       "first_ts": "2020-12-07T12:36:14.448677Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4439,
+        4456,
+        4487,
+        4518
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1547.001",
+     "name": "Registry Run Keys / Startup Folder",
+     "tactics": [
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+     "started_at": "2020-11-27T08:47:42.301334Z",
+     "ended_at": "2020-11-27T08:49:42.301334Z",
+     "status": "detected",
+     "ttd_ms": 6,
+     "events_ref": "T1547.001/reg-key-run.jsonl.gz",
+     "reason": "detected by Potential Persistence Attempt Via Run Keys Using Reg.EXE [de587dce-915e-4218-aac4-835ca6af6f70]",
+     "hits": [
+      {
+       "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+       "first_ts": "2020-11-27T08:47:42.307488Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4417,
+        4445
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1548.002",
+     "name": "Bypass User Account Control",
+     "tactics": [
+      "privilege-escalation"
+     ],
+     "test_guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
+     "started_at": "2020-11-18T10:08:52.277099Z",
+     "ended_at": "2020-11-18T10:10:52.277099Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1548.002/bypass-uac-using-event-viewer-cmd.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1218.011",
+     "name": "Rundll32",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+     "started_at": "2020-11-30T14:46:46.448020Z",
+     "ended_at": "2020-11-30T14:48:46.448020Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1218.011/rundll32-execute-vbscript-command.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1218.005",
+     "name": "Mshta",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "906865c3-e05f-4acc-85c4-fbc185455095",
+     "started_at": "2021-01-20T15:59:43.682727Z",
+     "ended_at": "2021-01-20T16:01:43.682727Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1218.005/mshta-executes-vbscript-to-execute-malicious-command.jsonl.gz",
+     "reason": "detected by Suspicious MSHTA Child Process [03cc0c25-389f-4bf8-b48d-11878079f1ca]",
+     "hits": [
+      {
+       "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+       "first_ts": "2021-01-20T15:59:42.410623Z",
+       "count": 8,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        27332,
+        27541,
+        27757,
+        27973,
+        28186,
+        28392,
+        28687,
+        29191
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1218.010",
+     "name": "Regsvr32",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+     "started_at": "2021-01-28T22:12:47.202281Z",
+     "ended_at": "2021-01-28T22:14:47.202281Z",
+     "status": "detected",
+     "ttd_ms": 14,
+     "events_ref": "T1218.010/regsvr32-local-com-scriptlet-execution.jsonl.gz",
+     "reason": "detected by Potential Regsvr32 Commandline Flag Anomaly [b236190c-1c61-41e9-84b3-3fe03f6d76b0]",
+     "hits": [
+      {
+       "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+       "first_ts": "2021-01-28T22:12:47.216562Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        360053,
+        360093
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1027",
+     "name": "Obfuscated Files or Information",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "a50d5a97-2531-499e-a1de-5544c74432c6",
+     "started_at": "2020-11-20T10:33:40.775271Z",
+     "ended_at": "2020-11-20T10:35:40.775271Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1027/execute-base64-encoded-powershell.jsonl.gz",
+     "reason": "1 rule(s) tagged for this technique were evaluated; none fired",
+     "hits": []
+    },
+    {
+     "technique_id": "T1003.001",
+     "name": "LSASS Memory",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+     "started_at": "2020-11-03T15:52:59.300564Z",
+     "ended_at": "2020-11-03T15:54:59.300564Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1003.001/dump-lsass-exe-memory-using-procdump.jsonl.gz",
+     "reason": "detected by Potential LSASS Process Dump Via Procdump [5afee48e-67dd-4e03-a783-f74259dcf998]; noisy rule(s) for this technique earned no credit: Potential Credential Dumping Activity Via LSASS [5ef9853e-4d0e-4a70-846f-a9ca37d876da] (2 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+       "first_ts": "2020-11-03T15:52:59.300564Z",
+       "count": 3,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5350,
+        5392,
+        5419
+       ]
+      },
+      {
+       "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+       "first_ts": "2020-11-03T15:52:58.630989Z",
+       "count": 44,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 2,
+       "record_ids": [
+        5161,
+        5164,
+        5167,
+        5169,
+        5171,
+        5173,
+        5187,
+        5189,
+        5191,
+        5193,
+        5195,
+        5197,
+        5199,
+        5201,
+        5203,
+        5205,
+        5207,
+        5209,
+        5211,
+        5213,
+        5215,
+        5231,
+        5248,
+        5277,
+        5318,
+        5320,
+        5322,
+        5324,
+        5326,
+        5328,
+        5330,
+        5332,
+        5334,
+        5336,
+        5338,
+        5340,
+        5342,
+        5344,
+        5417,
+        5433,
+        5435,
+        5574,
+        5576,
+        5579
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1003.002",
+     "name": "Security Account Manager",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+     "started_at": "2020-10-08T11:03:46.617920Z",
+     "ended_at": "2020-10-08T11:05:46.617920Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1003.002/registry-dump-of-sam-creds-and-secrets.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1558.003",
+     "name": "Kerberoasting",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": null,
+     "started_at": null,
+     "ended_at": null,
+     "status": "untested",
+     "ttd_ms": null,
+     "events_ref": "T1558.003/recorded-execution.jsonl.gz",
+     "reason": "recorded dataset contains no execution",
+     "hits": []
+    },
+    {
+     "technique_id": "T1033",
+     "name": "System Owner/User Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+     "started_at": "2020-12-04T14:34:45.878718Z",
+     "ended_at": "2020-12-04T14:36:45.878718Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1033/system-owner-user-discovery.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1069.001",
+     "name": "Local Groups",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "1f454dd6-e134-44df-bebb-67de70fb6cd8",
+     "started_at": "2021-09-14T16:31:03.077744Z",
+     "ended_at": "2021-09-14T16:33:03.077744Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1069.001/basic-permission-groups-discovery-windows-local.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1550.002",
+     "name": "Pass the Hash",
+     "tactics": [
+      "lateral-movement"
+     ],
+     "test_guid": null,
+     "started_at": "2020-10-15T12:15:58.755982Z",
+     "ended_at": "2020-10-15T12:17:58.755982Z",
+     "status": "telemetry_gap",
+     "ttd_ms": null,
+     "events_ref": "T1550.002/recorded-execution.jsonl.gz",
+     "reason": "rules tagged for this technique cannot match this telemetry: 8eef149c-bd26-49f2-9e5a-9b00e3af499b: channel 'Security' is not in the telemetry (needed for logsource service 'security')",
+     "hits": []
+    },
+    {
+     "technique_id": "T1105",
+     "name": "Ingress Tool Transfer",
+     "tactics": [
+      "command-and-control"
+     ],
+     "test_guid": "dd3b61dd-7bbc-48cd-ab51-49ad1a776df0",
+     "started_at": "2021-03-24T21:49:22.198836Z",
+     "ended_at": "2021-03-24T21:51:22.198836Z",
+     "status": "detected",
+     "ttd_ms": 24,
+     "events_ref": "T1105/certutil-download-urlcache.jsonl.gz",
+     "reason": "detected by Suspicious Download Via Certutil.EXE [19b08b1c-861d-4e75-a1ef-ea0c1baf202b]",
+     "hits": [
+      {
+       "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+       "first_ts": "2021-03-24T21:49:22.223069Z",
+       "count": 11,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5917149,
+        5917204,
+        5917472,
+        5917528,
+        5917611,
+        5917657,
+        5917712,
+        5917876,
+        5917940,
+        5918016,
+        5918074
+       ]
+      }
+     ]
+    }
+   ],
+   "rule_noise": [
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "status": "match",
+     "hits": 2,
+     "noisy": true
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    }
+   ],
+   "gaps": [
+    {
+     "technique_id": "T1059.001",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Closed in run 3 (rule set v3): PowerShell Encoded Command Outside The Remote Management Harness.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 (or Security 4688 with command-line auditing) and PowerShell Script Block Logging (event 4104) so encoded and in-memory scripts are visible.",
+     "rule_idea": "Match powershell.exe or pwsh.exe command lines with download cradles (Net.WebClient, DownloadString, Invoke-WebRequest) combined with IEX or -EncodedCommand.",
+     "closed_in_run": 3
+    },
+    {
+     "technique_id": "T1548.002",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): partial.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 13 on the shell\\open\\command keys under HKCU\\Software\\Classes and Sysmon event 1 with integrity level for auto-elevating binaries.",
+     "rule_idea": "Match eventvwr.exe, fodhelper.exe or computerdefaults.exe spawning a shell, and writes to HKCU\\Software\\Classes\\*\\shell\\open\\command.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1218.011",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): missed.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 1 with command line and parent image, Sysmon event 3 for rundll32.exe network connections, Sysmon event 7 for unusual DLL loads.",
+     "rule_idea": "Match rundll32.exe with javascript:, vbscript:, mshtml,RunHTMLApplication or a DLL with a non-.dll extension, and rundll32.exe making outbound connections.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1027",
+     "kind": "missed",
+     "notes": "Missed: 1 rule(s) tagged for this technique were evaluated; none fired. Closed in run 3 (rule set v3): PowerShell Encoded Command Outside The Remote Management Harness.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 command lines and PowerShell Script Block Logging (event 4104), which logs the decoded script.",
+     "rule_idea": "Match -EncodedCommand / -enc with long Base64 payloads, FromBase64String, and decoded content containing known tool strings.",
+     "closed_in_run": 3
+    },
+    {
+     "technique_id": "T1003.002",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Still open in run 3 (rule set v3): partial.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 1 for reg.exe, Sysmon event 11 for hive copies, Security 4656/4663 on the SAM key with registry auditing.",
+     "rule_idea": "Match reg.exe save/export of HKLM\\SAM, SYSTEM or SECURITY, and shadow-copy based copies of the config\\SAM file.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1033",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Closed in run 3 (rule set v3): Logged-On User Discovery With Quser Or Qwinsta.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 or Security 4688 with command-line auditing.",
+     "rule_idea": "Match whoami.exe with /all, /priv or output redirection, and quser / query user from unusual parents.",
+     "closed_in_run": 3
+    },
+    {
+     "technique_id": "T1069.001",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Closed in run 3 (rule set v3): Local Group Enumeration With Net.exe.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 or Security 4688 with command lines; Security 4798 (local group membership enumerated) where audited.",
+     "rule_idea": "Match net localgroup administrators, wmic group, and Get-LocalGroupMember in script block logs.",
+     "closed_in_run": 3
+    },
+    {
+     "technique_id": "T1550.002",
+     "kind": "telemetry_gap",
+     "notes": "Telemetry gap: rules tagged for this technique cannot match this telemetry: 8eef149c-bd26-49f2-9e5a-9b00e3af499b: channel 'Security' is not in the telemetry (needed for logsource service 'security'). Still open in run 3 (rule set v3): telemetry gap. Limit of the recorded data: the run launched mimikatz interactively with no sekurlsa::pth on the command line, and the recording has no Security channel, so logon-based pass-the-hash rules cannot be evaluated in recorded mode.",
+     "status": "open",
+     "telemetry_needed": "Security 4624 logon type 9 or type 3 with NTLM and Sysmon event 10 for credential-tool process access; ideally Security events from the destination host.",
+     "rule_idea": "Match 4624 type 9 with logon process seclogo and an empty or mismatched key length, and NTLM network logons from a workstation to many hosts.",
+     "closed_in_run": null
+    }
+   ]
+  },
+  {
+   "id": 2,
+   "campaign_id": 2,
+   "ruleset_id": 2,
+   "mode": "recorded",
+   "source": "Recorded mode: Sysmon recordings from Splunk attack_data (Apache-2.0), trimmed to each test window; https://github.com/splunk/attack_data. Nothing was executed and no lab was used.",
+   "started_at": "2026-10-12T09:00:00Z",
+   "notes": "More SigmaHQ coverage against the ransomware precursors campaign.",
+   "summary": {
+    "counts": {
+     "detected": 9,
+     "partial": 4,
+     "missed": 1,
+     "telemetry_gap": 0,
+     "untested": 0
+    },
+    "tested": 14,
+    "score": 64.3,
+    "partial_score": 78.6
+   },
+   "executions": [
+    {
+     "technique_id": "T1059.001",
+     "name": "PowerShell",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "bf8c1441-4674-4dab-8e4e-39d93d08f9b7",
+     "started_at": "2021-03-01T22:53:27.638275Z",
+     "ended_at": "2021-03-01T22:55:27.638275Z",
+     "status": "partial",
+     "ttd_ms": 11826,
+     "events_ref": "T1059.001/run-bloodhound-from-memory-using-download-cradle.jsonl.gz",
+     "reason": "detected via related technique T1218.005: Suspicious JavaScript Execution Via Mshta.EXE [67f113fa-e23d-4271-befa-30113b3e08b1]; noisy rule(s) for this technique earned no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+       "first_ts": "2021-03-01T22:53:39.464579Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695838
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2021-03-01T22:53:33.190884Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        1695555
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1047",
+     "name": "Windows Management Instrumentation",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+     "started_at": "2020-11-30T13:44:25.009905Z",
+     "ended_at": "2020-11-30T13:46:25.009905Z",
+     "status": "detected",
+     "ttd_ms": 6,
+     "events_ref": "T1047/wmi-execute-local-process.jsonl.gz",
+     "reason": "detected by Process Creation Attempt via Wmic.EXE [526be59f-a573-4eea-b5f7-f0973207634d]",
+     "hits": [
+      {
+       "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+       "first_ts": "2020-11-30T13:44:25.015762Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4705,
+        4747
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-30T13:44:25.612384Z",
+       "count": 3,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4806,
+        4825,
+        4903
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1569.002",
+     "name": "Service Execution",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "873106b7-cfed-454b-8680-fa9f6400431c",
+     "started_at": "2021-04-05T14:15:34.981144Z",
+     "ended_at": "2021-04-05T14:17:34.981144Z",
+     "status": "partial",
+     "ttd_ms": 0,
+     "events_ref": "T1569.002/use-psexec-to-execute-a-command-on-a-remote-host.jsonl.gz",
+     "reason": "detected via related technique T1543.003: Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]",
+     "hits": [
+      {
+       "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+       "first_ts": "2021-04-05T14:15:34.651517Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        7441
+       ]
+      },
+      {
+       "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+       "first_ts": "2021-04-05T14:15:34.651517Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        7441
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2021-04-05T14:15:30.731388Z",
+       "count": 7,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        7060,
+        7238,
+        7260,
+        7338,
+        7586,
+        7608,
+        7687
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1053.005",
+     "name": "Scheduled Task",
+     "tactics": [
+      "execution",
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+     "started_at": "2020-12-07T12:36:14.566933Z",
+     "ended_at": "2020-12-07T12:38:14.566933Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1053.005/scheduled-task-local.jsonl.gz",
+     "reason": "detected by Scheduled Task Creation Via Schtasks.EXE [92626ddd-662c-49e3-ac59-f6535f12d189]",
+     "hits": [
+      {
+       "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+       "first_ts": "2020-12-07T12:36:14.448677Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4439,
+        4456,
+        4487,
+        4518
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-07T12:36:09.807393Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4071,
+        4090,
+        4155,
+        4269,
+        4288,
+        4353,
+        4598,
+        4619,
+        4684
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1543.003",
+     "name": "Windows Service",
+     "tactics": [
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "981e2942-e433-44e9-afc1-8c957a1496b6",
+     "started_at": "2020-12-07T12:14:52.212225Z",
+     "ended_at": "2020-12-07T12:16:52.212225Z",
+     "status": "detected",
+     "ttd_ms": 6,
+     "events_ref": "T1543.003/service-installation-cmd.jsonl.gz",
+     "reason": "detected by Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]",
+     "hits": [
+      {
+       "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+       "first_ts": "2020-12-07T12:14:52.218324Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4522,
+        4563
+       ]
+      },
+      {
+       "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+       "first_ts": "2020-12-07T12:14:52.218324Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4522
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-07T12:14:48.102807Z",
+       "count": 7,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4121,
+        4299,
+        4318,
+        4396,
+        4638,
+        4657,
+        4722
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1136.001",
+     "name": "Local Account",
+     "tactics": [
+      "persistence"
+     ],
+     "test_guid": "bc8be0ac-475c-4fbf-9b1d-9fffd77afbde",
+     "started_at": "2020-10-09T10:41:25.793286Z",
+     "ended_at": "2020-10-09T10:43:25.793286Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1136.001/create-a-new-user-in-powershell.jsonl.gz",
+     "reason": "detected by New User Created Via Net.EXE [cd219ff3-fa99-45d4-8380-a7d15116c6dc]",
+     "hits": [
+      {
+       "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+       "first_ts": "2020-10-09T10:41:25.716373Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4232,
+        4245,
+        4291,
+        4304
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-09T10:41:21.063688Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3823,
+        3842,
+        3921,
+        4049,
+        4068,
+        4133,
+        4385,
+        4404,
+        4469
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1685",
+     "name": "Disable or Modify Tools",
+     "tactics": [
+      "defense-impairment"
+     ],
+     "test_guid": "aa875ed4-8935-47e2-b2c5-6ec00ab220d2",
+     "started_at": "2020-11-06T12:04:50.246878Z",
+     "ended_at": "2020-11-06T12:06:50.246878Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1685/tamper-with-windows-defender-command-prompt.jsonl.gz",
+     "reason": "detected by Disable Windows Defender AV Security Monitoring [a7ee1722-c3c5-aeff-3212-c777e4733217]",
+     "hits": [
+      {
+       "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+       "first_ts": "2020-11-06T12:04:50.246878Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        6655
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1685.005",
+     "name": "Clear Windows Event Logs",
+     "tactics": [
+      "defense-impairment"
+     ],
+     "test_guid": "e6abb60e-26b8-41da-8aae-0c35174b0967",
+     "started_at": "2020-10-09T09:10:56.367341Z",
+     "ended_at": "2020-10-09T09:12:56.367341Z",
+     "status": "detected",
+     "ttd_ms": 13,
+     "events_ref": "T1685.005/clear-logs.jsonl.gz",
+     "reason": "detected by Suspicious Eventlog Clearing or Configuration Change Activity [cc36992a-4671-4f21-a91d-6c2b72a2edf5]",
+     "hits": [
+      {
+       "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+       "first_ts": "2020-10-09T09:10:56.379954Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4264,
+        4277
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-09T09:10:51.928702Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3896,
+        3915,
+        3980,
+        4094,
+        4113,
+        4178,
+        4337,
+        4356,
+        4421
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1003.001",
+     "name": "LSASS Memory",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+     "started_at": "2020-11-03T15:52:59.300564Z",
+     "ended_at": "2020-11-03T15:54:59.300564Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1003.001/dump-lsass-exe-memory-using-procdump.jsonl.gz",
+     "reason": "detected by Potential LSASS Process Dump Via Procdump [5afee48e-67dd-4e03-a783-f74259dcf998]; Process Memory Dump Via Comsvcs.DLL [646ea171-dded-4578-8a4d-65e9822892e3]; noisy rule(s) for this technique earned no credit: Potential Credential Dumping Activity Via LSASS [5ef9853e-4d0e-4a70-846f-a9ca37d876da] (2 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+       "first_ts": "2020-11-03T15:52:59.300564Z",
+       "count": 3,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5350,
+        5392,
+        5419
+       ]
+      },
+      {
+       "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+       "first_ts": "2020-11-03T15:53:02.897089Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5477,
+        5535
+       ]
+      },
+      {
+       "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+       "first_ts": "2020-11-03T15:52:58.630989Z",
+       "count": 44,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 2,
+       "record_ids": [
+        5161,
+        5164,
+        5167,
+        5169,
+        5171,
+        5173,
+        5187,
+        5189,
+        5191,
+        5193,
+        5195,
+        5197,
+        5199,
+        5201,
+        5203,
+        5205,
+        5207,
+        5209,
+        5211,
+        5213,
+        5215,
+        5231,
+        5248,
+        5277,
+        5318,
+        5320,
+        5322,
+        5324,
+        5326,
+        5328,
+        5330,
+        5332,
+        5334,
+        5336,
+        5338,
+        5340,
+        5342,
+        5344,
+        5417,
+        5433,
+        5435,
+        5574,
+        5576,
+        5579
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-03T15:52:56.292856Z",
+       "count": 6,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4763,
+        4808,
+        4914,
+        5720,
+        5765,
+        5925
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1082",
+     "name": "System Information Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "66703791-c902-4560-8770-42b8a91f7667",
+     "started_at": "2020-10-12T08:42:42.742121Z",
+     "ended_at": "2020-10-12T08:44:42.742121Z",
+     "status": "partial",
+     "ttd_ms": 0,
+     "events_ref": "T1082/system-information-discovery.jsonl.gz",
+     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-12T08:42:38.103558Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3891,
+        3910,
+        3975,
+        4091,
+        4108,
+        4173,
+        4466,
+        4485,
+        4550
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1018",
+     "name": "Remote System Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+     "started_at": "2020-12-16T19:39:28.422957Z",
+     "ended_at": "2020-12-16T19:41:28.422957Z",
+     "status": "detected",
+     "ttd_ms": 11,
+     "events_ref": "T1018/remote-system-discovery-net.jsonl.gz",
+     "reason": "detected by Share And Session Enumeration Using Net.EXE [62510e69-616b-4078-b371-847da438cc03]",
+     "hits": [
+      {
+       "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+       "first_ts": "2020-12-16T19:39:28.434388Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        8964,
+        8984
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-16T19:39:25.055783Z",
+       "count": 3,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        8781,
+        8801,
+        8876
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1021.002",
+     "name": "SMB/Windows Admin Shares",
+     "tactics": [
+      "lateral-movement"
+     ],
+     "test_guid": "0eb03d41-79e4-4393-8e57-6344856be1cf",
+     "started_at": "2021-09-16T17:54:28.367664Z",
+     "ended_at": "2021-09-16T17:56:28.367664Z",
+     "status": "partial",
+     "ttd_ms": 55,
+     "events_ref": "T1021.002/copy-and-execute-file-with-psexec.jsonl.gz",
+     "reason": "parent-technique rule: Psexec Execution [730fc21b-eaff-474b-ad23-90fd265d4988]",
+     "hits": [
+      {
+       "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+       "first_ts": "2021-09-16T17:54:28.422276Z",
+       "count": 1,
+       "relation": "parent",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        155125
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1560.001",
+     "name": "Archive via Utility",
+     "tactics": [
+      "collection"
+     ],
+     "test_guid": null,
+     "started_at": "2021-04-22T18:35:57.982985Z",
+     "ended_at": "2021-04-22T18:37:57.982985Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1560.001/recorded-execution.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1490",
+     "name": "Inhibit System Recovery",
+     "tactics": [
+      "impact"
+     ],
+     "test_guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+     "started_at": "2021-01-22T20:43:31.973065Z",
+     "ended_at": "2021-01-22T20:45:31.973065Z",
+     "status": "detected",
+     "ttd_ms": 11,
+     "events_ref": "T1490/windows-delete-volume-shadow-copies.jsonl.gz",
+     "reason": "detected by Shadow Copies Deletion Using Operating Systems Utilities [c947b146-0abc-4c87-9c64-b17e9d7274a2]; Deletion of Volume Shadow Copies via WMI with PowerShell [21ff4ca9-f13a-41ad-b828-0077b2af2e40]",
+     "hits": [
+      {
+       "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+       "first_ts": "2021-01-22T20:43:31.984290Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        30961,
+        31014,
+        31045,
+        31106
+       ]
+      },
+      {
+       "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+       "first_ts": "2021-01-22T20:43:32.471967Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        31106
+       ]
+      }
+     ]
+    }
+   ],
+   "rule_noise": [
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "status": "match",
+     "hits": 1,
+     "noisy": true
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "status": "match",
+     "hits": 2,
+     "noisy": true
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "status": "match",
+     "hits": 5,
+     "noisy": true
+    }
+   ],
+   "gaps": [
+    {
+     "technique_id": "T1059.001",
+     "kind": "partial",
+     "notes": "Partial: detected via related technique T1218.005: Suspicious JavaScript Execution Via Mshta.EXE [67f113fa-e23d-4271-befa-30113b3e08b1]; noisy rule(s) for this technique earned no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Closed in run 4 (rule set v4): Suspicious PowerShell Download and Execute Pattern, PowerShell Encoded Command Outside The Remote Management Harness.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 (or Security 4688 with command-line auditing) and PowerShell Script Block Logging (event 4104) so encoded and in-memory scripts are visible.",
+     "rule_idea": "Match powershell.exe or pwsh.exe command lines with download cradles (Net.WebClient, DownloadString, Invoke-WebRequest) combined with IEX or -EncodedCommand.",
+     "closed_in_run": 4
+    },
+    {
+     "technique_id": "T1569.002",
+     "kind": "partial",
+     "notes": "Partial: detected via related technique T1543.003: Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]. Still open in run 4 (rule set v4): partial. Only rules tagged with other techniques (service creation) or the parent T1569 fire; no bundled rule is tagged T1569.002, so partial is the honest result.",
+     "status": "open",
+     "telemetry_needed": "System log event 7045 (service installed) and Security 4697; Sysmon event 1 for services.exe children and sc.exe.",
+     "rule_idea": "Match a new service whose image path is a command interpreter, a user-writable path or a random name such as PSEXESVC, and services.exe spawning cmd.exe.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1082",
+     "kind": "partial",
+     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Closed in run 4 (rule set v4): Suspicious Execution of Systeminfo.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 or Security 4688 with command-line auditing.",
+     "rule_idea": "Match systeminfo.exe, and clusters of discovery commands (hostname, ver, wmic os) from one parent process.",
+     "closed_in_run": 4
+    },
+    {
+     "technique_id": "T1021.002",
+     "kind": "partial",
+     "notes": "Partial: parent-technique rule: Psexec Execution [730fc21b-eaff-474b-ad23-90fd265d4988]. Still open in run 4 (rule set v4): partial. The PsExec rule is tagged with the parent technique T1021 only and no bundled rule is tagged T1021.002; the recording also holds just 10 events.",
+     "status": "open",
+     "telemetry_needed": "Security 5140/5145 (share access) and 4624 logon type 3 on the destination; Sysmon event 3 for port 445; Sysmon event 1 for net use.",
+     "rule_idea": "Match access to ADMIN$ or C$ followed by a service install (7045) or file creation under Windows\\System32 from the same source.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1560.001",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Closed in run 4 (rule set v4): 7-Zip Archive Created With Split Volumes Or Maximum Compression.",
+     "status": "closed",
+     "telemetry_needed": "Sysmon event 1 with command line for archiving tools (7z, rar, tar) and Sysmon event 11 for the archive file.",
+     "rule_idea": "Match 7z.exe/rar.exe with password (-p), split volume or maximum compression switches, and archives created in staging directories.",
+     "closed_in_run": 4
+    }
+   ]
+  },
+  {
+   "id": 3,
+   "campaign_id": 1,
+   "ruleset_id": 3,
+   "mode": "recorded",
+   "source": "Recorded mode: Sysmon recordings from Splunk attack_data (Apache-2.0), trimmed to each test window; https://github.com/splunk/attack_data. Nothing was executed and no lab was used.",
+   "started_at": "2026-10-26T09:00:00Z",
+   "notes": "Re-run of the credential theft campaign with the first custom rules, to see which gaps from run 1 closed.",
+   "summary": {
+    "counts": {
+     "detected": 10,
+     "partial": 2,
+     "missed": 1,
+     "telemetry_gap": 1,
+     "untested": 1
+    },
+    "tested": 14,
+    "score": 71.4,
+    "partial_score": 78.6
+   },
+   "executions": [
+    {
+     "technique_id": "T1059.001",
+     "name": "PowerShell",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "bf8c1441-4674-4dab-8e4e-39d93d08f9b7",
+     "started_at": "2021-03-01T22:53:27.638275Z",
+     "ended_at": "2021-03-01T22:55:27.638275Z",
+     "status": "detected",
+     "ttd_ms": 5553,
+     "events_ref": "T1059.001/run-bloodhound-from-memory-using-download-cradle.jsonl.gz",
+     "reason": "detected by PowerShell Encoded Command Outside The Remote Management Harness [a9f13099-6459-428b-99f5-c12ebb4b9734]; noisy rule(s) for this technique earned no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+       "first_ts": "2021-03-01T22:53:33.190884Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695555
+       ]
+      },
+      {
+       "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+       "first_ts": "2021-03-01T22:53:39.464579Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695838
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2021-03-01T22:53:33.190884Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        1695555
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1053.005",
+     "name": "Scheduled Task",
+     "tactics": [
+      "execution",
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+     "started_at": "2020-12-07T12:36:14.566933Z",
+     "ended_at": "2020-12-07T12:38:14.566933Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1053.005/scheduled-task-local.jsonl.gz",
+     "reason": "detected by Scheduled Task Creation Via Schtasks.EXE [92626ddd-662c-49e3-ac59-f6535f12d189]",
+     "hits": [
+      {
+       "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+       "first_ts": "2020-12-07T12:36:14.448677Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4439,
+        4456,
+        4487,
+        4518
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-07T12:36:09.807393Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4071,
+        4090,
+        4155,
+        4269,
+        4288,
+        4353,
+        4598,
+        4619,
+        4684
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1547.001",
+     "name": "Registry Run Keys / Startup Folder",
+     "tactics": [
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "e55be3fd-3521-4610-9d1a-e210e42dcf05",
+     "started_at": "2020-11-27T08:47:42.301334Z",
+     "ended_at": "2020-11-27T08:49:42.301334Z",
+     "status": "detected",
+     "ttd_ms": 6,
+     "events_ref": "T1547.001/reg-key-run.jsonl.gz",
+     "reason": "detected by Potential Persistence Attempt Via Run Keys Using Reg.EXE [de587dce-915e-4218-aac4-835ca6af6f70]",
+     "hits": [
+      {
+       "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+       "first_ts": "2020-11-27T08:47:42.307488Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4417,
+        4445
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-27T08:47:37.624658Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4008,
+        4027,
+        4106,
+        4233,
+        4253,
+        4331,
+        4664,
+        4683,
+        4748
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1548.002",
+     "name": "Bypass User Account Control",
+     "tactics": [
+      "privilege-escalation"
+     ],
+     "test_guid": "5073adf8-9a50-4bd9-b298-a9bd2ead8af9",
+     "started_at": "2020-11-18T10:08:52.277099Z",
+     "ended_at": "2020-11-18T10:10:52.277099Z",
+     "status": "partial",
+     "ttd_ms": 0,
+     "events_ref": "T1548.002/bypass-uac-using-event-viewer-cmd.jsonl.gz",
+     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-18T10:08:48.055922Z",
+       "count": 7,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4161,
+        4355,
+        4375,
+        4519,
+        5645,
+        5665,
+        5762
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1218.011",
+     "name": "Rundll32",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "638730e7-7aed-43dc-bf8c-8117f805f5bb",
+     "started_at": "2020-11-30T14:46:46.448020Z",
+     "ended_at": "2020-11-30T14:48:46.448020Z",
+     "status": "missed",
+     "ttd_ms": null,
+     "events_ref": "T1218.011/rundll32-execute-vbscript-command.jsonl.gz",
+     "reason": "no rule in the rule set is tagged for this technique",
+     "hits": []
+    },
+    {
+     "technique_id": "T1218.005",
+     "name": "Mshta",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "906865c3-e05f-4acc-85c4-fbc185455095",
+     "started_at": "2021-01-20T15:59:43.682727Z",
+     "ended_at": "2021-01-20T16:01:43.682727Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1218.005/mshta-executes-vbscript-to-execute-malicious-command.jsonl.gz",
+     "reason": "detected by Suspicious JavaScript Execution Via Mshta.EXE [67f113fa-e23d-4271-befa-30113b3e08b1]; Suspicious MSHTA Child Process [03cc0c25-389f-4bf8-b48d-11878079f1ca]",
+     "hits": [
+      {
+       "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+       "first_ts": "2021-01-20T15:59:42.341141Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        27317
+       ]
+      },
+      {
+       "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+       "first_ts": "2021-01-20T15:59:42.410623Z",
+       "count": 8,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        27332,
+        27541,
+        27757,
+        27973,
+        28186,
+        28392,
+        28687,
+        29191
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1218.010",
+     "name": "Regsvr32",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "449aa403-6aba-47ce-8a37-247d21ef0306",
+     "started_at": "2021-01-28T22:12:47.202281Z",
+     "ended_at": "2021-01-28T22:14:47.202281Z",
+     "status": "detected",
+     "ttd_ms": 14,
+     "events_ref": "T1218.010/regsvr32-local-com-scriptlet-execution.jsonl.gz",
+     "reason": "detected by Potential Regsvr32 Commandline Flag Anomaly [b236190c-1c61-41e9-84b3-3fe03f6d76b0]",
+     "hits": [
+      {
+       "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+       "first_ts": "2021-01-28T22:12:47.216562Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        360053,
+        360093
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1027",
+     "name": "Obfuscated Files or Information",
+     "tactics": [
+      "stealth"
+     ],
+     "test_guid": "a50d5a97-2531-499e-a1de-5544c74432c6",
+     "started_at": "2020-11-20T10:33:40.775271Z",
+     "ended_at": "2020-11-20T10:35:40.775271Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1027/execute-base64-encoded-powershell.jsonl.gz",
+     "reason": "detected by PowerShell Encoded Command Outside The Remote Management Harness [a9f13099-6459-428b-99f5-c12ebb4b9734]",
+     "hits": [
+      {
+       "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+       "first_ts": "2020-11-20T10:33:40.626214Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4483,
+        4501
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-20T10:33:38.422540Z",
+       "count": 8,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4327,
+        4346,
+        4411,
+        4483,
+        4501,
+        4643,
+        4662,
+        4727
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1003.001",
+     "name": "LSASS Memory",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+     "started_at": "2020-11-03T15:52:59.300564Z",
+     "ended_at": "2020-11-03T15:54:59.300564Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1003.001/dump-lsass-exe-memory-using-procdump.jsonl.gz",
+     "reason": "detected by Potential LSASS Process Dump Via Procdump [5afee48e-67dd-4e03-a783-f74259dcf998]; Process Memory Dump Via Comsvcs.DLL [646ea171-dded-4578-8a4d-65e9822892e3]; noisy rule(s) for this technique earned no credit: Potential Credential Dumping Activity Via LSASS [5ef9853e-4d0e-4a70-846f-a9ca37d876da] (2 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+       "first_ts": "2020-11-03T15:52:59.300564Z",
+       "count": 3,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5350,
+        5392,
+        5419
+       ]
+      },
+      {
+       "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+       "first_ts": "2020-11-03T15:53:02.897089Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5477,
+        5535
+       ]
+      },
+      {
+       "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+       "first_ts": "2020-11-03T15:52:58.630989Z",
+       "count": 44,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 2,
+       "record_ids": [
+        5161,
+        5164,
+        5167,
+        5169,
+        5171,
+        5173,
+        5187,
+        5189,
+        5191,
+        5193,
+        5195,
+        5197,
+        5199,
+        5201,
+        5203,
+        5205,
+        5207,
+        5209,
+        5211,
+        5213,
+        5215,
+        5231,
+        5248,
+        5277,
+        5318,
+        5320,
+        5322,
+        5324,
+        5326,
+        5328,
+        5330,
+        5332,
+        5334,
+        5336,
+        5338,
+        5340,
+        5342,
+        5344,
+        5417,
+        5433,
+        5435,
+        5574,
+        5576,
+        5579
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-03T15:52:56.292856Z",
+       "count": 6,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4763,
+        4808,
+        4914,
+        5720,
+        5765,
+        5925
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1003.002",
+     "name": "Security Account Manager",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "5c2571d0-1572-416d-9676-812e64ca9f44",
+     "started_at": "2020-10-08T11:03:46.617920Z",
+     "ended_at": "2020-10-08T11:05:46.617920Z",
+     "status": "partial",
+     "ttd_ms": 0,
+     "events_ref": "T1003.002/registry-dump-of-sam-creds-and-secrets.jsonl.gz",
+     "reason": "noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-08T11:03:44.502054Z",
+       "count": 6,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4366,
+        4385,
+        4450,
+        4934,
+        4953,
+        5019
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1558.003",
+     "name": "Kerberoasting",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": null,
+     "started_at": null,
+     "ended_at": null,
+     "status": "untested",
+     "ttd_ms": null,
+     "events_ref": "T1558.003/recorded-execution.jsonl.gz",
+     "reason": "recorded dataset contains no execution",
+     "hits": []
+    },
+    {
+     "technique_id": "T1033",
+     "name": "System Owner/User Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "4c4959bf-addf-4b4a-be86-8d09cc1857aa",
+     "started_at": "2020-12-04T14:34:45.878718Z",
+     "ended_at": "2020-12-04T14:36:45.878718Z",
+     "status": "detected",
+     "ttd_ms": 176,
+     "events_ref": "T1033/system-owner-user-discovery.jsonl.gz",
+     "reason": "detected by Logged-On User Discovery With Quser Or Qwinsta [a86050af-7b68-4a3b-a2d2-affe1bd8bd94]",
+     "hits": [
+      {
+       "rule_id": "a86050af-7b68-4a3b-a2d2-affe1bd8bd94",
+       "first_ts": "2020-12-04T14:34:46.054636Z",
+       "count": 5,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4481,
+        4501,
+        4521,
+        4547,
+        4586
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-04T14:34:40.984297Z",
+       "count": 8,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4090,
+        4155,
+        4268,
+        4288,
+        4353,
+        5936,
+        5956,
+        6021
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1069.001",
+     "name": "Local Groups",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "1f454dd6-e134-44df-bebb-67de70fb6cd8",
+     "started_at": "2021-09-14T16:31:03.077744Z",
+     "ended_at": "2021-09-14T16:33:03.077744Z",
+     "status": "detected",
+     "ttd_ms": 10,
+     "events_ref": "T1069.001/basic-permission-groups-discovery-windows-local.jsonl.gz",
+     "reason": "detected by Local Group Enumeration With Net.exe [466cc903-dc93-4a6c-994a-9e51377e4167]",
+     "hits": [
+      {
+       "rule_id": "466cc903-dc93-4a6c-994a-9e51377e4167",
+       "first_ts": "2021-09-14T16:31:03.087461Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        11654520,
+        11654581,
+        11654647,
+        11654667
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1550.002",
+     "name": "Pass the Hash",
+     "tactics": [
+      "lateral-movement"
+     ],
+     "test_guid": null,
+     "started_at": "2020-10-15T12:15:58.755982Z",
+     "ended_at": "2020-10-15T12:17:58.755982Z",
+     "status": "telemetry_gap",
+     "ttd_ms": null,
+     "events_ref": "T1550.002/recorded-execution.jsonl.gz",
+     "reason": "rules tagged for this technique cannot match this telemetry: 8eef149c-bd26-49f2-9e5a-9b00e3af499b: channel 'Security' is not in the telemetry (needed for logsource service 'security')",
+     "hits": []
+    },
+    {
+     "technique_id": "T1105",
+     "name": "Ingress Tool Transfer",
+     "tactics": [
+      "command-and-control"
+     ],
+     "test_guid": "dd3b61dd-7bbc-48cd-ab51-49ad1a776df0",
+     "started_at": "2021-03-24T21:49:22.198836Z",
+     "ended_at": "2021-03-24T21:51:22.198836Z",
+     "status": "detected",
+     "ttd_ms": 24,
+     "events_ref": "T1105/certutil-download-urlcache.jsonl.gz",
+     "reason": "detected by Suspicious Download Via Certutil.EXE [19b08b1c-861d-4e75-a1ef-ea0c1baf202b]",
+     "hits": [
+      {
+       "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+       "first_ts": "2021-03-24T21:49:22.223069Z",
+       "count": 11,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5917149,
+        5917204,
+        5917472,
+        5917528,
+        5917611,
+        5917657,
+        5917712,
+        5917876,
+        5917940,
+        5918016,
+        5918074
+       ]
+      }
+     ]
+    }
+   ],
+   "rule_noise": [
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "status": "match",
+     "hits": 1,
+     "noisy": true
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "466cc903-dc93-4a6c-994a-9e51377e4167",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "status": "match",
+     "hits": 2,
+     "noisy": true
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "6339ddf7-e217-4bce-b3a5-0698bc4a4eaf",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a86050af-7b68-4a3b-a2d2-affe1bd8bd94",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "status": "match",
+     "hits": 5,
+     "noisy": true
+    }
+   ],
+   "gaps": [
+    {
+     "technique_id": "T1548.002",
+     "kind": "partial",
+     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (UAC Bypass Via Shell Open Command Hijack, Bypass UAC via Fodhelper.exe, UAC Disabled); re-run the campaign to confirm.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 13 on the shell\\open\\command keys under HKCU\\Software\\Classes and Sysmon event 1 with integrity level for auto-elevating binaries.",
+     "rule_idea": "Match eventvwr.exe, fodhelper.exe or computerdefaults.exe spawning a shell, and writes to HKCU\\Software\\Classes\\*\\shell\\open\\command.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1218.011",
+     "kind": "missed",
+     "notes": "Missed: no rule in the rule set is tagged for this technique. Not re-run yet: rule set v4 detects this on the same recorded telemetry (Rundll32 Runs Inline Script Through Mshtml RunHTMLApplication, Rundll32 Execution With Uncommon DLL Extension); re-run the campaign to confirm.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 1 with command line and parent image, Sysmon event 3 for rundll32.exe network connections, Sysmon event 7 for unusual DLL loads.",
+     "rule_idea": "Match rundll32.exe with javascript:, vbscript:, mshtml,RunHTMLApplication or a DLL with a non-.dll extension, and rundll32.exe making outbound connections.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1003.002",
+     "kind": "partial",
+     "notes": "Partial: noisy rule: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits). Not re-run yet: rule set v4 detects this on the same recorded telemetry (Dumping of Sensitive Hives Via Reg.EXE, Copying Sensitive Files with Credential Data); re-run the campaign to confirm.",
+     "status": "open",
+     "telemetry_needed": "Sysmon event 1 for reg.exe, Sysmon event 11 for hive copies, Security 4656/4663 on the SAM key with registry auditing.",
+     "rule_idea": "Match reg.exe save/export of HKLM\\SAM, SYSTEM or SECURITY, and shadow-copy based copies of the config\\SAM file.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1550.002",
+     "kind": "telemetry_gap",
+     "notes": "Telemetry gap: rules tagged for this technique cannot match this telemetry: 8eef149c-bd26-49f2-9e5a-9b00e3af499b: channel 'Security' is not in the telemetry (needed for logsource service 'security'). No bundled rule set detects this. Limit of the recorded data: the run launched mimikatz interactively with no sekurlsa::pth on the command line, and the recording has no Security channel, so logon-based pass-the-hash rules cannot be evaluated in recorded mode.",
+     "status": "open",
+     "telemetry_needed": "Security 4624 logon type 9 or type 3 with NTLM and Sysmon event 10 for credential-tool process access; ideally Security events from the destination host.",
+     "rule_idea": "Match 4624 type 9 with logon process seclogo and an empty or mismatched key length, and NTLM network logons from a workstation to many hosts.",
+     "closed_in_run": null
+    }
+   ]
+  },
+  {
+   "id": 4,
+   "campaign_id": 2,
+   "ruleset_id": 4,
+   "mode": "recorded",
+   "source": "Recorded mode: Sysmon recordings from Splunk attack_data (Apache-2.0), trimmed to each test window; https://github.com/splunk/attack_data. Nothing was executed and no lab was used.",
+   "started_at": "2026-11-09T09:00:00Z",
+   "notes": "Re-run of the ransomware precursors campaign with the full bundled set.",
+   "summary": {
+    "counts": {
+     "detected": 12,
+     "partial": 2,
+     "missed": 0,
+     "telemetry_gap": 0,
+     "untested": 0
+    },
+    "tested": 14,
+    "score": 85.7,
+    "partial_score": 92.9
+   },
+   "executions": [
+    {
+     "technique_id": "T1059.001",
+     "name": "PowerShell",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "bf8c1441-4674-4dab-8e4e-39d93d08f9b7",
+     "started_at": "2021-03-01T22:53:27.638275Z",
+     "ended_at": "2021-03-01T22:55:27.638275Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1059.001/run-bloodhound-from-memory-using-download-cradle.jsonl.gz",
+     "reason": "detected by Suspicious PowerShell Download and Execute Pattern [e6c54d94-498c-4562-a37c-b469d8e9a275]; PowerShell Encoded Command Outside The Remote Management Harness [a9f13099-6459-428b-99f5-c12ebb4b9734]; noisy rule(s) for this technique earned no credit: Suspicious Execution of Powershell with Base64 [fb843269-508c-4b76-8b8d-88679db22ce7] (5 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "e6c54d94-498c-4562-a37c-b469d8e9a275",
+       "first_ts": "2021-03-01T22:53:27.638275Z",
+       "count": 3,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695514,
+        1695727,
+        1695736
+       ]
+      },
+      {
+       "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+       "first_ts": "2021-03-01T22:53:33.190884Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695555
+       ]
+      },
+      {
+       "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+       "first_ts": "2021-03-01T22:53:39.464579Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        1695838
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2021-03-01T22:53:33.190884Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        1695555
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1047",
+     "name": "Windows Management Instrumentation",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "b3bdfc91-b33e-4c6d-a5c8-d64bee0276b3",
+     "started_at": "2020-11-30T13:44:25.009905Z",
+     "ended_at": "2020-11-30T13:46:25.009905Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1047/wmi-execute-local-process.jsonl.gz",
+     "reason": "detected by Windows Hotfix Updates Reconnaissance Via Wmic.EXE [dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45]; Process Creation Attempt via Wmic.EXE [526be59f-a573-4eea-b5f7-f0973207634d]",
+     "hits": [
+      {
+       "rule_id": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+       "first_ts": "2020-11-30T13:44:21.321518Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4571
+       ]
+      },
+      {
+       "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+       "first_ts": "2020-11-30T13:44:25.015762Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4705,
+        4747
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-30T13:44:25.612384Z",
+       "count": 3,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4806,
+        4825,
+        4903
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1569.002",
+     "name": "Service Execution",
+     "tactics": [
+      "execution"
+     ],
+     "test_guid": "873106b7-cfed-454b-8680-fa9f6400431c",
+     "started_at": "2021-04-05T14:15:34.981144Z",
+     "ended_at": "2021-04-05T14:17:34.981144Z",
+     "status": "partial",
+     "ttd_ms": 0,
+     "events_ref": "T1569.002/use-psexec-to-execute-a-command-on-a-remote-host.jsonl.gz",
+     "reason": "detected via related technique T1543.003: Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]",
+     "hits": [
+      {
+       "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+       "first_ts": "2021-04-05T14:15:34.651517Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        7441
+       ]
+      },
+      {
+       "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+       "first_ts": "2021-04-05T14:15:34.651517Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        7441
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2021-04-05T14:15:30.731388Z",
+       "count": 7,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        7060,
+        7238,
+        7260,
+        7338,
+        7586,
+        7608,
+        7687
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1053.005",
+     "name": "Scheduled Task",
+     "tactics": [
+      "execution",
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "42f53695-ad4a-4546-abb6-7d837f644a71",
+     "started_at": "2020-12-07T12:36:14.566933Z",
+     "ended_at": "2020-12-07T12:38:14.566933Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1053.005/scheduled-task-local.jsonl.gz",
+     "reason": "detected by Scheduled Task Creation Via Schtasks.EXE [92626ddd-662c-49e3-ac59-f6535f12d189]; Scheduled Task Registered With PowerShell Cmdlets [d5f22328-8ef9-4106-b453-c703f42dc983]",
+     "hits": [
+      {
+       "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+       "first_ts": "2020-12-07T12:36:14.448677Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4439,
+        4456,
+        4487,
+        4518
+       ]
+      },
+      {
+       "rule_id": "d5f22328-8ef9-4106-b453-c703f42dc983",
+       "first_ts": "2020-12-07T12:36:14.682144Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4534
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-07T12:36:09.807393Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4071,
+        4090,
+        4155,
+        4269,
+        4288,
+        4353,
+        4598,
+        4619,
+        4684
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1543.003",
+     "name": "Windows Service",
+     "tactics": [
+      "persistence",
+      "privilege-escalation"
+     ],
+     "test_guid": "981e2942-e433-44e9-afc1-8c957a1496b6",
+     "started_at": "2020-12-07T12:14:52.212225Z",
+     "ended_at": "2020-12-07T12:16:52.212225Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1543.003/service-installation-cmd.jsonl.gz",
+     "reason": "detected by Suspicious Service Path Modification [138d3531-8793-4f50-a2cd-f291b2863d78]; Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]; Service Created With PowerShell New-Service [3fcbdd8a-468d-46b8-b6b4-3fe6a262972f]",
+     "hits": [
+      {
+       "rule_id": "138d3531-8793-4f50-a2cd-f291b2863d78",
+       "first_ts": "2020-12-07T12:14:52.133413Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4482
+       ]
+      },
+      {
+       "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+       "first_ts": "2020-12-07T12:14:52.218324Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4522,
+        4563
+       ]
+      },
+      {
+       "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+       "first_ts": "2020-12-07T12:14:52.218324Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4522
+       ]
+      },
+      {
+       "rule_id": "3fcbdd8a-468d-46b8-b6b4-3fe6a262972f",
+       "first_ts": "2020-12-07T12:14:52.284197Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4563
+       ]
+      },
+      {
+       "rule_id": "81bcb81b-5b1f-474b-b373-52c871aaa7b1",
+       "first_ts": "2020-12-07T12:14:55.404502Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4835
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-07T12:14:48.102807Z",
+       "count": 7,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4121,
+        4299,
+        4318,
+        4396,
+        4638,
+        4657,
+        4722
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1136.001",
+     "name": "Local Account",
+     "tactics": [
+      "persistence"
+     ],
+     "test_guid": "bc8be0ac-475c-4fbf-9b1d-9fffd77afbde",
+     "started_at": "2020-10-09T10:41:25.793286Z",
+     "ended_at": "2020-10-09T10:43:25.793286Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1136.001/create-a-new-user-in-powershell.jsonl.gz",
+     "reason": "detected by New User Created Via Net.EXE [cd219ff3-fa99-45d4-8380-a7d15116c6dc]; Local Account Created With PowerShell New-LocalUser [fb902c61-a077-478a-8c06-8e0a425a54fa]",
+     "hits": [
+      {
+       "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+       "first_ts": "2020-10-09T10:41:25.716373Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4232,
+        4245,
+        4291,
+        4304
+       ]
+      },
+      {
+       "rule_id": "fb902c61-a077-478a-8c06-8e0a425a54fa",
+       "first_ts": "2020-10-09T10:41:25.793286Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4259
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-09T10:41:21.063688Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3823,
+        3842,
+        3921,
+        4049,
+        4068,
+        4133,
+        4385,
+        4404,
+        4469
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1685",
+     "name": "Disable or Modify Tools",
+     "tactics": [
+      "defense-impairment"
+     ],
+     "test_guid": "aa875ed4-8935-47e2-b2c5-6ec00ab220d2",
+     "started_at": "2020-11-06T12:04:50.246878Z",
+     "ended_at": "2020-11-06T12:06:50.246878Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1685/tamper-with-windows-defender-command-prompt.jsonl.gz",
+     "reason": "detected by Microsoft Defender Service Stopped Or Reconfigured With Sc.exe [43269c66-3d33-4049-8192-a9f13805a54e]; Disable Windows Defender AV Security Monitoring [a7ee1722-c3c5-aeff-3212-c777e4733217]",
+     "hits": [
+      {
+       "rule_id": "43269c66-3d33-4049-8192-a9f13805a54e",
+       "first_ts": "2020-11-06T12:04:50.246878Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        6655
+       ]
+      },
+      {
+       "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+       "first_ts": "2020-11-06T12:04:50.246878Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        6655
+       ]
+      },
+      {
+       "rule_id": "81bcb81b-5b1f-474b-b373-52c871aaa7b1",
+       "first_ts": "2020-11-06T12:04:50.246878Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        6655
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1685.005",
+     "name": "Clear Windows Event Logs",
+     "tactics": [
+      "defense-impairment"
+     ],
+     "test_guid": "e6abb60e-26b8-41da-8aae-0c35174b0967",
+     "started_at": "2020-10-09T09:10:56.367341Z",
+     "ended_at": "2020-10-09T09:12:56.367341Z",
+     "status": "detected",
+     "ttd_ms": 13,
+     "events_ref": "T1685.005/clear-logs.jsonl.gz",
+     "reason": "detected by Suspicious Eventlog Clearing or Configuration Change Activity [cc36992a-4671-4f21-a91d-6c2b72a2edf5]",
+     "hits": [
+      {
+       "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+       "first_ts": "2020-10-09T09:10:56.379954Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4264,
+        4277
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-09T09:10:51.928702Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3896,
+        3915,
+        3980,
+        4094,
+        4113,
+        4178,
+        4337,
+        4356,
+        4421
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1003.001",
+     "name": "LSASS Memory",
+     "tactics": [
+      "credential-access"
+     ],
+     "test_guid": "0be2230c-9ab3-4ac2-8826-3199b9a0ebf8",
+     "started_at": "2020-11-03T15:52:59.300564Z",
+     "ended_at": "2020-11-03T15:54:59.300564Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1003.001/dump-lsass-exe-memory-using-procdump.jsonl.gz",
+     "reason": "detected by LSASS Opened By A Process Running From A User-Writable Folder [146bcd53-9281-45dd-b973-3e8390027f91]; Potential LSASS Process Dump Via Procdump [5afee48e-67dd-4e03-a783-f74259dcf998]; LSASS Process Memory Dump Files [a5a2d357-1ab8-4675-a967-ef9990a59391]; Process Memory Dump Via Comsvcs.DLL [646ea171-dded-4578-8a4d-65e9822892e3]; noisy rule(s) for this technique earned no credit: Potential Credential Dumping Activity Via LSASS [5ef9853e-4d0e-4a70-846f-a9ca37d876da] (2 baseline hits)",
+     "hits": [
+      {
+       "rule_id": "146bcd53-9281-45dd-b973-3e8390027f91",
+       "first_ts": "2020-11-03T15:52:58.630989Z",
+       "count": 43,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5161,
+        5164,
+        5167,
+        5169,
+        5171,
+        5173,
+        5187,
+        5189,
+        5191,
+        5193,
+        5195,
+        5197,
+        5199,
+        5201,
+        5203,
+        5205,
+        5207,
+        5209,
+        5211,
+        5213,
+        5215,
+        5231,
+        5248,
+        5277,
+        5318,
+        5320,
+        5322,
+        5324,
+        5326,
+        5328,
+        5330,
+        5332,
+        5334,
+        5336,
+        5338,
+        5340,
+        5342,
+        5344,
+        5417,
+        5433,
+        5435,
+        5574,
+        5576
+       ]
+      },
+      {
+       "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+       "first_ts": "2020-11-03T15:52:59.300564Z",
+       "count": 3,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5350,
+        5392,
+        5419
+       ]
+      },
+      {
+       "rule_id": "a5a2d357-1ab8-4675-a967-ef9990a59391",
+       "first_ts": "2020-11-03T15:52:59.461440Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5434,
+        5578
+       ]
+      },
+      {
+       "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+       "first_ts": "2020-11-03T15:53:02.897089Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        5477,
+        5535
+       ]
+      },
+      {
+       "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+       "first_ts": "2020-11-03T15:52:58.630989Z",
+       "count": 44,
+       "relation": "exact",
+       "noisy": true,
+       "noise_hits": 2,
+       "record_ids": [
+        5161,
+        5164,
+        5167,
+        5169,
+        5171,
+        5173,
+        5187,
+        5189,
+        5191,
+        5193,
+        5195,
+        5197,
+        5199,
+        5201,
+        5203,
+        5205,
+        5207,
+        5209,
+        5211,
+        5213,
+        5215,
+        5231,
+        5248,
+        5277,
+        5318,
+        5320,
+        5322,
+        5324,
+        5326,
+        5328,
+        5330,
+        5332,
+        5334,
+        5336,
+        5338,
+        5340,
+        5342,
+        5344,
+        5417,
+        5433,
+        5435,
+        5574,
+        5576,
+        5579
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-11-03T15:52:56.292856Z",
+       "count": 6,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        4763,
+        4808,
+        4914,
+        5720,
+        5765,
+        5925
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1082",
+     "name": "System Information Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "66703791-c902-4560-8770-42b8a91f7667",
+     "started_at": "2020-10-12T08:42:42.742121Z",
+     "ended_at": "2020-10-12T08:44:42.742121Z",
+     "status": "detected",
+     "ttd_ms": 10,
+     "events_ref": "T1082/system-information-discovery.jsonl.gz",
+     "reason": "detected by Suspicious Execution of Systeminfo [0ef56343-059e-4cb6-adc1-4c3c967c5e46]",
+     "hits": [
+      {
+       "rule_id": "0ef56343-059e-4cb6-adc1-4c3c967c5e46",
+       "first_ts": "2020-10-12T08:42:42.751839Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4259
+       ]
+      },
+      {
+       "rule_id": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+       "first_ts": "2020-10-12T08:42:47.445830Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        4371
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-10-12T08:42:38.103558Z",
+       "count": 9,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        3891,
+        3910,
+        3975,
+        4091,
+        4108,
+        4173,
+        4466,
+        4485,
+        4550
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1018",
+     "name": "Remote System Discovery",
+     "tactics": [
+      "discovery"
+     ],
+     "test_guid": "85321a9c-897f-4a60-9f20-29788e50bccd",
+     "started_at": "2020-12-16T19:39:28.422957Z",
+     "ended_at": "2020-12-16T19:41:28.422957Z",
+     "status": "detected",
+     "ttd_ms": 11,
+     "events_ref": "T1018/remote-system-discovery-net.jsonl.gz",
+     "reason": "detected by Share And Session Enumeration Using Net.EXE [62510e69-616b-4078-b371-847da438cc03]; Ping Sweep From A Command Shell Loop [fbd8e0d5-3bf6-4dc3-94c8-36a4591c55b2]",
+     "hits": [
+      {
+       "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+       "first_ts": "2020-12-16T19:39:28.434388Z",
+       "count": 2,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        8964,
+        8984
+       ]
+      },
+      {
+       "rule_id": "fbd8e0d5-3bf6-4dc3-94c8-36a4591c55b2",
+       "first_ts": "2020-12-16T19:39:39.567380Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        9077
+       ]
+      },
+      {
+       "rule_id": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+       "first_ts": "2020-12-16T19:39:39.282179Z",
+       "count": 2,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        9020,
+        9033
+       ]
+      },
+      {
+       "rule_id": "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+       "first_ts": "2020-12-16T19:39:39.486900Z",
+       "count": 1,
+       "relation": "related",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        9062
+       ]
+      },
+      {
+       "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+       "first_ts": "2020-12-16T19:39:25.055783Z",
+       "count": 3,
+       "relation": "related",
+       "noisy": true,
+       "noise_hits": 5,
+       "record_ids": [
+        8781,
+        8801,
+        8876
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1021.002",
+     "name": "SMB/Windows Admin Shares",
+     "tactics": [
+      "lateral-movement"
+     ],
+     "test_guid": "0eb03d41-79e4-4393-8e57-6344856be1cf",
+     "started_at": "2021-09-16T17:54:28.367664Z",
+     "ended_at": "2021-09-16T17:56:28.367664Z",
+     "status": "partial",
+     "ttd_ms": 55,
+     "events_ref": "T1021.002/copy-and-execute-file-with-psexec.jsonl.gz",
+     "reason": "parent-technique rule: Psexec Execution [730fc21b-eaff-474b-ad23-90fd265d4988]",
+     "hits": [
+      {
+       "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+       "first_ts": "2021-09-16T17:54:28.422276Z",
+       "count": 1,
+       "relation": "parent",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        155125
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1560.001",
+     "name": "Archive via Utility",
+     "tactics": [
+      "collection"
+     ],
+     "test_guid": null,
+     "started_at": "2021-04-22T18:35:57.982985Z",
+     "ended_at": "2021-04-22T18:37:57.982985Z",
+     "status": "detected",
+     "ttd_ms": 0,
+     "events_ref": "T1560.001/recorded-execution.jsonl.gz",
+     "reason": "detected by 7-Zip Archive Created With Split Volumes Or Maximum Compression [6339ddf7-e217-4bce-b3a5-0698bc4a4eaf]",
+     "hits": [
+      {
+       "rule_id": "6339ddf7-e217-4bce-b3a5-0698bc4a4eaf",
+       "first_ts": "2021-04-22T18:35:57.982985Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        2530424
+       ]
+      }
+     ]
+    },
+    {
+     "technique_id": "T1490",
+     "name": "Inhibit System Recovery",
+     "tactics": [
+      "impact"
+     ],
+     "test_guid": "43819286-91a9-4369-90ed-d31fb4da2c01",
+     "started_at": "2021-01-22T20:43:31.973065Z",
+     "ended_at": "2021-01-22T20:45:31.973065Z",
+     "status": "detected",
+     "ttd_ms": 11,
+     "events_ref": "T1490/windows-delete-volume-shadow-copies.jsonl.gz",
+     "reason": "detected by Shadow Copies Deletion Using Operating Systems Utilities [c947b146-0abc-4c87-9c64-b17e9d7274a2]; Deletion of Volume Shadow Copies via WMI with PowerShell [21ff4ca9-f13a-41ad-b828-0077b2af2e40]",
+     "hits": [
+      {
+       "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+       "first_ts": "2021-01-22T20:43:31.984290Z",
+       "count": 4,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        30961,
+        31014,
+        31045,
+        31106
+       ]
+      },
+      {
+       "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+       "first_ts": "2021-01-22T20:43:32.471967Z",
+       "count": 1,
+       "relation": "exact",
+       "noisy": false,
+       "noise_hits": 0,
+       "record_ids": [
+        31106
+       ]
+      }
+     ]
+    }
+   ],
+   "rule_noise": [
+    {
+     "rule_id": "03cc0c25-389f-4bf8-b48d-11878079f1ca",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "0ef56343-059e-4cb6-adc1-4c3c967c5e46",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "138d3531-8793-4f50-a2cd-f291b2863d78",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "14187fb3-74db-4976-b032-a4a177aa578f",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "146bcd53-9281-45dd-b973-3e8390027f91",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "164eda96-11b2-430b-85ff-6a265c15bf32",
+     "status": "match",
+     "hits": 1,
+     "noisy": true
+    },
+    {
+     "rule_id": "17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "19b08b1c-861d-4e75-a1ef-ea0c1baf202b",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "1d61f71d-59d2-479e-9562-4ff5f4ead16b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "1ec65a5f-9473-4f12-97da-622044d6df21",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "20f0ee37-5942-4e45-b7d5-c5b5db9df5cd",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "21ff4ca9-f13a-41ad-b828-0077b2af2e40",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "259e5a6a-b8d2-4c38-86e2-26c5e651361d",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "2aa0a6b4-a865-495b-ab51-c28249537b75",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "3a734d25-df5c-4b99-8034-af1ddb5883a4",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "3fcbdd8a-468d-46b8-b6b4-3fe6a262972f",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "403c2cc0-7f6b-4925-9423-bfa573bed7eb",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "42c575ea-e41e-41f1-b248-8093c3e82a28",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "43269c66-3d33-4049-8192-a9f13805a54e",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "466cc903-dc93-4a6c-994a-9e51377e4167",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "48437c39-9e5f-47fb-af95-3d663c3f2919",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "4a1b6da0-d94f-4fc3-98fc-2d9cb9e5ee76",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "4fdc44df-bfe9-4fcc-b041-68f5a2d3031c",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "526be59f-a573-4eea-b5f7-f0973207634d",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5aae86d9-df8a-4529-a7db-a1e18a21e69a",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5afee48e-67dd-4e03-a783-f74259dcf998",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5cc90652-4cbd-4241-aa3b-4b462fa5a248",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "5ef9853e-4d0e-4a70-846f-a9ca37d876da",
+     "status": "match",
+     "hits": 2,
+     "noisy": true
+    },
+    {
+     "rule_id": "62510e69-616b-4078-b371-847da438cc03",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "6339ddf7-e217-4bce-b3a5-0698bc4a4eaf",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "646ea171-dded-4578-8a4d-65e9822892e3",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "66b6be3d-55d0-4f47-9855-d69df21740ea",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "67f113fa-e23d-4271-befa-30113b3e08b1",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "730fc21b-eaff-474b-ad23-90fd265d4988",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "7c81fec3-1c1d-43b0-996a-46753041b1b6",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "7f741dcf-fc22-4759-87b4-9ae8376676a2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "81bcb81b-5b1f-474b-b373-52c871aaa7b1",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "85ff530b-261d-48c6-a441-facaa2e81e48",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "867356ee-9352-41c9-a8f2-1be690d78216",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "88f680b8-070e-402c-ae11-d2914f2257f1",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "8eef149c-bd26-49f2-9e5a-9b00e3af499b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "92626ddd-662c-49e3-ac59-f6535f12d189",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "9fbf5927-5261-4284-a71d-f681029ea574",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a5a2d357-1ab8-4675-a967-ef9990a59391",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a62b37e0-45d3-48d9-a517-90c1a1b0186b",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a7ee1722-c3c5-aeff-3212-c777e4733217",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a86050af-7b68-4a3b-a2d2-affe1bd8bd94",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "a9f13099-6459-428b-99f5-c12ebb4b9734",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "b236190c-1c61-41e9-84b3-3fe03f6d76b0",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "be344333-921d-4c4d-8bb8-e584cf584780",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c30fb093-1109-4dc8-88a8-b30d11c95a5d",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c3a99af4-35a9-4668-879e-c09aeb4f2bdf",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "c947b146-0abc-4c87-9c64-b17e9d7274a2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cc36992a-4671-4f21-a91d-6c2b72a2edf5",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cd219ff3-fa99-45d4-8380-a7d15116c6dc",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "cdc8da7d-c303-42f8-b08c-b4ab47230263",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "d04ae2b8-ad54-4de0-bd87-4bc1da66aa59",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "d5f22328-8ef9-4106-b453-c703f42dc983",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "d95de845-b83c-4a9a-8a6a-4fc802ebf6c0",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "d99b79d2-0a6f-4f46-ad8b-260b6e17f982",
+     "status": "telemetry_gap",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "de587dce-915e-4218-aac4-835ca6af6f70",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "dfd2fcb7-8bd5-4daa-b132-5adb61d6ad45",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "e32d4572-9826-4738-b651-95fa63747e8a",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "e6c54d94-498c-4562-a37c-b469d8e9a275",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "e7be6119-fc37-43f0-ad4f-1f3f99be2f9f",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fb843269-508c-4b76-8b8d-88679db22ce7",
+     "status": "match",
+     "hits": 5,
+     "noisy": true
+    },
+    {
+     "rule_id": "fb902c61-a077-478a-8c06-8e0a425a54fa",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fbd8e0d5-3bf6-4dc3-94c8-36a4591c55b2",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fd877b94-9bb5-4191-bb25-d79cbd93c167",
+     "status": "no_match",
+     "hits": 0,
+     "noisy": false
+    },
+    {
+     "rule_id": "fdb62a13-9a81-4e5c-a38f-ea93a16f6d7c",
+     "status": "unsupported",
+     "hits": 0,
+     "noisy": false
+    }
+   ],
+   "gaps": [
+    {
+     "technique_id": "T1569.002",
+     "kind": "partial",
+     "notes": "Partial: detected via related technique T1543.003: Suspicious New Service Creation [17a1be64-8d88-40bf-b5ff-a4f7a50ebcc8]; New Service Creation Using Sc.EXE [85ff530b-261d-48c6-a441-facaa2e81e48]. No bundled rule set detects this. Only rules tagged with other techniques (service creation) or the parent T1569 fire; no bundled rule is tagged T1569.002, so partial is the honest result.",
+     "status": "open",
+     "telemetry_needed": "System log event 7045 (service installed) and Security 4697; Sysmon event 1 for services.exe children and sc.exe.",
+     "rule_idea": "Match a new service whose image path is a command interpreter, a user-writable path or a random name such as PSEXESVC, and services.exe spawning cmd.exe.",
+     "closed_in_run": null
+    },
+    {
+     "technique_id": "T1021.002",
+     "kind": "partial",
+     "notes": "Partial: parent-technique rule: Psexec Execution [730fc21b-eaff-474b-ad23-90fd265d4988]. No bundled rule set detects this. The PsExec rule is tagged with the parent technique T1021 only and no bundled rule is tagged T1021.002; the recording also holds just 10 events.",
+     "status": "open",
+     "telemetry_needed": "Security 5140/5145 (share access) and 4624 logon type 3 on the destination; Sysmon event 3 for port 445; Sysmon event 1 for net use.",
+     "rule_idea": "Match access to ADMIN$ or C$ followed by a service install (7045) or file creation under Windows\\System32 from the same source.",
+     "closed_in_run": null
+    }
+   ]
+  }
+ ]
+}
