@@ -96,7 +96,7 @@ def test_import_scores_as_lab_run(seeded_db, good, conn):
     rid = runfile.import_run(conn, _raw(good))
     run = db.get_run(conn, rid)
     assert run["mode"] == "lab"
-    assert "not yet been run against a real lab" in run["source"]
+    assert "not yet been run" not in run["source"]  # that statement is project-level, shown at display time
     assert "LAB-WS01" in run["source"]
     assert _counts(conn)[0] == before[0] + 1
     ex = db.list_executions(conn, rid)

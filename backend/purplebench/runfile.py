@@ -268,7 +268,7 @@ def _record_refs(rule, index: EventIndex, profile: TelemetryProfile, anchor: str
     """The matching events inside the window as [channel, record_id] pairs (record ids repeat across logs)."""
     res = evaluate(rule, index, profile)
     return [[ref.channel, ref.record_id] for ref in res.matches
-            if -skew <= scoring._seconds(ref.ts, anchor) <= window]
+            if -skew <= scoring.seconds_between(ref.ts, anchor) <= window]
 
 
 def events_dir() -> Path:
@@ -335,8 +335,7 @@ def import_run(conn: sqlite3.Connection, raw: bytes | str | Path, *, ruleset_id:
         else:
             cid = campaign["id"]
         source = (f"Lab run on {run['target']} from a run file written by the PurpleBench lab runner. "
-                  "Lab mode has not yet been run against a real lab by the project author; "
-                  "this result is only as good as the lab that produced the file.")
+                  "This result is only as good as the lab that produced the file.")
         notes = ("No benign baseline is collected in lab mode, so rule noise was not measured for this run. "
                  "WinRM harness activity (for example wsmprovhost.exe) can appear in the collected windows. "
                  f"Telemetry profile: the events of this run. Scored with rule set {rs_row['version']}.")

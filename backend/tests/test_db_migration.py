@@ -120,3 +120,21 @@ def test_v3_database_gets_analyst_notes_column_only(tmp_path):
         assert c.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
     finally:
         c.close()
+
+
+def test_stored_lab_statement_is_removed_from_existing_runs(tmp_path):
+    path = tmp_path / "old.db"
+    c = db.connect(path)
+    c.execute("INSERT INTO campaigns (id, name) VALUES (1, 'c')")
+    c.execute("INSERT INTO rulesets (id, version, created_at, rules_json_hash) VALUES (1, 'v1', 't', 'h')")
+    stale = ("Lab run on LAB-WS01 from a run file written by the PurpleBench lab runner. Lab mode has not yet been "
+             "run against a real lab by the project author; this result is only as good as the lab that produced the file.")
+    c.execute("INSERT INTO runs (id, campaign_id, ruleset_id, mode, source, started_at) VALUES (1, 1, 1, 'lab', ?, 't')",
+              (stale,))
+    c.commit()
+    c.close()
+    c = db.connect(path)
+    src = c.execute("SELECT source FROM runs WHERE id = 1").fetchone()[0]
+    c.close()
+    assert "project author" not in src and "not yet been run" not in src
+    assert src.endswith("lab runner. This result is only as good as the lab that produced the file.")

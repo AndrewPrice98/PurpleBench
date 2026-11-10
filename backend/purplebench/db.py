@@ -108,8 +108,11 @@ CREATE INDEX IF NOT EXISTS idx_gaps_run          ON gaps(run_id);
 CREATE INDEX IF NOT EXISTS idx_ruleset_rules_set ON ruleset_rules(ruleset_id);
 """
 
-SCHEMA_VERSION = 4  # 4: gaps.analyst_notes (the importer text stays in gaps.notes); 2: executions.status also allows 'did_not_run'; 3: gaps.status also allows 'accepted'
+# 2: executions.status also allows 'did_not_run'; 3: gaps.status also allows 'accepted';
+# 4: gaps.analyst_notes (the importer text stays in gaps.notes)
+SCHEMA_VERSION = 4
 BUSY_TIMEOUT_SECONDS = 15.0
+_STALE_LAB_SENTENCE = "Lab mode has not yet been run against a real lab by the project author; this result"
 GAP_KINDS = ("missed", "telemetry_gap", "partial")
 GAP_STATUSES = ("open", "closed", "accepted")
 
@@ -136,6 +139,10 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     _use_wal(conn)
     _migrate(conn)
     conn.executescript(SCHEMA)
+    # Older imports stored a project-level statement in every lab run's source; it is shown at display time now.
+    conn.execute("UPDATE runs SET source = REPLACE(source, ?, ?) WHERE source LIKE ?",
+                 (_STALE_LAB_SENTENCE, "This result", f"%{_STALE_LAB_SENTENCE}%"))
+    conn.commit()
     # Only ever raise the version, and only write when it is lower (no write on every connection).
     if conn.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
@@ -381,8 +388,9 @@ def set_gap_status(conn: sqlite3.Connection, gap_id: int, status: str, *, closed
 
 
 def update_gap(conn: sqlite3.Connection, gap_id: int, *, status: str | None = None, notes: str | None = None) -> bool:
-    """Change a gap's status and/or the analyst's notes (the importer text in ``notes`` is never touched). Returns False if there is no such gap. Re-opening or accepting a
-    gap clears ``closed_in_run`` (it only means something for a closed gap)."""
+    """Change a gap's status and/or the analyst's notes (the importer text in ``notes`` is never touched).
+    Returns False if there is no such gap.
+    Re-opening or accepting a gap clears ``closed_in_run`` (it only means something for a closed gap)."""
     if status is not None and status not in GAP_STATUSES:
         raise ValueError("gap status must be 'open', 'closed' or 'accepted'")
     with conn:
